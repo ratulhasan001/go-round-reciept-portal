@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Go Round · Receipt Studio
 
-## Getting Started
+Create professional A4 payment receipts in under a minute, then download them as a **PDF** or an **Excel** file, print them, or send them on WhatsApp.
 
-First, run the development server:
+## Features
+
+- **Live A4 preview** that matches the downloaded PDF.
+- **PDF** (A4 portrait, Bricolage Grotesque + Manrope fonts embedded, your logo, multi-page with a repeating table header and page numbers).
+- **Excel** (A4 portrait, fit to page width, logo, live formulas for amounts, totals, paid and balance due).
+- **Autofill:** saved customers fill in their phone and address, and saved products fill in their price. New customers and products are remembered automatically.
+- **Quick-add chips** for your best-selling products (tap twice to make the quantity 2).
+- **Payments:** Cash, bKash, Nagad, Rocket, Bank, Card. "Mark fully paid" fills in the remaining amount. Status (Paid / Partial / Unpaid) is calculated automatically.
+- **Discount shortcuts** (5%, 10%, 15% of the subtotal).
+- **WhatsApp:** send the receipt summary to the customer, or on a phone, share the PDF itself into WhatsApp.
+- **Who owes you:** a dashboard list of unpaid balances, each with a one-tap WhatsApp reminder.
+- **Ledger export:** every receipt in a single Excel sheet with totals.
+- **Auto-save** while editing, with keyboard shortcuts **Ctrl/⌘ + S** (save) and **Ctrl/⌘ + P** (print).
+- **Mobile-first:** a bottom navigation bar, a thumb-friendly action bar, and "Add to Home Screen" support (PWA manifest).
+- **Backup / restore** to a JSON file (Settings).
+
+> Data is stored in the browser (localStorage) on each device. Use **Settings → Download backup** regularly, and **Restore backup** to move your data to another phone or computer.
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev       # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deploy to Vercel
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Option A: GitHub (recommended)**
+1. Push this folder to a new GitHub repository.
+2. Go to vercel.com → **Add New… → Project** → import the repository.
+3. Keep the defaults (Framework: Next.js) and click **Deploy**.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Option B: Vercel CLI**
+```bash
+npx vercel          # first time: log in and link the project
+npx vercel --prod   # deploy to production
+```
 
-## Learn More
+No environment variables or database are needed.
 
-To learn more about Next.js, take a look at the following resources:
+## Customising
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Shop name, tagline, contact details, logo, invoice prefix, next number, delivery charge and footer text: **Settings** page.
+- Colours: `src/lib/theme.ts` (receipt) and `src/app/globals.css` (website).
+- Receipt layout: `src/lib/pdf.tsx` (PDF), `src/components/ReceiptPreview.tsx` (preview), `src/lib/excel.ts` (Excel).
