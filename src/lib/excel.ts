@@ -224,7 +224,7 @@ export async function renderExcelBlob(inv: Invoice, shop: Shop) {
   const firstCharge = tot.disc + 1 + hc;
   t.charges.forEach((c, i) => {
     const row = firstCharge + i;
-    totRow(row, c.label, c.rate !== undefined ? { formula: `ROUND(${baseRef}*${c.rate}/100,2)${c.fixed ? `+${c.fixed}` : ""}`, result: c.amount } : c.amount);
+    totRow(row, c.label, c.rate !== undefined ? { formula: `ROUND(E${tot.sub}*${c.rate}/100,2)${c.fixed ? `+${c.fixed}` : ""}`, result: c.amount } : c.amount);
   });
   const chargeSum = nc ? `+SUM(E${firstCharge}:E${firstCharge + nc - 1})` : "";
   totRow(tot.grand, "Grand Total", { formula: `${baseRef}${chargeSum}`, result: t.grandTotal }, font({ size: 12, bold: true }), font({ size: 11, bold: true }));

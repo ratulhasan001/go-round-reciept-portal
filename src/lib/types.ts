@@ -115,7 +115,7 @@ export interface Totals {
   discountLabel: string;
   couponTotal: number;
   couponLabel: string;
-  base: number; // subtotal + delivery - discount - coupon (what charge percentages apply to)
+  base: number; // subtotal + delivery - discount - coupon (before additional charges)
   charges: ChargeLine[];
   chargesTotal: number;
   grandTotal: number;

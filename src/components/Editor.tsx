@@ -573,7 +573,7 @@ function EditorForm({
                       <span>Additional charges</span>
                       <span className="text-brand">+ {money(t.chargesTotal)}</span>
                     </div>
-                    <div className="mt-1 text-[11.5px] text-muted">Percentages apply to {money(t.base)} (the amount after delivery, discount and coupon).</div>
+                    <div className="mt-1 text-[11.5px] text-muted">Percentages apply to the product total {money(t.subtotal)} only (not delivery, discount or coupon).</div>
                   </div>
                 </div>
               )}

@@ -173,7 +173,7 @@ export default function SettingsPage() {
                     <RateInput key={c} label={c} value={shop.rates.courier[c]} onChange={(v) => set("rates", { ...shop.rates, courier: { ...shop.rates.courier, [c]: v } })} />
                   ))}
                 </div>
-                <p className="mt-3 text-[12px] leading-relaxed text-muted">Percentages are calculated on subtotal + delivery − discount. Use “Other charges” in a receipt for fixed amounts.</p>
+                <p className="mt-3 text-[12px] leading-relaxed text-muted">Percentages are calculated on the product total only (delivery, discount and coupon are not included). Use “Other charges” in a receipt for fixed amounts.</p>
               </div>
             </div>
           </Card>

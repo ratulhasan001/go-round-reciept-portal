@@ -17,8 +17,9 @@ const adjustLabel = (p: number, fixed: number, freeDelivery = false) => {
   return ` (${parts.join(" + ")})`;
 };
 
-/** Additional charge lines (payment channel %, courier %, manual) for a receipt. */
-export function chargeLines(inv: Invoice, base: number): ChargeLine[] {
+/** Additional charge lines (payment channel %, courier %, manual). Percentages apply to the product total only. */
+export function chargeLines(inv: Invoice, productTotal: number): ChargeLine[] {
+  const base = productTotal;
   const x = inv.extras;
   if (!x?.enabled) return [];
   const lines: ChargeLine[] = [];
@@ -48,7 +49,7 @@ export function computeTotals(inv: Invoice): Totals {
   const cFree = !!c?.freeDelivery && !dFree && delivery > 0; // delivery is only waived once
   const couponTotal = round2(((subtotal - discountOnItems) * cPct) / 100 + cFix + (cFree ? delivery : 0));
   const base = round2(subtotal + delivery - discountTotal - couponTotal);
-  const charges = chargeLines(inv, base);
+  const charges = chargeLines(inv, subtotal);
   const chargesTotal = round2(charges.reduce((s, c) => s + c.amount, 0));
   const grandTotal = round2(base + chargesTotal);
   const paid = round2(inv.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0));
