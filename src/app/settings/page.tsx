@@ -179,7 +179,7 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="p-5 sm:p-6">
-            <SectionTitle icon={<DatabaseBackup className="size-4" />} title="Backup & data" hint="Data is stored in this browser. Download a backup regularly, or to move to another device." />
+            <SectionTitle icon={<DatabaseBackup className="size-4" />} title="Backup & data" hint={store.mode === "cloud" ? "Your data is saved to the cloud database and shared across your devices. A backup file is an extra safety copy." : "Data is stored in this browser. Download a backup regularly, or to move to another device."} />
             <div className="flex flex-wrap gap-2">
               <Button variant="dark" onClick={exportData}>
                 <DatabaseBackup className="size-4" /> Download backup
@@ -187,6 +187,7 @@ export default function SettingsPage() {
               <Button onClick={() => importRef.current?.click()}>
                 <Upload className="size-4" /> Restore backup
               </Button>
+              {store.mode !== "cloud" && (
               <Button
                 variant="danger"
                 onClick={() => {
@@ -202,6 +203,7 @@ export default function SettingsPage() {
               >
                 <RotateCcw className="size-4" /> {confirmReset ? "Click again - this erases everything" : "Reset"}
               </Button>
+              )}
               <input
                 ref={importRef}
                 type="file"

@@ -18,7 +18,18 @@ Create professional A4 payment receipts in under a minute, then download them as
 - **Mobile-first:** a bottom navigation bar, a thumb-friendly action bar, and "Add to Home Screen" support (PWA manifest).
 - **Backup / restore** to a JSON file (Settings).
 
-> Data is stored in the browser (localStorage) on each device. Use **Settings → Download backup** regularly, and **Restore backup** to move your data to another phone or computer.
+## Database & login (Vercel)
+
+Set these in Vercel → Project → Settings → Environment Variables:
+
+| Variable | What it does |
+|---|---|
+| `DATABASE_URL` | Postgres connection (added automatically when you connect a Neon database). Customers, products, receipts and settings are saved here and shared across devices. PDFs / Excel files are never stored — they are generated on demand. |
+| `APP_PASSWORD` | Shop password. When set, every page asks for it on a “Confidential” login screen. Changing it logs every device out. |
+
+- The table (`gr_docs`) is created automatically on first use.
+- The first time you log in on a device that already has receipts in its browser, they are moved into the database automatically. **Log in first on the device that has your existing receipts.**
+- Without `DATABASE_URL` the app still works, saving to the browser only (the sidebar shows “Saved on this device”).
 
 ## Run locally
 
