@@ -73,3 +73,167 @@ input[type="number"] {
 .animate-fade-up {
   animation: fade-up 0.35s ease-out both;
 }
+
+/* ---------- PIN login ---------- */
+@keyframes pin-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-pin-pop {
+  animation: pin-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes pin-ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+.animate-pin-ripple {
+  animation: pin-ripple 0.5s ease-out forwards;
+}
+
+@keyframes pin-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15%,
+  55% {
+    transform: translateX(-10px);
+  }
+  35%,
+  75% {
+    transform: translateX(10px);
+  }
+  90% {
+    transform: translateX(-4px);
+  }
+}
+.animate-pin-shake {
+  animation: pin-shake 0.5s ease-in-out;
+}
+
+@keyframes pin-wave {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-9px);
+  }
+}
+.animate-pin-wave {
+  animation: pin-wave 0.7s ease-in-out infinite;
+}
+
+@keyframes pin-hop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-14px) scale(1.08);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-pin-hop {
+  animation: pin-hop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes pin-caret {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.animate-pin-caret {
+  animation: pin-caret 1s ease-in-out infinite;
+}
+
+@keyframes pin-halo {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+.animate-pin-halo {
+  animation: pin-halo 2.4s ease-in-out infinite;
+}
+
+@keyframes pin-unlock {
+  0% {
+    transform: scale(1) rotate(0);
+  }
+  40% {
+    transform: scale(1.18) rotate(-10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+.animate-pin-unlock {
+  animation: pin-unlock 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pin-wobble {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-12deg);
+  }
+  75% {
+    transform: rotate(12deg);
+  }
+}
+.animate-pin-wobble {
+  animation: pin-wobble 0.3s ease-in-out 2;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(40px, 30px);
+  }
+}
+.animate-drift {
+  animation: drift 14s ease-in-out infinite;
+}
+.animate-drift-slow {
+  animation: drift 20s ease-in-out infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-pin-"],
+  .animate-drift,
+  .animate-drift-slow {
+    animation: none !important;
+  }
+}
