@@ -117,7 +117,7 @@ export default function Home() {
               {greet}
               <span className="inline-block origin-[70%_70%] animate-wave-hand">👋</span>
             </h1>
-            <p className="animate-home-in mt-3 max-w-xl text-[15px] text-mint/85 sm:text-base [animation-delay:200ms]">What would you like to do today?</p>
+            <p className="animate-home-in mt-3 max-w-xl text-[15px] text-mint/85 sm:text-base [animation-delay:200ms]">Witness the Underwater World Through Us</p>
           </div>
 
           {/* this month */}
