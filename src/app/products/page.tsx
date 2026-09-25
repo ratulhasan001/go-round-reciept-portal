@@ -9,7 +9,7 @@ import { ListEditor } from "@/components/ListEditor";
 import { cx } from "@/components/ui";
 
 const inStock = (p: Product) => p.inStock !== false;
-const byName = (a: Product, b: Product) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+const byName = (a: Product, b: Product) => a.name.trim().localeCompare(b.name.trim(), undefined, { numeric: true, sensitivity: "base" });
 const updated = (p: Product) => p.updatedAt ?? 0;
 const fmtUpdated = (p: Product) =>
   p.updatedAt ? `Updated ${new Date(p.updatedAt).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}` : "Not edited recently";

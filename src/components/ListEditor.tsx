@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ArrowUpDown, Plus, RefreshCw, Search, SearchX, Sparkles, Trash2 } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ArrowUpDown, Plus, Search, SearchX, Sparkles, Trash2 } from "lucide-react";
 import { Button, Card, Input, Select, cx, useToast } from "./ui";
 
 export interface Column<T> {
@@ -73,26 +73,47 @@ export function ListEditor<T extends { id: string }>({
   });
   const grid = `${lead ? "40px " : ""}${columns.map((c) => c.width).join(" ")} 40px`;
 
-  // Sorting: the order is worked out when the sort option or the set of rows changes, then held still
-  // while you type, so a row never jumps away mid-edit. "Sort again" appears once edits change the order.
+  // Sorting is live, except while the cursor is inside a row: then the order is held still so the row
+  // being edited never jumps away. As soon as focus leaves the rows, everything glides into place.
   const [sortIdx, setSortIdx] = useState(0);
-  const [sortRun, setSortRun] = useState(0); // bumped to replay the row animation on re-sort
+  const [hold, setHold] = useState<string[] | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const tops = useRef(new Map<string, number>());
   const primary = columns[0]!.key;
   const compare = sorts?.[sortIdx]?.compare;
   const isBlank = (r: T) => !String(r[primary] ?? "").trim();
   // rows still being filled in (no name yet) stay on top
   const sortRows = (list: T[]) => (!compare ? list : [...list].sort((a, b) => Number(isBlank(b)) - Number(isBlank(a)) || compare(a, b)));
-  const orderKey = `${sortIdx}|${rows.map((r) => r.id).join(",")}`;
-  const [order, setOrder] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
-  if (order.key !== orderKey) setOrder({ key: orderKey, ids: sortRows(rows).map((r) => r.id) });
   const byId = new Map(rows.map((r) => [r.id, r]));
-  const ordered = order.key === orderKey ? order.ids.map((id) => byId.get(id)!).filter(Boolean) : sortRows(rows);
-  const fresher = sortRows(rows);
-  const stale = !!compare && ordered.some((r, i) => r.id !== fresher[i]?.id);
-  const resort = () => {
-    setOrder({ key: orderKey, ids: fresher.map((r) => r.id) });
-    setSortRun((n) => n + 1);
+  const ordered = hold
+    ? [...rows.filter((r) => !hold.includes(r.id)), ...hold.map((id) => byId.get(id)!).filter(Boolean)]
+    : sortRows(rows);
+
+  const onRowFocus = () => {
+    if (!hold) setHold(ordered.map((r) => r.id));
   };
+  const onRowBlur = (e: React.FocusEvent) => {
+    // moving between rows keeps the hold; leaving the rows releases it
+    if (!listRef.current?.contains(e.relatedTarget as Node | null)) setHold(null);
+  };
+
+  // FLIP: when rows change position, slide them from where they were to where they are now
+  useLayoutEffect(() => {
+    const els = listRef.current?.querySelectorAll<HTMLElement>("[data-row]") ?? [];
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const next = new Map<string, number>();
+    els.forEach((el) => {
+      const id = el.dataset.row!;
+      const before = tops.current.get(id);
+      if (before !== undefined && !reduce && Math.abs(before - el.offsetTop) > 1)
+        el.animate([{ transform: `translateY(${before - el.offsetTop}px)` }, { transform: "none" }], {
+          duration: 420,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        });
+      next.set(id, el.offsetTop);
+    });
+    tops.current = next;
+  });
 
   const tabs: Filter<T>[] = filters ? [{ label: "All", test: () => true }, ...filters] : [];
   const needle = q.trim().toLowerCase();
@@ -132,6 +153,7 @@ export function ListEditor<T extends { id: string }>({
     setLeaving((l) => [...l, r.id]);
     // let the row slide away before it is actually removed
     setTimeout(() => {
+      setHold(null); // the focused delete button disappears without a blur event
       onChange(latest.current.filter((x) => x.id !== r.id));
       setLeaving((l) => l.filter((id) => id !== r.id));
       toast(`${noun} removed`);
@@ -212,8 +234,8 @@ export function ListEditor<T extends { id: string }>({
                     aria-label="Sort by"
                     value={sortIdx}
                     onChange={(e) => {
+                      setHold(null);
                       setSortIdx(Number(e.target.value));
-                      setSortRun((n) => n + 1);
                     }}
                     className="w-auto cursor-pointer bg-canvas pl-9 font-semibold"
                   >
@@ -224,17 +246,6 @@ export function ListEditor<T extends { id: string }>({
                     ))}
                   </Select>
                 </div>
-                {stale && (
-                  <button
-                    type="button"
-                    onClick={resort}
-                    className="animate-chip-in group flex h-10 items-center gap-1.5 rounded-xl border border-lime/60 bg-soft px-3 text-[12.5px] font-bold text-brand transition hover:border-lime hover:bg-lime/20"
-                    title="Your edits changed the order - tap to sort again"
-                  >
-                    <RefreshCw className="size-3.5 transition-transform duration-500 group-hover:rotate-180" />
-                    Sort again
-                  </button>
-                )}
               </div>
             )}
           </div>
@@ -255,7 +266,7 @@ export function ListEditor<T extends { id: string }>({
           ))}
           <span />
         </div>
-        <div key={sortRun} className="flex flex-col gap-2 p-4 md:gap-1.5">
+        <div ref={listRef} className="relative flex flex-col gap-2 p-4 md:gap-1.5">
           {visible.length === 0 && (
             <div className="animate-fade-up flex flex-col items-center gap-3 py-12 text-center">
               <div className="animate-empty-bob grid size-14 place-items-center rounded-2xl bg-soft text-brand">
@@ -272,6 +283,9 @@ export function ListEditor<T extends { id: string }>({
               <div
                 id={`row-${r.id}`}
                 key={r.id}
+                data-row={r.id}
+                onFocus={onRowFocus}
+                onBlur={onRowBlur}
                 className={cx(
                   "grid gap-2 rounded-xl border border-line p-3 transition-colors md:border-transparent md:p-1 md:-mx-1 md:[grid-template-columns:var(--g)] md:hover:bg-canvas",
                   isLeaving ? "animate-row-out pointer-events-none" : "animate-row-in",
