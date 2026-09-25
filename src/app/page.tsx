@@ -112,6 +112,7 @@ export default function Home() {
           <div className="mt-10 sm:mt-14">
             <p className="animate-home-in flex items-center gap-2 text-sm font-semibold text-lime [animation-delay:80ms]">
               <CalendarDays className="size-4" /> {today || " "}
+              <LiveClock />
             </p>
             <h1 className="animate-home-in mt-3 font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl [animation-delay:140ms]">
               {greet}
@@ -213,6 +214,35 @@ function Glance({ i, icon, label, value, money: isMoney, warn }: { i: number; ic
         {isMoney ? money(n) : Math.round(n)}
       </div>
     </div>
+  );
+}
+
+/** Ticking clock (hh:mm:ss am/pm); rendered only in the browser so server and client HTML match. */
+function LiveClock() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    let id = 0;
+    const tick = () => {
+      setNow(new Date());
+      id = window.setTimeout(tick, 1000 - (Date.now() % 1000)); // stay on the second boundary
+    };
+    tick();
+    return () => clearTimeout(id);
+  }, []);
+  if (!now) return null;
+  const [hm, ampm] = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).split(" ");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  return (
+    <span className="animate-label-swap ml-1 inline-flex items-center gap-1.5 rounded-full bg-white/8 px-2.5 py-0.5 tabular-nums text-white">
+      <Clock3 className="size-3.5 text-lime" />
+      <span>
+        {hm}:
+        <span key={ss} className="animate-tick inline-block w-[2ch] text-mint/80">
+          {ss}
+        </span>
+      </span>
+      <span className="text-[11px] font-bold text-lime">{ampm}</span>
+    </span>
   );
 }
 

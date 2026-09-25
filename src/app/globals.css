@@ -686,3 +686,23 @@ input[type="number"] {
     animation: none !important;
   }
 }
+
+/* live clock: each new second rolls up into place */
+@keyframes tick {
+  from {
+    opacity: 0;
+    transform: translateY(-40%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-tick {
+  animation: tick 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-tick {
+    animation: none;
+  }
+}
