@@ -64,7 +64,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  category: string;
+  inStock?: boolean; // missing (older saved products) means in stock
 }
 
 export interface Customer {

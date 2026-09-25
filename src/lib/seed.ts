@@ -21,8 +21,8 @@ export const DEFAULT_SHOP: Shop = {
 };
 
 export const SEED_PRODUCTS: Product[] = [
-  { id: "p1", name: "Seachem Prime 325ml", price: 2350, category: "Water Care" },
-  { id: "p2", name: "APT Complete (3) 500ml", price: 3200, category: "Fertilizer" },
+  { id: "p1", name: "Seachem Prime 325ml", price: 2350, inStock: true },
+  { id: "p2", name: "APT Complete (3) 500ml", price: 3200, inStock: true },
 ];
 
 export const SEED_CUSTOMERS: Customer[] = [

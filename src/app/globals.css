@@ -253,3 +253,153 @@ input[type="number"] {
 .animate-key-in {
   animation: key-in 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
+
+/* ---------- Products & Customers lists ---------- */
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-row-in {
+  animation: row-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes row-out {
+  to {
+    opacity: 0;
+    transform: translateX(-40px) scale(0.96);
+    filter: blur(2px);
+  }
+}
+.animate-row-out {
+  animation: row-out 0.28s ease-in forwards;
+}
+
+@keyframes row-fresh {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+    box-shadow: 0 0 0 0 rgb(140 197 86 / 0.55);
+    background: rgb(140 197 86 / 0.18);
+  }
+  35% {
+    opacity: 1;
+    transform: none;
+    box-shadow: 0 0 0 6px rgb(140 197 86 / 0.18);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(140 197 86 / 0);
+    background: transparent;
+  }
+}
+.animate-row-fresh {
+  animation: row-fresh 1.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes count-bump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-count-bump {
+  animation: count-bump 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes icon-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-4deg);
+  }
+}
+.animate-icon-float {
+  animation: icon-float 3.2s ease-in-out infinite;
+}
+
+@keyframes empty-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.animate-empty-bob {
+  animation: empty-bob 1.8s ease-in-out infinite;
+}
+
+@keyframes label-swap {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-label-swap {
+  animation: label-swap 0.25s ease-out;
+}
+
+@keyframes lead-pop {
+  0% {
+    transform: scale(0.5) rotate(-15deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+.animate-lead-pop {
+  animation: lead-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+@keyframes confirm-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+.animate-confirm-shake {
+  animation: confirm-shake 0.2s ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-row-in,
+  .animate-row-out,
+  .animate-row-fresh,
+  .animate-count-bump,
+  .animate-icon-float,
+  .animate-empty-bob,
+  .animate-label-swap,
+  .animate-lead-pop,
+  .animate-confirm-shake {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
