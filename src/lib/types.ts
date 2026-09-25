@@ -65,6 +65,7 @@ export interface Product {
   name: string;
   price: number;
   inStock?: boolean; // missing (older saved products) means in stock
+  updatedAt?: number; // ms timestamp of the last edit; missing on older saved products
 }
 
 export interface Customer {

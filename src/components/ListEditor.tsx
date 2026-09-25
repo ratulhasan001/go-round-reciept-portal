@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, Search, SearchX, Sparkles, Trash2 } from "lucide-react";
-import { Button, Card, Input, cx, useToast } from "./ui";
+import { ArrowUpDown, Plus, RefreshCw, Search, SearchX, Sparkles, Trash2 } from "lucide-react";
+import { Button, Card, Input, Select, cx, useToast } from "./ui";
 
 export interface Column<T> {
   key: keyof T & string;
@@ -21,6 +21,11 @@ export interface Filter<T> {
   test: (row: T) => boolean;
 }
 
+export interface Sort<T> {
+  label: string;
+  compare: (a: T, b: T) => number;
+}
+
 const ROW_OUT_MS = 280;
 
 /** Inline-editable list used for Products and Customers. Changes save instantly. */
@@ -35,6 +40,8 @@ export function ListEditor<T extends { id: string }>({
   noun,
   lead,
   filters,
+  sorts,
+  touch,
 }: {
   title: string;
   subtitle: string;
@@ -48,6 +55,10 @@ export function ListEditor<T extends { id: string }>({
   lead?: (row: T) => React.ReactNode;
   /** Quick filter tabs shown next to the search box; "All" is added in front. */
   filters?: Filter<T>[];
+  /** Sort options; the first one is the default. */
+  sorts?: Sort<T>[];
+  /** Applied to a row whenever it is edited, e.g. to stamp an updated time. */
+  touch?: (row: T) => T;
 }) {
   const toast = useToast();
   const [q, setQ] = useState("");
@@ -62,16 +73,43 @@ export function ListEditor<T extends { id: string }>({
   });
   const grid = `${lead ? "40px " : ""}${columns.map((c) => c.width).join(" ")} 40px`;
 
+  // Sorting: the order is worked out when the sort option or the set of rows changes, then held still
+  // while you type, so a row never jumps away mid-edit. "Sort again" appears once edits change the order.
+  const [sortIdx, setSortIdx] = useState(0);
+  const [sortRun, setSortRun] = useState(0); // bumped to replay the row animation on re-sort
+  const primary = columns[0]!.key;
+  const compare = sorts?.[sortIdx]?.compare;
+  const isBlank = (r: T) => !String(r[primary] ?? "").trim();
+  // rows still being filled in (no name yet) stay on top
+  const sortRows = (list: T[]) => (!compare ? list : [...list].sort((a, b) => Number(isBlank(b)) - Number(isBlank(a)) || compare(a, b)));
+  const orderKey = `${sortIdx}|${rows.map((r) => r.id).join(",")}`;
+  const [order, setOrder] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
+  if (order.key !== orderKey) setOrder({ key: orderKey, ids: sortRows(rows).map((r) => r.id) });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const ordered = order.key === orderKey ? order.ids.map((id) => byId.get(id)!).filter(Boolean) : sortRows(rows);
+  const fresher = sortRows(rows);
+  const stale = !!compare && ordered.some((r, i) => r.id !== fresher[i]?.id);
+  const resort = () => {
+    setOrder({ key: orderKey, ids: fresher.map((r) => r.id) });
+    setSortRun((n) => n + 1);
+  };
+
   const tabs: Filter<T>[] = filters ? [{ label: "All", test: () => true }, ...filters] : [];
   const needle = q.trim().toLowerCase();
-  const visible = rows.filter(
+  const visible = ordered.filter(
     (r) =>
       (!tabs[tab] || tabs[tab].test(r)) &&
       (!needle || columns.some((c) => c.type !== "toggle" && String(r[c.key] ?? "").toLowerCase().includes(needle))),
   );
 
   const set = (id: string, key: keyof T, v: string | boolean, type?: Column<T>["type"]) =>
-    onChange(rows.map((r) => (r.id === id ? { ...r, [key]: type === "number" ? (v === "" ? 0 : Number(v)) : v } : r)));
+    onChange(
+      rows.map((r) => {
+        if (r.id !== id) return r;
+        const next = { ...r, [key]: type === "number" ? (v === "" ? 0 : Number(v)) : v };
+        return touch ? touch(next) : next;
+      }),
+    );
 
   const add = () => {
     const row = blank();
@@ -117,7 +155,7 @@ export function ListEditor<T extends { id: string }>({
 
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="relative min-w-0 flex-1 sm:max-w-xs">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${title.toLowerCase()}`} className="bg-canvas pl-9" />
@@ -163,6 +201,42 @@ export function ListEditor<T extends { id: string }>({
                 })}
               </div>
             )}
+            {sorts && sorts.length > 1 && (
+              <div className="flex shrink-0 items-center gap-2">
+                <div className="relative">
+                  <ArrowUpDown
+                    key={sortIdx}
+                    className="animate-sort-flip pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-brand"
+                  />
+                  <Select
+                    aria-label="Sort by"
+                    value={sortIdx}
+                    onChange={(e) => {
+                      setSortIdx(Number(e.target.value));
+                      setSortRun((n) => n + 1);
+                    }}
+                    className="w-auto cursor-pointer bg-canvas pl-9 font-semibold"
+                  >
+                    {sorts.map((s, i) => (
+                      <option key={s.label} value={i}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {stale && (
+                  <button
+                    type="button"
+                    onClick={resort}
+                    className="animate-chip-in group flex h-10 items-center gap-1.5 rounded-xl border border-lime/60 bg-soft px-3 text-[12.5px] font-bold text-brand transition hover:border-lime hover:bg-lime/20"
+                    title="Your edits changed the order - tap to sort again"
+                  >
+                    <RefreshCw className="size-3.5 transition-transform duration-500 group-hover:rotate-180" />
+                    Sort again
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <span className="shrink-0 text-[13px] font-semibold text-muted">
             <span key={rows.length} className="animate-count-bump inline-block tabular-nums text-ink">
@@ -181,7 +255,7 @@ export function ListEditor<T extends { id: string }>({
           ))}
           <span />
         </div>
-        <div className="flex flex-col gap-2 p-4 md:gap-1.5">
+        <div key={sortRun} className="flex flex-col gap-2 p-4 md:gap-1.5">
           {visible.length === 0 && (
             <div className="animate-fade-up flex flex-col items-center gap-3 py-12 text-center">
               <div className="animate-empty-bob grid size-14 place-items-center rounded-2xl bg-soft text-brand">

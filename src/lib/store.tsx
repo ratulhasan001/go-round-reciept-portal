@@ -314,7 +314,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       for (const it of inv.items) {
         if (!it.description.trim() || !it.price) continue;
         if (!products.some((p) => norm(p.name) === norm(it.description)))
-          products = [...products, { id: uid(), name: it.description.trim(), price: Number(it.price), inStock: true }];
+          products = [...products, { id: uid(), name: it.description.trim(), price: Number(it.price), inStock: true, updatedAt: Date.now() }];
       }
       return { ...d, invoices, shop, customers, products };
     });
