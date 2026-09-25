@@ -404,7 +404,32 @@ input[type="number"] {
   animation: sort-flip 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+.animate-backdrop-in {
+  animation: backdrop-in 0.25s ease-out;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-modal-in {
+  animation: modal-in 0.4s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-backdrop-in,
+  .animate-modal-in,
   .animate-sort-flip,
   .animate-row-in,
   .animate-row-out,

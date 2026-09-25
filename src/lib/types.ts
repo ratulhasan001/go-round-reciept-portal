@@ -73,6 +73,7 @@ export interface Customer {
   name: string;
   phone: string;
   address: string;
+  updatedAt?: number; // ms timestamp of the last change; missing on older saved customers
 }
 
 export interface LineItem {

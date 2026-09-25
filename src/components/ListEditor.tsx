@@ -42,6 +42,7 @@ export function ListEditor<T extends { id: string }>({
   filters,
   sorts,
   touch,
+  actions,
 }: {
   title: string;
   subtitle: string;
@@ -59,6 +60,8 @@ export function ListEditor<T extends { id: string }>({
   sorts?: Sort<T>[];
   /** Applied to a row whenever it is edited, e.g. to stamp an updated time. */
   touch?: (row: T) => T;
+  /** Extra buttons shown next to "Add", e.g. Import. */
+  actions?: React.ReactNode;
 }) {
   const toast = useToast();
   const [q, setQ] = useState("");
@@ -170,9 +173,12 @@ export function ListEditor<T extends { id: string }>({
             <p className="text-sm text-muted">{subtitle}</p>
           </div>
         </div>
-        <Button variant="primary" onClick={add} className="group">
-          <Plus className="size-4 transition-transform duration-300 group-hover:rotate-90" /> Add {noun.toLowerCase()}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {actions}
+          <Button variant="primary" onClick={add} className="group">
+            <Plus className="size-4 transition-transform duration-300 group-hover:rotate-90" /> Add {noun.toLowerCase()}
+          </Button>
+        </div>
       </div>
 
       <Card className="overflow-hidden">

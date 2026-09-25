@@ -304,9 +304,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const c = inv.customer;
       if (c.name.trim()) {
         const hit = customers.find((x) => norm(x.name) === norm(c.name));
-        if (!hit) customers = [...customers, { id: uid(), name: c.name.trim(), phone: c.phone, address: c.address }];
+        if (!hit) customers = [...customers, { id: uid(), name: c.name.trim(), phone: c.phone, address: c.address, updatedAt: Date.now() }];
         else if (hit.phone !== c.phone || hit.address !== c.address)
-          customers = customers.map((x) => (x.id === hit.id ? { ...x, phone: c.phone || x.phone, address: c.address || x.address } : x));
+          customers = customers.map((x) =>
+            x.id === hit.id ? { ...x, phone: c.phone || x.phone, address: c.address || x.address, updatedAt: Date.now() } : x,
+          );
       }
 
       // remember new products automatically

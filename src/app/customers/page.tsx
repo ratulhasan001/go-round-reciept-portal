@@ -1,13 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { Users } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { uid } from "@/lib/calc";
+import { computeTotals, uid } from "@/lib/calc";
 import { initials } from "@/lib/theme";
 import type { Customer } from "@/lib/types";
 import { ListEditor } from "@/components/ListEditor";
+import { ImportCustomers } from "@/components/ImportCustomers";
 
-// friendly avatar colours, picked from the name so each customer keeps theirs
+// friendly avatar colours, picked from the initials so each customer keeps theirs
 const AVATARS = [
   "bg-lime/25 text-brand",
   "bg-aqua/20 text-aqua-deep",
@@ -18,8 +20,27 @@ const AVATARS = [
 ];
 const avatarTone = (name: string) => AVATARS[[...name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % AVATARS.length];
 
+const key = (name: string) => name.trim().toLowerCase();
+const byName = (a: Customer, b: Customer) => a.name.trim().localeCompare(b.name.trim(), undefined, { numeric: true, sensitivity: "base" });
+const updated = (c: Customer) => c.updatedAt ?? 0;
+
 export default function CustomersPage() {
-  const { customers, setCustomers } = useStore();
+  const { customers, setCustomers, invoices } = useStore();
+
+  // receipts, spend and money still owed per customer (matched by name, like receipts do)
+  const stats = useMemo(() => {
+    const m = new Map<string, { receipts: number; spent: number; due: number }>();
+    for (const inv of invoices) {
+      const k = key(inv.customer.name);
+      if (!k) continue;
+      const t = computeTotals(inv);
+      const s = m.get(k) ?? { receipts: 0, spent: 0, due: 0 };
+      m.set(k, { receipts: s.receipts + 1, spent: s.spent + t.grandTotal, due: s.due + t.due });
+    }
+    return m;
+  }, [invoices]);
+  const stat = (c: Customer) => stats.get(key(c.name)) ?? { receipts: 0, spent: 0, due: 0 };
+
   return (
     <ListEditor<Customer>
       title="Customers"
@@ -28,11 +49,35 @@ export default function CustomersPage() {
       noun="Customer"
       rows={customers}
       onChange={setCustomers}
-      blank={() => ({ id: uid(), name: "", phone: "", address: "" })}
+      blank={() => ({ id: uid(), name: "", phone: "", address: "", updatedAt: Date.now() })}
+      touch={(c) => ({ ...c, updatedAt: Date.now() })}
+      actions={
+        <ImportCustomers
+          customers={customers}
+          onImport={(plan) => {
+            const changed = new Map(plan.update.map((c) => [c.id, c]));
+            setCustomers([...plan.add, ...customers.map((c) => changed.get(c.id) ?? c)]);
+          }}
+        />
+      }
+      sorts={[
+        { label: "Recently updated", compare: (a, b) => updated(b) - updated(a) },
+        { label: "Oldest updated", compare: (a, b) => updated(a) - updated(b) },
+        { label: "Name A → Z", compare: byName },
+        { label: "Name Z → A", compare: (a, b) => byName(b, a) },
+        { label: "Most receipts", compare: (a, b) => stat(b).receipts - stat(a).receipts || byName(a, b) },
+        { label: "Top spending", compare: (a, b) => stat(b).spent - stat(a).spent || byName(a, b) },
+        { label: "Most due", compare: (a, b) => stat(b).due - stat(a).due || byName(a, b) },
+      ]}
       lead={(c) => {
         const ini = c.name.trim() ? initials(c.name) : "?";
+        const s = stat(c);
         return (
-          <span key={ini} className={`animate-lead-pop grid size-9 place-items-center rounded-full text-[12px] font-extrabold ${avatarTone(ini)}`}>
+          <span
+            key={ini}
+            title={`${s.receipts} receipt${s.receipts === 1 ? "" : "s"} · ৳ ${Math.round(s.spent).toLocaleString("en-IN")} spent${s.due > 0 ? ` · ৳ ${Math.round(s.due).toLocaleString("en-IN")} due` : ""}`}
+            className={`animate-lead-pop grid size-9 place-items-center rounded-full text-[12px] font-extrabold ${avatarTone(ini)}`}
+          >
             {ini}
           </span>
         );
