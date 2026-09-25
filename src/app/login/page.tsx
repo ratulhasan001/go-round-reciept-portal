@@ -5,7 +5,17 @@ import { Delete, LockKeyhole, LockKeyholeOpen } from "lucide-react";
 import { WAVE_BACK, WAVE_FRONT } from "@/lib/theme";
 
 const PIN_LENGTH = 4;
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"] as const;
+const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+
+/** Keypad layout: 10 digits in random order, with Clear and Delete in the bottom corners. */
+const shuffledKeys = () => {
+  const d = [...DIGITS];
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = crypto.getRandomValues(new Uint32Array(1))[0]! % (i + 1);
+    [d[i], d[j]] = [d[j]!, d[i]!];
+  }
+  return [...d.slice(0, 9), "", d[9]!, "del"];
+};
 
 type Status = "idle" | "checking" | "error" | "success";
 
@@ -15,6 +25,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [peek, setPeek] = useState(-1); // index of the digit briefly shown before it turns into a dot
   const [pressed, setPressed] = useState<string | null>(null);
+  const [keys, setKeys] = useState<string[] | null>(null); // shuffled on the client only, so SSR and hydration agree
   const peekTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const locked = status === "checking" || status === "success";
@@ -90,6 +101,9 @@ export default function LoginPage() {
   }, [press]);
 
   useEffect(() => () => clearTimeout(peekTimer.current), []);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- random layout must be created after hydration
+  useEffect(() => setKeys(shuffledKeys()), []);
 
   const Lock = status === "success" ? LockKeyholeOpen : LockKeyhole;
 
@@ -174,14 +188,15 @@ export default function LoginPage() {
 
         {/* keypad */}
         <div className="mt-1 grid grid-cols-3 gap-3">
-          {KEYS.map((key, i) =>
+          {!keys && Array.from({ length: 12 }, (_, i) => <div key={i} className="h-14" />)}
+          {keys?.map((key, i) =>
             key === "" ? (
               <button
                 key={i}
                 type="button"
                 onClick={() => press("clear")}
                 disabled={locked || !pin}
-                className="h-14 rounded-2xl text-[12px] font-bold uppercase tracking-widest text-white/45 transition hover:text-white disabled:opacity-0"
+                className="animate-key-in h-14 rounded-2xl text-[12px] font-bold uppercase tracking-widest text-white/45 transition hover:text-white disabled:opacity-0"
               >
                 Clear
               </button>
@@ -192,7 +207,8 @@ export default function LoginPage() {
                 onClick={() => press(key)}
                 disabled={locked}
                 aria-label={key === "del" ? "Delete last digit" : key}
-                className={`relative grid h-14 place-items-center overflow-hidden rounded-2xl font-display text-2xl font-bold transition duration-150 active:scale-90 disabled:opacity-40 ${
+                style={{ animationDelay: `${i * 35}ms` }}
+                className={`animate-key-in relative grid h-14 place-items-center overflow-hidden rounded-2xl font-display text-2xl font-bold transition duration-150 active:scale-90 disabled:opacity-40 ${
                   key === "del"
                     ? "text-white/60 hover:text-white"
                     : "border border-white/10 bg-white/[0.07] hover:border-lime/40 hover:bg-white/[0.12]"
