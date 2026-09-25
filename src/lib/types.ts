@@ -76,6 +76,21 @@ export interface Customer {
   updatedAt?: number; // ms timestamp of the last change; missing on older saved customers
 }
 
+/** A coupon from the coupon sheet. The offer comes from the code's ending (a = 1% … e = 5%, fd = free delivery). */
+export interface CouponCode {
+  id: string;
+  code: string; // e.g. GR41-87-44-79a
+  pct: number; // percent off (0 for free delivery)
+  freeDelivery: boolean;
+  name: string; // customer it was given to ("" = not given yet)
+  phone: string;
+  validFrom: string; // yyyy-mm-dd, "" = no start
+  validTo: string; // yyyy-mm-dd, "" = never expires
+  usedOn: string; // yyyy-mm-dd, "" = not used yet
+  usedInvoice?: string; // receipt number it was used on
+  updatedAt?: number;
+}
+
 export interface LineItem {
   id: string;
   description: string;

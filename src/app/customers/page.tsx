@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
-import { Users } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
+import { CopyX, RefreshCw, UserPlus, UserX, Users } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { computeTotals, uid } from "@/lib/calc";
 import { initials } from "@/lib/theme";
 import type { Customer } from "@/lib/types";
 import { ListEditor } from "@/components/ListEditor";
-import { ImportCustomers } from "@/components/ImportCustomers";
+import { ImportDialog } from "@/components/ImportDialog";
+import { SAMPLE_CSV, planImport, readCustomerFile } from "@/lib/customerImport";
 
 // friendly avatar colours, picked from the initials so each customer keeps theirs
 const AVATARS = [
@@ -26,6 +27,10 @@ const updated = (c: Customer) => c.updatedAt ?? 0;
 
 export default function CustomersPage() {
   const { customers, setCustomers, invoices } = useStore();
+  const latest = useRef(customers);
+  useEffect(() => {
+    latest.current = customers;
+  });
 
   // receipts, spend and money still owed per customer (matched by name, like receipts do)
   const stats = useMemo(() => {
@@ -52,11 +57,33 @@ export default function CustomersPage() {
       blank={() => ({ id: uid(), name: "", phone: "", address: "", updatedAt: Date.now() })}
       touch={(c) => ({ ...c, updatedAt: Date.now() })}
       actions={
-        <ImportCustomers
-          customers={customers}
-          onImport={(plan) => {
-            const changed = new Map(plan.update.map((c) => [c.id, c]));
-            setCustomers([...plan.add, ...customers.map((c) => changed.get(c.id) ?? c)]);
+        <ImportDialog
+          title="Import customers"
+          hint="From Excel (.xlsx) or CSV - duplicates are skipped."
+          columns={["Recipient Name", "Recipient Phone", "Recipient Address"]}
+          notes="Same phone number = same customer. Phones like +8801… or 1743… are tidied to 01XXXXXXXXX. A match only fills in a missing phone or address."
+          sample={{ name: "customers-sample.csv", csv: SAMPLE_CSV }}
+          noun={["customer", "customers"]}
+          read={async (file) => {
+            const plan = planImport(latest.current, await readCustomerFile(file));
+            return {
+              total: plan.total,
+              changes: plan.add.length + plan.update.length,
+              stats: [
+                { label: "New", value: plan.add.length, icon: <UserPlus className="size-4" />, tone: "bg-soft text-brand" },
+                { label: "Details filled in", value: plan.update.length, icon: <RefreshCw className="size-4" />, tone: "bg-aqua-soft text-aqua-deep" },
+                { label: "Duplicates skipped", value: plan.duplicates, icon: <CopyX className="size-4" />, tone: "bg-amber-50 text-amber-700" },
+                { label: "No name, skipped", value: plan.invalid, icon: <UserX className="size-4" />, tone: "bg-red-50 text-red-600" },
+              ],
+              listTitle: "New customers",
+              list: plan.add.map((c) => ({ id: c.id, primary: c.name, secondary: c.phone })),
+              apply: () => {
+                const changed = new Map(plan.update.map((c) => [c.id, c]));
+                setCustomers([...plan.add, ...latest.current.map((c) => changed.get(c.id) ?? c)]);
+                const parts = [plan.add.length && `${plan.add.length} added`, plan.update.length && `${plan.update.length} updated`].filter(Boolean);
+                return `Customers ${parts.join(", ")}`;
+              },
+            };
           }}
         />
       }

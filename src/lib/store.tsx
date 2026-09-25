@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import type { Customer, Invoice, Product, Shop } from "./types";
+import type { CouponCode, Customer, Invoice, Product, Shop } from "./types";
 import { DEFAULT_SHOP, SEED_CUSTOMERS, SEED_INVOICES, SEED_PRODUCTS } from "./seed";
 import { uid } from "./calc";
 
@@ -14,6 +14,7 @@ interface Data {
   shop: Shop;
   products: Product[];
   customers: Customer[];
+  coupons: CouponCode[];
   invoices: Invoice[];
 }
 
@@ -29,6 +30,7 @@ interface Store extends Data {
   setShop: (s: Shop) => void;
   setProducts: (p: Product[]) => void;
   setCustomers: (c: Customer[]) => void;
+  setCoupons: (c: CouponCode[]) => void;
   saveInvoice: (inv: Invoice) => Invoice;
   deleteInvoice: (id: string) => void;
   nextInvoiceNumber: () => string;
@@ -42,12 +44,30 @@ const seed = (): Data => ({
   shop: DEFAULT_SHOP,
   products: SEED_PRODUCTS,
   customers: SEED_CUSTOMERS,
+  coupons: [],
   invoices: SEED_INVOICES,
 });
 
 const Ctx = createContext<Store | null>(null);
 
 const norm = (s: string) => s.trim().toLowerCase();
+
+/**
+ * Keeps the coupon sheet in step with a receipt: its coupon code gets marked as used by it, and a coupon it
+ * no longer uses (code changed / receipt deleted) is released. A coupon used by another receipt is left alone.
+ */
+function linkCoupon(coupons: CouponCode[], inv: Invoice, deleted = false): CouponCode[] {
+  const code = deleted ? "" : norm(inv.coupon?.code ?? "");
+  return coupons.map((c) => {
+    const mine = c.usedInvoice === inv.number;
+    if (code && norm(c.code) === code) {
+      if (!c.usedOn) return { ...c, usedOn: inv.date, usedInvoice: inv.number, updatedAt: Date.now() };
+      if (mine && c.usedOn !== inv.date) return { ...c, usedOn: inv.date, updatedAt: Date.now() };
+      return c;
+    }
+    return mine ? { ...c, usedOn: "", usedInvoice: undefined, updatedAt: Date.now() } : c;
+  });
+}
 
 const withDefaults = (shop?: Partial<Shop> | null): Shop => ({
   ...DEFAULT_SHOP,
@@ -60,7 +80,7 @@ const withDefaults = (shop?: Partial<Shop> | null): Shop => ({
 
 // ---------- document diffing (what changed since the last sync) ----------
 
-type Kind = "shop" | "product" | "customer" | "invoice";
+type Kind = "shop" | "product" | "customer" | "coupon" | "invoice";
 interface Change {
   kind: Kind;
   id: string;
@@ -69,6 +89,7 @@ interface Change {
 const LISTS: [Kind, keyof Omit<Data, "shop">][] = [
   ["product", "products"],
   ["customer", "customers"],
+  ["coupon", "coupons"],
   ["invoice", "invoices"],
 ];
 
@@ -89,7 +110,7 @@ function diff(prev: Data, next: Data): Change[] {
 }
 
 function applyChanges(d: Data, changes: Change[]): Data {
-  const next: Data = { ...d, products: [...d.products], customers: [...d.customers], invoices: [...d.invoices] };
+  const next: Data = { ...d, products: [...d.products], customers: [...d.customers], coupons: [...d.coupons], invoices: [...d.invoices] };
   for (const c of changes) {
     if (c.kind === "shop") {
       if (c.data) next.shop = withDefaults(c.data as Shop);
@@ -199,6 +220,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       shop: withDefaults(body.shop),
       products: body.products ?? [],
       customers: body.customers ?? [],
+      coupons: body.coupons ?? [],
       invoices: body.invoices ?? [],
     };
     const pending: Change[] = [];
@@ -214,7 +236,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         for (const [k, c] of docs(localData)) if (!have.has(k) || (k === "shop:shop" && !body.shop)) pending.push(c);
       } else if (serverEmpty) {
         // brand-new shop: start with the default settings and product list
-        pending.push(...docs({ shop: DEFAULT_SHOP, products: SEED_PRODUCTS, customers: [], invoices: [] }).values());
+        pending.push(...docs({ shop: DEFAULT_SHOP, products: SEED_PRODUCTS, customers: [], coupons: [], invoices: [] }).values());
       }
       merged = applyChanges(server, pending);
       localStorage.setItem(MIGRATED, "1");
@@ -318,7 +340,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (!products.some((p) => norm(p.name) === norm(it.description)))
           products = [...products, { id: uid(), name: it.description.trim(), price: Number(it.price), inStock: true, updatedAt: Date.now() }];
       }
-      return { ...d, invoices, shop, customers, products };
+      return { ...d, invoices, shop, customers, products, coupons: linkCoupon(d.coupons, saved) };
     });
     return saved;
   }, []);
@@ -340,8 +362,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setShop: (shop) => setData((d) => ({ ...d, shop })),
       setProducts: (products) => setData((d) => ({ ...d, products })),
       setCustomers: (customers) => setData((d) => ({ ...d, customers })),
+      setCoupons: (coupons) => setData((d) => ({ ...d, coupons })),
       saveInvoice,
-      deleteInvoice: (id) => setData((d) => ({ ...d, invoices: d.invoices.filter((i) => i.id !== id) })),
+      deleteInvoice: (id) =>
+        setData((d) => {
+          const inv = d.invoices.find((i) => i.id === id);
+          return { ...d, invoices: d.invoices.filter((i) => i.id !== id), coupons: inv ? linkCoupon(d.coupons, inv, true) : d.coupons };
+        }),
       nextInvoiceNumber,
       exportBackup: () => JSON.stringify({ app: "go-round-receipts", version: 1, ...data }, null, 2),
       importBackup: (json) => {
@@ -351,6 +378,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           shop: withDefaults(parsed.shop),
           products: parsed.products ?? [],
           customers: parsed.customers ?? [],
+          coupons: parsed.coupons ?? [],
           invoices: parsed.invoices,
         });
       },

@@ -2,6 +2,7 @@
 
 import type { Customer } from "./types";
 import { uid } from "./calc";
+import { readSheet } from "./sheet";
 
 export interface ImportRow {
   name: string;
@@ -31,70 +32,9 @@ export function normPhone(raw: string) {
 }
 const phoneKey = (p: string) => normPhone(p).replace(/\D/g, "");
 
-// ---------- reading files ----------
-
-function detectDelimiter(firstLine: string) {
-  const counts = [",", ";", "\t"].map((d) => [d, firstLine.split(d).length] as const);
-  return counts.sort((a, b) => b[1] - a[1])[0]![0];
-}
-
-/** Small RFC 4180 CSV parser: quoted fields, "" escapes, commas / newlines inside quotes. */
-function parseCsv(text: string): string[][] {
-  text = text.replace(/^﻿/, "");
-  const delim = detectDelimiter(text.split(/\r?\n/, 1)[0] ?? "");
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let quoted = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]!;
-    if (quoted) {
-      if (ch === '"' && text[i + 1] === '"') {
-        field += '"';
-        i++;
-      } else if (ch === '"') quoted = false;
-      else field += ch;
-    } else if (ch === '"') quoted = true;
-    else if (ch === delim) {
-      row.push(field);
-      field = "";
-    } else if (ch === "\n" || ch === "\r") {
-      if (ch === "\r" && text[i + 1] === "\n") i++;
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-    } else field += ch;
-  }
-  if (field || row.length) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows;
-}
-
-async function parseXlsx(file: File): Promise<string[][]> {
-  const ExcelJS = (await import("exceljs")).default;
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(await file.arrayBuffer());
-  const ws = wb.worksheets.find((w) => w.actualRowCount > 0);
-  if (!ws) return [];
-  const rows: string[][] = [];
-  ws.eachRow({ includeEmpty: false }, (r) => {
-    const out: string[] = [];
-    for (let c = 1; c <= ws.columnCount; c++) out.push(r.getCell(c).text ?? "");
-    rows.push(out);
-  });
-  return rows;
-}
-
 /** Reads a .csv or .xlsx file into customer rows, finding the columns by their headings. */
 export async function readCustomerFile(file: File): Promise<ImportRow[]> {
-  const ext = file.name.toLowerCase().split(".").pop();
-  if (ext === "xls") throw new Error("Old .xls files aren't supported - open it in Excel and save as .xlsx or .csv.");
-  if (ext !== "csv" && ext !== "xlsx") throw new Error("Please choose a .xlsx or .csv file.");
-  const grid = (ext === "csv" ? parseCsv(await file.text()) : await parseXlsx(file)).filter((r) => r.some((c) => clean(c)));
-  if (!grid.length) throw new Error("The file is empty.");
+  const grid = await readSheet(file);
 
   // header row: the first row (of the top 10) that mentions a name column
   const headerIdx = grid.slice(0, 10).findIndex((r) => r.some((c) => /name/i.test(c)));

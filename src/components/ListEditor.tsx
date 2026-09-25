@@ -7,13 +7,15 @@ import { Button, Card, Input, Select, cx, useToast } from "./ui";
 export interface Column<T> {
   key: keyof T & string;
   label: string;
-  type?: "text" | "number" | "tel" | "toggle";
+  type?: "text" | "number" | "tel" | "toggle" | "custom";
   placeholder?: string;
   width: string; // grid track
   align?: "right";
   /** Labels for a "toggle" column. A missing value counts as on. */
   on?: string;
   off?: string;
+  /** Cell content for a "custom" column; `update` merges changes into the row. */
+  render?: (row: T, update: (patch: Partial<T>) => void) => React.ReactNode;
 }
 
 export interface Filter<T> {
@@ -28,7 +30,26 @@ export interface Sort<T> {
 
 const ROW_OUT_MS = 280;
 
-/** Inline-editable list used for Products and Customers. Changes save instantly. */
+// Screen width from which rows are laid out as a table (below it each row is a card).
+// Written out in full so Tailwind sees every class.
+const LAYOUT = {
+  md: {
+    head: "md:grid",
+    list: "md:gap-1.5",
+    row: "md:border-transparent md:p-1 md:-mx-1 md:[grid-template-columns:var(--g)] md:hover:bg-canvas",
+    label: "md:hidden",
+    lead: "md:grid",
+  },
+  "2xl": {
+    head: "2xl:grid",
+    list: "2xl:gap-1.5",
+    row: "sm:grid-cols-2 lg:grid-cols-3 2xl:border-transparent 2xl:p-1 2xl:-mx-1 2xl:[grid-template-columns:var(--g)] 2xl:hover:bg-canvas",
+    label: "2xl:hidden",
+    lead: "2xl:grid",
+  },
+} as const;
+
+/** Inline-editable list used for Products, Customers and Coupons. Changes save instantly. */
 export function ListEditor<T extends { id: string }>({
   title,
   subtitle,
@@ -43,6 +64,7 @@ export function ListEditor<T extends { id: string }>({
   sorts,
   touch,
   actions,
+  tableFrom = "md",
 }: {
   title: string;
   subtitle: string;
@@ -62,7 +84,10 @@ export function ListEditor<T extends { id: string }>({
   touch?: (row: T) => T;
   /** Extra buttons shown next to "Add", e.g. Import. */
   actions?: React.ReactNode;
+  /** When rows switch from cards to a table; use "2xl" for lists with many columns. */
+  tableFrom?: keyof typeof LAYOUT;
 }) {
+  const L = LAYOUT[tableFrom];
   const toast = useToast();
   const [q, setQ] = useState("");
   const [confirm, setConfirm] = useState<string | null>(null);
@@ -126,14 +151,16 @@ export function ListEditor<T extends { id: string }>({
       (!needle || columns.some((c) => c.type !== "toggle" && String(r[c.key] ?? "").toLowerCase().includes(needle))),
   );
 
-  const set = (id: string, key: keyof T, v: string | boolean, type?: Column<T>["type"]) =>
+  const patch = (id: string, changes: Partial<T>) =>
     onChange(
       rows.map((r) => {
         if (r.id !== id) return r;
-        const next = { ...r, [key]: type === "number" ? (v === "" ? 0 : Number(v)) : v };
+        const next = { ...r, ...changes };
         return touch ? touch(next) : next;
       }),
     );
+  const set = (id: string, key: keyof T, v: string | boolean, type?: Column<T>["type"]) =>
+    patch(id, { [key]: type === "number" ? (v === "" ? 0 : Number(v)) : v } as Partial<T>);
 
   const add = () => {
     const row = blank();
@@ -189,10 +216,11 @@ export function ListEditor<T extends { id: string }>({
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${title.toLowerCase()}`} className="bg-canvas pl-9" />
             </div>
             {tabs.length > 0 && (
+              <div className="-mx-4 shrink-0 overflow-x-auto px-4 sm:mx-0 sm:px-0">
               <div
                 role="tablist"
                 aria-label={`Filter ${title.toLowerCase()}`}
-                className="relative grid h-10 shrink-0 rounded-xl bg-canvas p-1"
+                className="relative grid h-10 w-max min-w-full rounded-xl bg-canvas p-1 sm:min-w-0"
                 style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
               >
                 {/* sliding highlight */}
@@ -227,6 +255,7 @@ export function ListEditor<T extends { id: string }>({
                     </button>
                   );
                 })}
+              </div>
               </div>
             )}
             {sorts && sorts.length > 1 && (
@@ -263,7 +292,7 @@ export function ListEditor<T extends { id: string }>({
           </span>
         </div>
 
-        <div className="hidden gap-3 px-4 pt-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted md:grid" style={{ gridTemplateColumns: grid }}>
+        <div className={cx("hidden gap-3 px-4 pt-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted", L.head)} style={{ gridTemplateColumns: grid }}>
           {lead && <span />}
           {columns.map((c) => (
             <span key={c.key} className={cx(c.align === "right" && "text-right")}>
@@ -272,7 +301,7 @@ export function ListEditor<T extends { id: string }>({
           ))}
           <span />
         </div>
-        <div ref={listRef} className="relative flex flex-col gap-2 p-4 md:gap-1.5">
+        <div ref={listRef} className={cx("relative flex flex-col gap-2 p-4", L.list)}>
           {visible.length === 0 && (
             <div className="animate-fade-up flex flex-col items-center gap-3 py-12 text-center">
               <div className="animate-empty-bob grid size-14 place-items-center rounded-2xl bg-soft text-brand">
@@ -293,17 +322,20 @@ export function ListEditor<T extends { id: string }>({
                 onFocus={onRowFocus}
                 onBlur={onRowBlur}
                 className={cx(
-                  "grid gap-2 rounded-xl border border-line p-3 transition-colors md:border-transparent md:p-1 md:-mx-1 md:[grid-template-columns:var(--g)] md:hover:bg-canvas",
+                  "grid gap-2 rounded-xl border border-line p-3 transition-colors",
+                  L.row,
                   isLeaving ? "animate-row-out pointer-events-none" : "animate-row-in",
                   fresh === r.id && "animate-row-fresh",
                 )}
                 style={{ "--g": grid, animationDelay: isLeaving || fresh === r.id ? undefined : `${Math.min(i, 12) * 35}ms` } as React.CSSProperties}
               >
-                {lead && <div className="hidden place-items-center md:grid">{lead(r)}</div>}
+                {lead && <div className={cx("hidden place-items-center", L.lead)}>{lead(r)}</div>}
                 {columns.map((c) => (
                   <div key={c.key}>
-                    <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted md:hidden">{c.label}</span>
-                    {c.type === "toggle" ? (
+                    <span className={cx("mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted", L.label)}>{c.label}</span>
+                    {c.type === "custom" ? (
+                      c.render?.(r, (changes) => patch(r.id, changes))
+                    ) : c.type === "toggle" ? (
                       <Toggle on={r[c.key] !== false} onLabel={c.on ?? "On"} offLabel={c.off ?? "Off"} onChange={(v) => set(r.id, c.key, v, c.type)} />
                     ) : (
                       <Input

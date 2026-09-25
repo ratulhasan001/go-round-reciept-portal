@@ -4,17 +4,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowLeft, BadgePercent, Banknote, CheckCheck, Download, Eye, FileSpreadsheet, FileText, MessageCircle, Minus, NotebookPen, Plus,
+  AlertTriangle, ArrowLeft, BadgeCheck, BadgePercent, Banknote, CheckCheck, CircleHelp, Download, Eye, FileSpreadsheet, FileText, MessageCircle, Minus, NotebookPen, Plus,
   Printer, PlusCircle, Receipt, Save, Share2, ShoppingBag, TicketPercent, Trash2, Truck, UserRound, Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
 import type { Coupon, Extras, Invoice, LineItem, ManualCharge, Payment } from "@/lib/types";
 import { COURIERS, PAYMENT_METHODS } from "@/lib/types";
-import { bdt, computeTotals, lineAmount, money, pct, todayISO, uid } from "@/lib/calc";
+import { bdt, computeTotals, fmtDate, lineAmount, money, pct, todayISO, uid } from "@/lib/calc";
 import { canShareFiles, downloadExcel, downloadPdf, printPdf, sharePdf, whatsappUrl } from "@/lib/download";
 import { Button, Card, Chip, Field, Input, Label, SectionTitle, Select, StatusBadge, Switch, Textarea, cx, useClientValue, useToast } from "./ui";
 import { Combobox } from "./Combobox";
+import { couponProblem, normCode, offerLabel } from "@/lib/coupons";
 import ReceiptPreview from "./ReceiptPreview";
 
 const blankItem = (): LineItem => ({ id: uid(), description: "", price: 0, qty: 1 });
@@ -85,7 +86,7 @@ function EditorForm({
   onFirstSave: (id: string) => void;
 }) {
   const store = useStore();
-  const { shop, products, customers, invoices } = store;
+  const { shop, products, customers, invoices, coupons } = store;
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState<Job>("");
@@ -166,6 +167,9 @@ function EditorForm({
   };
   const setEx = (patch: Partial<Extras>) => update({ extras: { ...ex, ...patch } });
   const cp: Coupon = inv.coupon ?? { code: "", pct: 0, amount: 0 };
+  // the typed code's entry in the coupon sheet, and why it can't be used (if so)
+  const sheetCoupon = cp.code.trim() ? coupons.find((c) => normCode(c.code) === normCode(cp.code)) : undefined;
+  const sheetProblem = sheetCoupon ? couponProblem(sheetCoupon, inv.number, inv.customer, inv.date) : "";
   const setManual = (id: string, patch: Partial<ManualCharge>) => setEx({ manual: ex.manual.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
   const rateHint = (r: number) => (r > 0 ? `+${pct(r)}` : "No charge");
 
@@ -466,8 +470,39 @@ function EditorForm({
                   aria-label="Coupon code"
                   className="mb-2 uppercase placeholder:normal-case"
                   value={cp.code}
-                  onChange={(e) => update({ coupon: { ...cp, code: e.target.value } })}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    const hit = code.trim() ? coupons.find((c) => normCode(c.code) === normCode(code)) : undefined;
+                    // a code from the coupon sheet brings its offer with it
+                    update({ coupon: hit ? { ...cp, code, pct: hit.pct, freeDelivery: hit.freeDelivery } : { ...cp, code } });
+                  }}
                 />
+                {cp.code.trim() && coupons.length > 0 && (
+                  <div
+                    key={sheetCoupon ? sheetCoupon.id + sheetProblem : "none"}
+                    className={cx(
+                      "animate-label-swap -mt-1 mb-2 flex items-center gap-1.5 text-[12px] font-semibold",
+                      !sheetCoupon ? "text-muted" : sheetProblem ? "text-red-600" : "text-brand",
+                    )}
+                    role="status"
+                  >
+                    {!sheetCoupon ? (
+                      <>
+                        <CircleHelp className="size-3.5 shrink-0" /> Not in the coupon sheet
+                      </>
+                    ) : sheetProblem ? (
+                      <>
+                        <AlertTriangle className="size-3.5 shrink-0" /> {sheetProblem}
+                      </>
+                    ) : (
+                      <>
+                        <BadgeCheck className="size-3.5 shrink-0" /> {offerLabel(sheetCoupon)}
+                        {sheetCoupon.validTo ? ` · valid till ${fmtDate(sheetCoupon.validTo)}` : ""}
+                        {sheetCoupon.name.trim() ? ` · ${sheetCoupon.name.trim()}` : ""}
+                      </>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <SuffixInput suffix="%" label="Coupon percent" value={cp.pct} onChange={(v) => update({ coupon: { ...cp, pct: Math.min(100, v) } })} />
                   <SuffixInput suffix="BDT" label="Coupon amount" value={cp.amount} onChange={(v) => update({ coupon: { ...cp, amount: v } })} />

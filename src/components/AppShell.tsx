@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, FilePlus2, Package, Users, Settings, LogOut } from "lucide-react";
+import { LayoutGrid, FilePlus2, Package, Users, TicketPercent, Settings, LogOut } from "lucide-react";
 import type { Mode, SyncState } from "@/lib/store";
 import { useStore } from "@/lib/store";
 import { initials } from "@/lib/theme";
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/new", label: "New receipt", icon: FilePlus2 },
   { href: "/products", label: "Products", icon: Package },
   { href: "/customers", label: "Customers", icon: Users },
+  { href: "/coupons", label: "Coupons", icon: TicketPercent },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -90,12 +91,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <main className="mx-auto w-full max-w-[1500px] px-4 pb-28 pt-5 sm:px-6 lg:px-10 lg:pb-12 lg:pt-8">{children}</main>
 
       {/* mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         {NAV.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
-            className={cx("flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold", active(href) ? "text-brand" : "text-muted")}
+            className={cx("flex min-w-0 flex-col items-center gap-1 truncate px-0.5 py-2.5 text-[10.5px] font-semibold", active(href) ? "text-brand" : "text-muted")}
           >
             {href === "/new" ? (
               <span className="-my-1 grid h-8 w-12 place-items-center rounded-xl bg-brand text-white shadow-md shadow-brand/30">

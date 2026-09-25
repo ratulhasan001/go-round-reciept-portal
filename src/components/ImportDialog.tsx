@@ -2,21 +2,44 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CopyX, Download, FileSpreadsheet, FileUp, Loader2, RefreshCw, UserPlus, UserX, X } from "lucide-react";
-import type { Customer } from "@/lib/types";
-import { SAMPLE_CSV, planImport, readCustomerFile, type ImportPlan } from "@/lib/customerImport";
+import { Download, FileSpreadsheet, FileUp, Loader2, X } from "lucide-react";
 import { saveBlob } from "@/lib/download";
 import { Button, cx, useToast } from "./ui";
 
-/** "Import" button + dialog that adds customers from an Excel / CSV file, skipping duplicates. */
-export function ImportCustomers({ customers, onImport }: { customers: Customer[]; onImport: (plan: ImportPlan) => void }) {
+export interface ImportPreview {
+  total: number; // data rows read from the file
+  changes: number; // records that will be added or updated
+  stats: { label: string; value: number; icon: React.ReactNode; tone: string }[];
+  listTitle: string;
+  list: { id: string; primary: string; secondary: string }[];
+  apply: () => string; // saves the changes and returns the toast message
+}
+
+/** "Import" button + dialog: pick an Excel / CSV file, preview what will change, then confirm. */
+export function ImportDialog({
+  title,
+  hint,
+  columns,
+  notes,
+  sample,
+  noun,
+  read,
+}: {
+  title: string;
+  hint: string;
+  columns: string[];
+  notes: string;
+  sample: { name: string; csv: string };
+  noun: [string, string]; // singular, plural
+  read: (file: File) => Promise<ImportPreview>;
+}) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [drag, setDrag] = useState(false);
   const [error, setError] = useState("");
   const [file, setFile] = useState("");
-  const [plan, setPlan] = useState<ImportPlan | null>(null);
+  const [plan, setPlan] = useState<ImportPreview | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   const close = () => {
@@ -40,8 +63,7 @@ export function ImportCustomers({ customers, onImport }: { customers: Customer[]
     setPlan(null);
     setFile(f.name);
     try {
-      const rows = await readCustomerFile(f);
-      setPlan(planImport(customers, rows));
+      setPlan(await read(f));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't read this file.");
     }
@@ -51,13 +73,9 @@ export function ImportCustomers({ customers, onImport }: { customers: Customer[]
 
   const confirm = () => {
     if (!plan) return;
-    onImport(plan);
-    const parts = [plan.add.length && `${plan.add.length} added`, plan.update.length && `${plan.update.length} updated`].filter(Boolean);
-    toast(parts.length ? `Customers ${parts.join(", ")}` : "Nothing new to import");
+    toast(plan.apply());
     close();
   };
-
-  const changes = plan ? plan.add.length + plan.update.length : 0;
 
   return (
     <>
@@ -79,9 +97,9 @@ export function ImportCustomers({ customers, onImport }: { customers: Customer[]
                   </div>
                   <div>
                     <h2 id="import-title" className="font-display text-lg font-extrabold">
-                      Import customers
+                      {title}
                     </h2>
-                    <p className="text-[13px] text-muted">From Excel (.xlsx) or CSV - duplicates are skipped.</p>
+                    <p className="text-[13px] text-muted">{hint}</p>
                   </div>
                 </div>
                 <button onClick={close} className="grid size-9 place-items-center rounded-xl text-muted transition hover:rotate-90 hover:bg-canvas hover:text-ink" aria-label="Close">
@@ -111,7 +129,12 @@ export function ImportCustomers({ customers, onImport }: { customers: Customer[]
                         drag ? "scale-[1.02] border-lime bg-soft" : "border-line bg-canvas hover:border-lime/70 hover:bg-soft/60",
                       )}
                     >
-                      <span className={cx("grid size-14 place-items-center rounded-2xl bg-white text-brand shadow-sm transition-transform duration-300", drag ? "animate-empty-bob scale-110" : "group-hover:-translate-y-1")}>
+                      <span
+                        className={cx(
+                          "grid size-14 place-items-center rounded-2xl bg-white text-brand shadow-sm transition-transform duration-300",
+                          drag ? "animate-empty-bob scale-110" : "group-hover:-translate-y-1",
+                        )}
+                      >
                         {busy ? <Loader2 className="size-6 animate-spin" /> : <FileUp className="size-6" />}
                       </span>
                       <span className="font-semibold text-ink">{busy ? `Reading ${file}…` : drag ? "Drop it!" : "Drop your file here, or click to browse"}</span>
@@ -127,18 +150,16 @@ export function ImportCustomers({ customers, onImport }: { customers: Customer[]
                     <div className="mt-5 rounded-2xl border border-line p-4">
                       <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-muted">Expected columns</div>
                       <div className="flex flex-wrap gap-2">
-                        {["Recipient Name", "Recipient Phone", "Recipient Address"].map((c, i) => (
+                        {columns.map((c, i) => (
                           <span key={c} className="animate-row-in rounded-lg bg-canvas px-2.5 py-1 text-[12.5px] font-semibold text-ink" style={{ animationDelay: `${i * 70}ms` }}>
                             {c}
                           </span>
                         ))}
                       </div>
-                      <p className="mt-2.5 text-[12.5px] text-muted">
-                        Same phone number = same customer. Phones like +8801… or 1743… are tidied to 01XXXXXXXXX. A match only fills in a missing phone or address.
-                      </p>
+                      <p className="mt-2.5 text-[12.5px] text-muted">{notes}</p>
                       <button
                         type="button"
-                        onClick={() => saveBlob(new Blob([SAMPLE_CSV], { type: "text/csv" }), "customers-sample.csv")}
+                        onClick={() => saveBlob(new Blob([sample.csv], { type: "text/csv" }), sample.name)}
                         className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-bold text-brand hover:underline"
                       >
                         <Download className="size-3.5" /> Download sample file
@@ -154,23 +175,22 @@ export function ImportCustomers({ customers, onImport }: { customers: Customer[]
                       <span className="truncate font-semibold text-ink">{file}</span>· {plan.total} rows
                     </div>
                     <div className="grid grid-cols-2 gap-2.5">
-                      <Stat i={0} icon={<UserPlus className="size-4" />} label="New" value={plan.add.length} tone="bg-soft text-brand" />
-                      <Stat i={1} icon={<RefreshCw className="size-4" />} label="Details filled in" value={plan.update.length} tone="bg-aqua-soft text-aqua-deep" />
-                      <Stat i={2} icon={<CopyX className="size-4" />} label="Duplicates skipped" value={plan.duplicates} tone="bg-amber-50 text-amber-700" />
-                      <Stat i={3} icon={<UserX className="size-4" />} label="No name, skipped" value={plan.invalid} tone="bg-red-50 text-red-600" />
+                      {plan.stats.map((s, i) => (
+                        <Stat key={s.label} i={i} {...s} />
+                      ))}
                     </div>
 
-                    {plan.add.length > 0 && (
+                    {plan.list.length > 0 && (
                       <div className="mt-4">
-                        <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-muted">New customers</div>
+                        <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{plan.listTitle}</div>
                         <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
-                          {plan.add.slice(0, 6).map((c, i) => (
+                          {plan.list.slice(0, 6).map((c, i) => (
                             <li key={c.id} className="animate-row-in flex items-center gap-3 px-3 py-2.5" style={{ animationDelay: `${200 + i * 60}ms` }}>
-                              <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{c.name}</span>
-                              <span className="shrink-0 text-[12.5px] tabular-nums text-muted">{c.phone || "—"}</span>
+                              <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{c.primary}</span>
+                              <span className="shrink-0 text-[12.5px] tabular-nums text-muted">{c.secondary || "—"}</span>
                             </li>
                           ))}
-                          {plan.add.length > 6 && <li className="px-3 py-2 text-center text-[12.5px] font-semibold text-muted">+ {plan.add.length - 6} more</li>}
+                          {plan.list.length > 6 && <li className="px-3 py-2 text-center text-[12.5px] font-semibold text-muted">+ {plan.list.length - 6} more</li>}
                         </ul>
                       </div>
                     )}
@@ -183,8 +203,8 @@ export function ImportCustomers({ customers, onImport }: { customers: Customer[]
                   <Button variant="ghost" onClick={() => setPlan(null)}>
                     Choose another file
                   </Button>
-                  <Button variant="primary" onClick={confirm} disabled={!changes}>
-                    {changes ? `Import ${changes} customer${changes === 1 ? "" : "s"}` : "Nothing new"}
+                  <Button variant="primary" onClick={confirm} disabled={!plan.changes}>
+                    {plan.changes ? `Import ${plan.changes} ${plan.changes === 1 ? noun[0] : noun[1]}` : "Nothing new"}
                   </Button>
                 </div>
               )}

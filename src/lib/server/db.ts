@@ -1,11 +1,11 @@
 import postgres from "postgres";
 
 /**
- * Everything (shop settings, products, customers, receipts) is stored as JSON
+ * Everything (shop settings, products, customers, coupons, receipts) is stored as JSON
  * documents in one table: gr_docs(kind, id, data). PDFs / Excel files are never
  * stored - they are generated in the browser on demand.
  */
-export const KINDS = ["shop", "product", "customer", "invoice"] as const;
+export const KINDS = ["shop", "product", "customer", "invoice", "coupon"] as const;
 export type Kind = (typeof KINDS)[number];
 
 export const dbEnabled = () => !!process.env.DATABASE_URL;
