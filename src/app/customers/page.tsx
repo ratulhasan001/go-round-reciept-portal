@@ -48,6 +48,7 @@ export default function CustomersPage() {
 
   return (
     <ListEditor<Customer>
+      section="customers"
       title="Customers"
       subtitle="Saved automatically from every receipt - type a name and their details fill in."
       icon={<Users className="size-5" />}

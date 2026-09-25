@@ -15,6 +15,7 @@ import { bdt, computeTotals, fmtDate, lineAmount, money, pct, todayISO, uid } fr
 import { canShareFiles, downloadExcel, downloadPdf, printPdf, sharePdf, whatsappUrl } from "@/lib/download";
 import { Button, Card, Chip, Field, Input, Label, SectionTitle, Select, StatusBadge, Switch, Textarea, cx, useClientValue, useToast } from "./ui";
 import { Combobox } from "./Combobox";
+import { SectionIcon } from "./nav";
 import { couponProblem, normCode, offerLabel } from "@/lib/coupons";
 import ReceiptPreview from "./ReceiptPreview";
 
@@ -226,11 +227,12 @@ function EditorForm({
   return (
     <div>
       {/* top bar */}
-      <div className="sticky top-[57px] z-20 -mx-4 mb-5 border-b border-line bg-canvas/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-10 lg:px-10">
+      <div className="sticky top-(--nav-h,0px) z-20 -mx-4 -mt-5 mb-5 border-b border-line bg-canvas/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-10 lg:-mt-8 lg:px-10">
         <div className="flex items-center gap-3">
-          <Link href="/" className="grid size-9 shrink-0 place-items-center rounded-xl text-muted hover:bg-black/5" aria-label="Back to receipts">
+          <Link href="/receipts" transitionTypes={["nav-left"]} className="grid size-9 shrink-0 place-items-center rounded-xl text-muted transition hover:-translate-x-0.5 hover:bg-black/5" aria-label="Back to receipts">
             <ArrowLeft className="size-5" />
           </Link>
+          <SectionIcon section="new" className="size-10 rounded-xl bg-deep text-lime shadow-md shadow-deep/20" />
           <div className="mr-auto min-w-0">
             <div className="flex items-center gap-2.5">
               <h1 className="truncate font-display text-xl font-bold sm:text-2xl">{isSaved ? inv.number : "New receipt"}</h1>
@@ -685,7 +687,7 @@ function EditorForm({
 
         {/* ---------------- preview ---------------- */}
         <div className={cx(mobileTab === "edit" && "hidden xl:block")}>
-          <div className="xl:sticky xl:top-28">
+          <div className="xl:sticky xl:top-[calc(var(--nav-h,0px)+6rem)]">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-muted">
                 <FileText className="size-4" /> Live preview · A4 portrait
@@ -698,7 +700,7 @@ function EditorForm({
       </div>
 
       {/* mobile action bar (above the bottom navigation) */}
-      <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 border-t border-line bg-white/95 px-3 py-2.5 backdrop-blur md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-3 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden">
         <div className={cx("grid gap-2", shareable ? "grid-cols-[auto_auto_1fr_1fr]" : "grid-cols-[auto_1fr_1fr]")}>
           {shareable && (
             <Button onClick={() => run("share")} loading={busy === "share"} aria-label="Share PDF to WhatsApp or other apps">

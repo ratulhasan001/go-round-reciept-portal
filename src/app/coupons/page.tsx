@@ -41,6 +41,7 @@ export default function CouponsPage() {
 
   return (
     <ListEditor<CouponCode>
+      section="coupons"
       title="Coupons"
       subtitle="Your coupon sheet - who got which code, how long it's valid, and when it was used."
       icon={<TicketPercent className="size-5" />}

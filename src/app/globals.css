@@ -444,3 +444,245 @@ input[type="number"] {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ---------- Page transitions (View Transitions API, driven by <ViewTransition> in AppShell) ---------- */
+:root {
+  --vt-exit: 170ms;
+  --vt-enter: 460ms;
+  --vt-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* clicks during a transition reach the new page; the whole page is animated per section, not as one image */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-group(root) {
+  animation: none;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: var(--vt-to, none);
+    filter: blur(4px);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: var(--vt-from, none);
+    filter: blur(6px);
+  }
+}
+::view-transition-old(*) {
+  animation: var(--vt-exit) ease-in both vt-out;
+}
+::view-transition-new(*) {
+  animation: var(--vt-enter) var(--vt-ease) calc(var(--vt-exit) * 0.6) both vt-in;
+}
+
+/* home → section: the section rises forward; section → home: it settles back */
+::view-transition-old(.nav-forward) {
+  --vt-to: scale(0.97);
+}
+::view-transition-new(.nav-forward) {
+  --vt-from: translateY(28px) scale(0.985);
+}
+::view-transition-old(.nav-back) {
+  --vt-to: translateY(24px) scale(0.985);
+}
+::view-transition-new(.nav-back) {
+  --vt-from: scale(1.03);
+}
+/* between sections: slide the way the navbar reads */
+::view-transition-old(.nav-right) {
+  --vt-to: translateX(-48px);
+}
+::view-transition-new(.nav-right) {
+  --vt-from: translateX(56px);
+}
+::view-transition-old(.nav-left) {
+  --vt-to: translateX(48px);
+}
+::view-transition-new(.nav-left) {
+  --vt-from: translateX(-56px);
+}
+/* browser back / forward: a soft crossfade */
+::view-transition-old(.nav-fade) {
+  --vt-to: none;
+}
+::view-transition-new(.nav-fade) {
+  --vt-from: translateY(8px);
+}
+
+/* section icons fly between the home tile and the page header */
+::view-transition-group(.morph) {
+  animation-duration: 560ms;
+  animation-timing-function: var(--vt-ease);
+  z-index: 50;
+}
+::view-transition-old(.morph),
+::view-transition-new(.morph) {
+  animation: none;
+  height: 100%;
+}
+::view-transition-new(.morph) {
+  animation: 560ms var(--vt-ease) both morph-fade;
+}
+::view-transition-old(.morph) {
+  animation: 560ms var(--vt-ease) both morph-fade reverse;
+}
+@keyframes morph-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* the navbar stays put while pages move; it drops in when leaving home and lifts away when returning */
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+::view-transition-new(site-header):only-child {
+  animation: 420ms var(--vt-ease) both header-drop;
+}
+::view-transition-old(site-header):only-child {
+  display: block;
+  animation: 200ms ease-in both header-drop reverse;
+}
+@keyframes header-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/* ---------- Home ---------- */
+@keyframes home-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.animate-home-in {
+  animation: home-in 0.7s var(--vt-ease) backwards;
+}
+
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(36px) scale(0.96);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+/* "backwards" (not "both") so hover lift / press scale work once the entrance is over */
+.animate-tile-in {
+  animation: tile-in 0.8s var(--vt-ease) backwards;
+}
+
+@keyframes aurora {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(60px, 30px) scale(1.12);
+  }
+  66% {
+    transform: translate(-30px, 50px) scale(0.94);
+  }
+}
+.animate-aurora {
+  animation: aurora 18s ease-in-out infinite;
+}
+.animate-aurora-slow {
+  animation: aurora 26s ease-in-out infinite reverse;
+}
+
+@keyframes shine {
+  0%,
+  60% {
+    transform: translateX(0) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(520%) skewX(-20deg);
+  }
+}
+.animate-shine {
+  animation: shine 4.5s ease-in-out 1.2s infinite;
+}
+
+@keyframes wave-hand {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30% {
+    transform: rotate(16deg);
+  }
+  20%,
+  40% {
+    transform: rotate(-8deg);
+  }
+}
+.animate-wave-hand {
+  animation: wave-hand 2.4s ease-in-out 0.9s 2;
+}
+
+@keyframes wave-sway {
+  0%,
+  100% {
+    transform: translateX(0) scaleY(1);
+  }
+  50% {
+    transform: translateX(-1.5%) scaleY(1.15);
+  }
+}
+.animate-wave {
+  transform-origin: bottom;
+  animation: wave-sway 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-home-in,
+  .animate-tile-in,
+  .animate-aurora,
+  .animate-aurora-slow,
+  .animate-shine,
+  .animate-wave-hand,
+  .animate-wave {
+    animation: none !important;
+  }
+}

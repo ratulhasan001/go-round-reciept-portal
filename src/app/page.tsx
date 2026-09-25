@@ -1,333 +1,246 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Copy, Download, FilePlus2, FileSpreadsheet, Pencil, Search, Trash2, Wallet, TrendingUp, Clock3, ReceiptText, MessageCircle, Sheet, BellRing } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, CalendarDays, Clock3, LogOut, ReceiptText, TrendingUp, Wallet } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { computeTotals, fmtDate, money } from "@/lib/calc";
-import type { Invoice, Status } from "@/lib/types";
-import { downloadExcel, downloadLedger, downloadPdf, waNumber } from "@/lib/download";
+import { computeTotals, money, todayISO } from "@/lib/calc";
+import { couponStatus } from "@/lib/coupons";
 import { WAVE_BACK, WAVE_FRONT } from "@/lib/theme";
-import { Button, Card, StatusBadge, buttonClass, cx, useClientValue, useToast } from "@/components/ui";
+import { Mark, SECTIONS, SectionIcon, SyncDot, syncLabel } from "@/components/nav";
+import { cx, useClientValue } from "@/components/ui";
 
 const greeting = () => {
   const hour = new Date().getHours();
   return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 };
+const plural = (n: number, one: string, many = one + "s") => `${n} ${n === 1 ? one : many}`;
+const longDate = () => new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-type Filter = "ALL" | Status;
+// each tile's colour story
+const TONE: Record<string, { badge: string; glow: string }> = {
+  receipts: { badge: "bg-aqua-soft text-aqua-deep", glow: "rgb(86 202 238 / 0.18)" },
+  new: { badge: "bg-deep text-lime", glow: "rgb(140 197 86 / 0.35)" },
+  products: { badge: "bg-soft text-brand", glow: "rgb(140 197 86 / 0.2)" },
+  customers: { badge: "bg-violet-50 text-violet-600", glow: "rgb(139 92 246 / 0.14)" },
+  coupons: { badge: "bg-amber-50 text-amber-600", glow: "rgb(245 158 11 / 0.16)" },
+  settings: { badge: "bg-canvas text-ink", glow: "rgb(14 42 35 / 0.1)" },
+};
 
-export default function Dashboard() {
-  const { invoices, shop, deleteInvoice, ready } = useStore();
-  const toast = useToast();
-  const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<Filter>("ALL");
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [busy, setBusy] = useState("");
-
-  const rows = useMemo(
-    () =>
-      invoices
-        .map((inv) => ({ inv, t: computeTotals(inv) }))
-        .sort((a, b) => (b.inv.date + b.inv.number).localeCompare(a.inv.date + a.inv.number)),
-    [invoices],
-  );
-
-  const stats = useMemo(() => {
-    const billed = rows.reduce((s, r) => s + r.t.grandTotal, 0);
-    const collected = rows.reduce((s, r) => s + r.t.paid, 0);
-    const outstanding = rows.reduce((s, r) => s + Math.max(r.t.due, 0), 0);
-    const open = rows.filter((r) => r.t.status !== "PAID").length;
-    return { billed, collected, outstanding, open };
-  }, [rows]);
-
-  const visible = rows.filter(({ inv, t }) => {
-    if (filter !== "ALL" && t.status !== filter) return false;
-    const s = q.trim().toLowerCase();
-    return !s || [inv.number, inv.customer.name, inv.customer.phone].some((x) => x.toLowerCase().includes(s));
-  });
-
-  const dl = async (inv: Invoice, kind: "pdf" | "xlsx") => {
-    setBusy(inv.id + kind);
-    try {
-      if (kind === "pdf") await downloadPdf(inv, shop);
-      else await downloadExcel(inv, shop);
-      toast(`${kind === "pdf" ? "PDF" : "Excel"} downloaded · ${inv.number}`);
-    } catch {
-      toast("Could not generate the file", "err");
-    } finally {
-      setBusy("");
-    }
-  };
-
-  const del = (inv: Invoice) => {
-    if (confirmId !== inv.id) {
-      setConfirmId(inv.id);
-      setTimeout(() => setConfirmId((c) => (c === inv.id ? null : c)), 3000);
-      return;
-    }
-    deleteInvoice(inv.id);
-    setConfirmId(null);
-    toast(`${inv.number} deleted`);
-  };
-
+export default function Home() {
+  const { shop, invoices, products, customers, coupons, mode, sync, authEnabled, logout } = useStore();
+  const router = useRouter();
   const greet = useClientValue(greeting, "Welcome back");
+  const today = useClientValue(longDate, "");
 
-  // customers who still owe money, biggest first
-  const owing = useMemo(() => {
-    const m = new Map<string, { name: string; phone: string; due: number; numbers: string[] }>();
-    for (const { inv, t } of rows) {
-      if (t.due <= 0) continue;
-      const key = (inv.customer.phone || inv.customer.name).trim().toLowerCase();
-      const e = m.get(key) ?? { name: inv.customer.name || "Unknown", phone: inv.customer.phone, due: 0, numbers: [] };
-      e.due += t.due;
-      e.numbers.push(inv.number);
-      m.set(key, e);
-    }
-    return [...m.values()].sort((a, b) => b.due - a.due).slice(0, 6);
-  }, [rows]);
+  const month = todayISO().slice(0, 7);
+  const stats = useMemo(() => {
+    const all = invoices.map((inv) => ({ inv, t: computeTotals(inv) }));
+    const thisMonth = all.filter((r) => r.inv.date.startsWith(month));
+    return {
+      billed: thisMonth.reduce((s, r) => s + r.t.grandTotal, 0),
+      collected: thisMonth.reduce((s, r) => s + r.t.paid, 0),
+      due: all.reduce((s, r) => s + Math.max(r.t.due, 0), 0),
+      receipts: thisMonth.length,
+      unpaid: all.filter((r) => r.t.status !== "PAID").length,
+    };
+  }, [invoices, month]);
 
-  const remindUrl = (o: (typeof owing)[number]) =>
-    `https://wa.me/${waNumber(o.phone)}?text=${encodeURIComponent(
-      `Hello ${o.name}, this is a friendly reminder from ${shop.name}. Your balance due is BDT ${money(o.due)} (receipt ${o.numbers.join(", ")}). Thank you!`,
-    )}`;
-
-  const exportLedger = async () => {
-    setBusy("ledger");
-    try {
-      await downloadLedger(invoices, shop);
-      toast("Ledger downloaded");
-    } catch {
-      toast("Could not create the ledger", "err");
-    } finally {
-      setBusy("");
-    }
+  // one live line per tile
+  const meta: Record<string, string> = {
+    receipts: `${plural(invoices.length, "receipt")} · ${stats.unpaid} not fully paid`,
+    new: `Next number ${shop.invoicePrefix}${String(shop.nextNumber).padStart(4, "0")}`,
+    products: `${plural(products.length, "product")} · ${products.filter((p) => p.inStock === false).length} out of stock`,
+    customers: plural(customers.length, "saved customer"),
+    coupons: `${coupons.filter((c) => couponStatus(c) === "available").length} available · ${coupons.filter((c) => couponStatus(c) === "used").length} used`,
+    settings: `${shop.name} · prefix ${shop.invoicePrefix}`,
   };
+
+  // number keys 1-6 open a section
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest("input, textarea, select")) return;
+      const s = SECTIONS[Number(e.key) - 1];
+      if (s) router.push(s.href, { transitionTypes: ["nav-forward"] });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [router]);
 
   return (
-    <div className="animate-fade-up">
+    <div className="min-h-dvh pb-16">
       {/* hero */}
-      <div className="relative mb-6 overflow-hidden rounded-3xl bg-deep px-6 pb-12 pt-7 text-white sm:px-8 sm:pb-14 sm:pt-9">
-        <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-aqua/25 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 right-40 size-64 rounded-full bg-lime/20 blur-3xl" />
-        <svg viewBox="0 0 595 40" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-0 h-10 w-full" aria-hidden>
-          <path d={WAVE_BACK} className="fill-aqua/25" />
-          <path d={WAVE_FRONT} className="fill-aqua/60" />
+      <section className="relative overflow-hidden bg-deep px-4 pb-36 pt-5 text-white sm:px-6 lg:px-10">
+        <div className="animate-aurora pointer-events-none absolute -left-40 -top-40 size-[520px] rounded-full bg-aqua/25 blur-3xl" />
+        <div className="animate-aurora-slow pointer-events-none absolute -right-32 top-10 size-[460px] rounded-full bg-lime/20 blur-3xl" />
+        <div className="animate-aurora pointer-events-none absolute bottom-0 left-1/3 size-[380px] rounded-full bg-emerald-400/10 blur-3xl [animation-delay:-6s]" />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "24px 24px" }}
+        />
+        <svg viewBox="0 0 595 40" preserveAspectRatio="none" className="animate-wave pointer-events-none absolute inset-x-0 bottom-0 h-16 w-full" aria-hidden>
+          <path d={WAVE_BACK} className="fill-aqua/20" />
+          <path d={WAVE_FRONT} className="fill-canvas" />
         </svg>
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4 sm:gap-5">
-          {shop.logo && (
-            // eslint-disable-next-line @next/next/no-img-element -- logo may be a data URL
-            <img src={shop.logo} alt="" className="hidden size-20 shrink-0 rounded-full bg-white object-contain p-1 shadow-lg shadow-black/20 sm:block" />
-          )}
-          <div>
-            <p className="text-sm font-semibold text-mint">{greet} 👋</p>
-            <h1 className="mt-1 font-display text-3xl font-extrabold sm:text-4xl">{shop.name} receipts</h1>
-            <p className="mt-2 max-w-lg text-[14.5px] text-mint/85">Create a receipt in under a minute. Every receipt downloads as an A4 PDF or Excel file, ready to print or send on WhatsApp.</p>
-          </div>
-          </div>
-          <Link href="/new" className={buttonClass("accent", "lg", "w-full sm:w-auto")}>
-            <FilePlus2 className="size-5" /> New receipt
-          </Link>
-        </div>
-      </div>
 
-      {/* stats */}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        <Stat icon={<TrendingUp className="size-4" />} label="Total billed" value={money(stats.billed)} />
-        <Stat icon={<Wallet className="size-4" />} label="Collected" value={money(stats.collected)} tone="text-brand" />
-        <Stat icon={<Clock3 className="size-4" />} label="Outstanding" value={money(stats.outstanding)} tone="text-red-700" />
-        <Stat icon={<ReceiptText className="size-4" />} label="Open receipts" value={`${stats.open} / ${rows.length}`} />
-      </div>
-
-      {/* who owes you */}
-      {owing.length > 0 && (
-        <Card className="mb-6 p-4 sm:p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-lg bg-red-50 text-red-600">
-              <BellRing className="size-4" />
-            </span>
-            <h2 className="font-display text-[16px] font-bold">Who owes you</h2>
-            <span className="text-[12.5px] text-muted">· send a polite WhatsApp reminder in one tap</span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {owing.map((o) => (
-              <div key={o.name + o.phone} className="flex items-center justify-between gap-3 rounded-xl bg-canvas px-3.5 py-3">
-                <div className="min-w-0">
-                  <div className="truncate font-semibold">{o.name}</div>
-                  <div className="text-[12px] text-muted">{o.numbers.join(", ")}</div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="font-display font-bold text-red-700">{money(o.due)}</span>
-                  {o.phone && (
-                    <a href={remindUrl(o)} target="_blank" rel="noopener" className="grid size-8 place-items-center rounded-lg bg-white text-[#25D366] shadow-sm hover:scale-105" aria-label={`Remind ${o.name} on WhatsApp`} title="Send reminder on WhatsApp">
-                      <MessageCircle className="size-4" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* list */}
-      <Card className="overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div className="relative w-full sm:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search number, customer, phone"
-              className="h-10 w-full rounded-xl border border-line bg-canvas pl-9 pr-3 text-sm placeholder:text-faint focus:border-brand focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/10"
-            />
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto">
-          <div className="flex gap-1 rounded-xl bg-canvas p-1">
-            {(["ALL", "UNPAID", "PARTIAL", "PAID"] as Filter[]).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={cx("whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-semibold transition", filter === f ? "bg-white text-ink shadow-sm" : "text-muted hover:text-ink")}
-              >
-                {f === "ALL" ? "All" : f === "PARTIAL" ? "Partial" : f[0] + f.slice(1).toLowerCase()}
-              </button>
-            ))}
-          </div>
-          <Button size="sm" onClick={exportLedger} loading={busy === "ledger"} disabled={!rows.length} title="Download every receipt as one Excel sheet">
-            {busy !== "ledger" && <Sheet className="size-4 text-brand" />} Ledger
-          </Button>
-          </div>
-        </div>
-
-        {!ready ? (
-          <div className="p-10 text-center text-muted">Loading…</div>
-        ) : visible.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-            <div className="grid size-14 place-items-center rounded-2xl bg-soft text-brand">
-              <ReceiptText className="size-6" />
+        <div className="relative mx-auto max-w-[1300px]">
+          {/* top bar */}
+          <div className="animate-home-in flex items-center gap-3">
+            <Mark className="size-10 text-[14px]" />
+            <div className="mr-auto min-w-0">
+              <div className="truncate font-display text-[17px] font-bold leading-tight">{shop.name}</div>
+              <div className="text-[12px] text-mint/75">Receipt Studio</div>
             </div>
-            <div className="font-display text-lg font-bold">{rows.length ? "No receipts match" : "No receipts yet"}</div>
-            <p className="max-w-sm text-sm text-muted">{rows.length ? "Try a different search or filter." : "Create your first receipt - it only takes a minute."}</p>
-            {!rows.length && (
-              <Link href="/new" className={buttonClass("primary")}>
-                <FilePlus2 className="size-4" /> New receipt
-              </Link>
+            <span className="flex items-center gap-2 rounded-full bg-white/8 px-3 py-1.5 text-[12px] font-semibold text-mint/90 backdrop-blur" title={syncLabel(mode, sync)}>
+              <SyncDot mode={mode} sync={sync} />
+              <span className="hidden sm:inline">{syncLabel(mode, sync, true)}</span>
+            </span>
+            {authEnabled && (
+              <button
+                onClick={() => void logout()}
+                className="grid size-9 place-items-center rounded-xl text-mint/70 transition hover:bg-white/10 hover:text-white active:scale-90"
+                aria-label="Log out"
+                title="Log out"
+              >
+                <LogOut className="size-[18px]" />
+              </button>
             )}
           </div>
-        ) : (
-          <>
-            {/* desktop table */}
-            <table className="hidden w-full text-sm md:table">
-              <thead>
-                <tr className="text-left text-[11.5px] font-semibold uppercase tracking-wide text-muted">
-                  <th className="px-5 py-3">Receipt</th>
-                  <th className="px-3 py-3">Customer</th>
-                  <th className="px-3 py-3">Date</th>
-                  <th className="px-3 py-3 text-right">Total</th>
-                  <th className="px-3 py-3 text-right">Due</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map(({ inv, t }) => (
-                  <tr key={inv.id} className="group border-t border-line transition hover:bg-canvas/70">
-                    <td className="px-5 py-3.5">
-                      <Link href={`/new?id=${inv.id}`} className="font-display font-bold text-ink hover:text-brand">{inv.number}</Link>
-                    </td>
-                    <td className="px-3 py-3.5">
-                      <div className="font-semibold">{inv.customer.name || "—"}</div>
-                      <div className="text-[12px] text-muted">{inv.customer.phone}</div>
-                    </td>
-                    <td className="px-3 py-3.5 text-body">{fmtDate(inv.date)}</td>
-                    <td className="px-3 py-3.5 text-right font-semibold">{money(t.grandTotal)}</td>
-                    <td className={cx("px-3 py-3.5 text-right font-bold", t.due > 0 ? "text-red-700" : "text-brand")}>{money(Math.max(t.due, 0))}</td>
-                    <td className="px-3 py-3.5"><StatusBadge status={t.status} /></td>
-                    <td className="px-5 py-3.5">
-                      <RowActions inv={inv} busy={busy} confirm={confirmId === inv.id} onDl={dl} onDel={del} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
 
-            {/* mobile cards */}
-            <ul className="divide-y divide-line md:hidden">
-              {visible.map(({ inv, t }) => (
-                <li key={inv.id} className="p-4">
-                  <Link href={`/new?id=${inv.id}`} className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-display font-bold">{inv.number}</span>
-                        <StatusBadge status={t.status} />
-                      </div>
-                      <div className="mt-0.5 truncate text-sm font-semibold text-body">{inv.customer.name || "—"}</div>
-                      <div className="text-[12px] text-muted">{fmtDate(inv.date)}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-display text-lg font-bold">{money(t.grandTotal)}</div>
-                      {t.due > 0 && <div className="text-[12px] font-bold text-red-700">Due {money(t.due)}</div>}
-                    </div>
-                  </Link>
-                  <div className="mt-3">
-                    <RowActions inv={inv} busy={busy} confirm={confirmId === inv.id} onDl={dl} onDel={del} mobile />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </Card>
+          {/* greeting */}
+          <div className="mt-10 sm:mt-14">
+            <p className="animate-home-in flex items-center gap-2 text-sm font-semibold text-lime [animation-delay:80ms]">
+              <CalendarDays className="size-4" /> {today || " "}
+            </p>
+            <h1 className="animate-home-in mt-3 font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl [animation-delay:140ms]">
+              {greet}
+              <span className="inline-block origin-[70%_70%] animate-wave-hand">👋</span>
+            </h1>
+            <p className="animate-home-in mt-3 max-w-xl text-[15px] text-mint/85 sm:text-base [animation-delay:200ms]">What would you like to do today?</p>
+          </div>
+
+          {/* this month */}
+          <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Glance i={0} icon={<TrendingUp className="size-4" />} label="Billed this month" value={stats.billed} money />
+            <Glance i={1} icon={<Wallet className="size-4" />} label="Collected this month" value={stats.collected} money />
+            <Glance i={2} icon={<Clock3 className="size-4" />} label="Still due (all time)" value={stats.due} money warn={stats.due > 0} />
+            <Glance i={3} icon={<ReceiptText className="size-4" />} label="Receipts this month" value={stats.receipts} />
+          </div>
+        </div>
+      </section>
+
+      {/* sections */}
+      <section className="relative -mt-24 px-4 sm:px-6 lg:px-10">
+        <div className="mx-auto grid max-w-[1300px] gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {SECTIONS.map((s, i) => (
+            <Tile key={s.key} i={i} section={s} meta={meta[s.key]!} featured={s.key === "new"} />
+          ))}
+        </div>
+        <p className="animate-home-in mt-6 hidden text-center text-[12.5px] text-muted [animation-delay:700ms] sm:block">
+          Tip: press <Kbd>1</Kbd>–<Kbd>6</Kbd> to jump straight to a section.
+        </p>
+      </section>
     </div>
   );
 }
 
-function Stat({ icon, label, value, tone = "text-ink" }: { icon: React.ReactNode; label: string; value: string; tone?: string }) {
+function Tile({ i, section, meta, featured }: { i: number; section: (typeof SECTIONS)[number]; meta: string; featured: boolean }) {
+  const tone = TONE[section.key]!;
   return (
-    <Card className="p-4 sm:p-5">
-      <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-muted">
-        <span className="grid size-7 place-items-center rounded-lg bg-soft text-brand">{icon}</span>
+    <Link
+      href={section.href}
+      transitionTypes={["nav-forward"]}
+      onPointerMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        e.currentTarget.style.setProperty("--x", `${e.clientX - r.left}px`);
+        e.currentTarget.style.setProperty("--y", `${e.clientY - r.top}px`);
+      }}
+      style={{ animationDelay: `${260 + i * 70}ms`, "--glow": tone.glow } as React.CSSProperties}
+      className={cx(
+        "animate-tile-in group relative isolate flex min-h-44 flex-col overflow-hidden rounded-3xl border p-5 shadow-[0_1px_2px_rgba(20,32,26,0.05)] transition-[transform,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-deep/10 active:translate-y-0 active:scale-[0.985] sm:p-6",
+        featured ? "border-lime/60 bg-gradient-to-br from-lime to-[#b6e27f] text-deep" : "border-line bg-white hover:border-transparent",
+      )}
+    >
+      {/* cursor spotlight */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+        style={{ background: "radial-gradient(420px circle at var(--x, 50%) var(--y, 50%), var(--glow), transparent 60%)" }}
+      />
+      {featured && <span aria-hidden className="animate-shine pointer-events-none absolute inset-y-0 -left-1/2 -z-10 w-1/3 skew-x-[-20deg] bg-white/35 blur-md" />}
+
+      <div className="flex items-start justify-between">
+        <SectionIcon
+          section={section.key}
+          className={cx("size-12 rounded-2xl shadow-sm transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110", tone.badge)}
+          iconClass="size-6"
+        />
+        <span className="flex items-center gap-2">
+          <Kbd className={featured ? "border-deep/15 bg-white/40 text-deep/70" : undefined}>{i + 1}</Kbd>
+          <span
+            className={cx(
+              "grid size-9 place-items-center rounded-full transition-all duration-500 group-hover:rotate-45",
+              featured ? "bg-deep text-lime" : "bg-canvas text-muted group-hover:bg-deep group-hover:text-lime",
+            )}
+          >
+            <ArrowUpRight className="size-4" />
+          </span>
+        </span>
+      </div>
+      <div className="mt-auto pt-8">
+        <h2 className="font-display text-xl font-extrabold sm:text-[22px]">{section.label}</h2>
+        <p className={cx("mt-1 text-[13.5px]", featured ? "text-deep/75" : "text-muted")}>{section.blurb}</p>
+        <p className={cx("mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold", featured ? "bg-deep/10 text-deep" : "bg-canvas text-body")}>{meta}</p>
+      </div>
+    </Link>
+  );
+}
+
+function Glance({ i, icon, label, value, money: isMoney, warn }: { i: number; icon: React.ReactNode; label: string; value: number; money?: boolean; warn?: boolean }) {
+  const n = useCountUp(value);
+  return (
+    <div
+      className="animate-home-in rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-md transition-colors duration-300 hover:bg-white/[0.1]"
+      style={{ animationDelay: `${260 + i * 60}ms` }}
+    >
+      <div className="flex items-center gap-2 text-[12px] font-semibold text-mint/80">
+        <span className={cx("grid size-7 place-items-center rounded-lg", warn ? "bg-red-400/20 text-red-200" : "bg-lime/15 text-lime")}>{icon}</span>
         {label}
       </div>
-      <div className={cx("mt-3 font-display text-xl font-extrabold sm:text-2xl", tone)}>{value}</div>
-    </Card>
-  );
-}
-
-function RowActions({
-  inv, busy, confirm, onDl, onDel, mobile,
-}: {
-  inv: Invoice;
-  busy: string;
-  confirm: boolean;
-  onDl: (inv: Invoice, k: "pdf" | "xlsx") => void;
-  onDel: (inv: Invoice) => void;
-  mobile?: boolean;
-}) {
-  const icon = "grid size-8 place-items-center rounded-lg text-muted transition hover:bg-white hover:text-ink hover:shadow-sm";
-  return (
-    <div className={cx("flex items-center gap-1", mobile ? "justify-between" : "justify-end")}>
-      <div className="flex gap-1.5">
-        <Button size="sm" variant="primary" loading={busy === inv.id + "pdf"} onClick={() => onDl(inv, "pdf")}>
-          {busy !== inv.id + "pdf" && <Download className="size-3.5" />} PDF
-        </Button>
-        <Button size="sm" loading={busy === inv.id + "xlsx"} onClick={() => onDl(inv, "xlsx")}>
-          {busy !== inv.id + "xlsx" && <FileSpreadsheet className="size-3.5 text-brand" />} Excel
-        </Button>
-      </div>
-      <div className="flex gap-0.5">
-        <Link href={`/new?id=${inv.id}`} className={icon} title="Edit" aria-label="Edit">
-          <Pencil className="size-4" />
-        </Link>
-        <Link href={`/new?copy=${inv.id}`} className={icon} title="Duplicate as new receipt" aria-label="Duplicate">
-          <Copy className="size-4" />
-        </Link>
-        <button onClick={() => onDel(inv)} className={cx(icon, confirm && "w-auto bg-red-600 px-2 text-[12px] font-bold text-white hover:bg-red-700 hover:text-white")} title="Delete" aria-label="Delete">
-          {confirm ? "Confirm?" : <Trash2 className="size-4" />}
-        </button>
+      <div className="mt-2 font-display text-xl font-extrabold tabular-nums sm:text-2xl">
+        {isMoney && <span className="mr-1 text-[0.7em] font-bold text-mint/70">৳</span>}
+        {isMoney ? money(n) : Math.round(n)}
       </div>
     </div>
   );
+}
+
+function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <kbd className={cx("hidden h-6 min-w-6 place-items-center rounded-md border border-line bg-canvas px-1.5 font-sans text-[11px] font-bold text-muted sm:inline-grid", className)}>
+      {children}
+    </kbd>
+  );
+}
+
+/** Eases a number up to `target` (and on to new values as data loads). */
+function useCountUp(target: number, ms = 900) {
+  const [n, setN] = useState(0);
+  const shown = useRef(0); // the value on screen, so a new target animates on from there
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const from = shown.current;
+    const start = performance.now();
+    let id = 0;
+    const tick = (t: number) => {
+      const p = reduce ? 1 : Math.min(1, (t - start) / ms);
+      shown.current = from + (target - from) * (1 - Math.pow(1 - p, 4));
+      setN(shown.current);
+      if (p < 1) id = requestAnimationFrame(tick);
+    };
+    id = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(id);
+  }, [target, ms]);
+  return n;
 }

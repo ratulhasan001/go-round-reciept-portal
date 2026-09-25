@@ -27,6 +27,7 @@ export default function ProductsPage() {
 
   return (
     <ListEditor<Product>
+      section="products"
       title="Products"
       subtitle="Your price list - pick these while making a receipt and the price fills in."
       icon={<Package className="size-5" />}

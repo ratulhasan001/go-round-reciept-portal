@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowUpDown, Plus, Search, SearchX, Sparkles, Trash2 } from "lucide-react";
 import { Button, Card, Input, Select, cx, useToast } from "./ui";
+import { SectionIcon } from "./nav";
 
 export interface Column<T> {
   key: keyof T & string;
@@ -65,6 +66,7 @@ export function ListEditor<T extends { id: string }>({
   touch,
   actions,
   tableFrom = "md",
+  section,
 }: {
   title: string;
   subtitle: string;
@@ -86,6 +88,8 @@ export function ListEditor<T extends { id: string }>({
   actions?: React.ReactNode;
   /** When rows switch from cards to a table; use "2xl" for lists with many columns. */
   tableFrom?: keyof typeof LAYOUT;
+  /** Section key (see nav.tsx): the header icon then morphs from the home tile. */
+  section?: string;
 }) {
   const L = LAYOUT[tableFrom];
   const toast = useToast();
@@ -194,7 +198,11 @@ export function ListEditor<T extends { id: string }>({
     <div className="animate-fade-up">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="animate-icon-float grid size-11 shrink-0 place-items-center rounded-2xl bg-deep text-lime shadow-lg shadow-deep/20">{icon}</div>
+          {section ? (
+            <SectionIcon section={section} className="size-11 rounded-2xl bg-deep text-lime shadow-lg shadow-deep/20" />
+          ) : (
+            <div className="animate-icon-float grid size-11 shrink-0 place-items-center rounded-2xl bg-deep text-lime shadow-lg shadow-deep/20">{icon}</div>
+          )}
           <div>
             <h1 className="font-display text-2xl font-extrabold sm:text-3xl">{title}</h1>
             <p className="text-sm text-muted">{subtitle}</p>
@@ -216,7 +224,7 @@ export function ListEditor<T extends { id: string }>({
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${title.toLowerCase()}`} className="bg-canvas pl-9" />
             </div>
             {tabs.length > 0 && (
-              <div className="-mx-4 shrink-0 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+              <div className="-mx-4 shrink-0 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
               <div
                 role="tablist"
                 aria-label={`Filter ${title.toLowerCase()}`}

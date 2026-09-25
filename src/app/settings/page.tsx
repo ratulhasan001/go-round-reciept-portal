@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { DatabaseBackup, ImagePlus, Percent, RotateCcw, Settings, Store, Upload, FileCog, X } from "lucide-react";
+import { DatabaseBackup, ImagePlus, Percent, RotateCcw, Store, Upload, FileCog, X } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { SectionIcon } from "@/components/nav";
 import { DEFAULT_LOGO } from "@/lib/theme";
 import type { Shop } from "@/lib/types";
 import { COURIERS, PAYMENT_METHODS } from "@/lib/types";
@@ -53,9 +54,7 @@ export default function SettingsPage() {
   return (
     <div className="animate-fade-up">
       <div className="mb-6 flex items-center gap-3">
-        <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-deep text-lime">
-          <Settings className="size-5" />
-        </div>
+        <SectionIcon section="settings" className="size-11 rounded-2xl bg-deep text-lime shadow-lg shadow-deep/20" />
         <div>
           <h1 className="font-display text-2xl font-extrabold sm:text-3xl">Settings</h1>
           <p className="text-sm text-muted">Set these once - every receipt uses them. Changes save automatically.</p>
