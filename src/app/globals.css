@@ -1177,3 +1177,127 @@ input[type="number"] {
     animation: none;
   }
 }
+
+/* customer form (public page and the owner's dialog) */
+@keyframes form-bubble {
+  from {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100dvh);
+    opacity: 0;
+  }
+}
+.form-bubble {
+  animation: form-bubble 11s linear infinite;
+}
+@keyframes form-badge {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.form-badge {
+  animation: form-badge 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes form-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.form-check-ring {
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  animation: form-draw 0.6s ease-out 0.2s forwards;
+}
+.form-check-tick {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: form-draw 0.4s ease-out 0.7s forwards;
+}
+@keyframes form-hourglass {
+  0%,
+  70% {
+    transform: rotate(0);
+  }
+  85%,
+  100% {
+    transform: rotate(180deg);
+  }
+}
+.form-hourglass {
+  animation: form-hourglass 2.4s ease-in-out infinite;
+}
+@keyframes form-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.2;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+.form-dots span {
+  animation: form-dot 1.4s infinite;
+}
+.form-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.form-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes form-colon {
+  50% {
+    opacity: 0.25;
+  }
+}
+.form-colon {
+  animation: form-colon 1s steps(1) infinite;
+}
+@keyframes form-timer {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  10% {
+    transform: rotate(-14deg);
+  }
+  20% {
+    transform: rotate(10deg);
+  }
+  30% {
+    transform: rotate(0);
+  }
+}
+.form-timer {
+  animation: form-timer 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .form-bubble,
+  .form-colon,
+  .form-timer,
+  .form-hourglass,
+  .form-dots span {
+    animation: none;
+  }
+  .form-badge,
+  .form-check-ring,
+  .form-check-tick {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
+}

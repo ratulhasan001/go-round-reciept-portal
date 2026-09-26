@@ -8,6 +8,7 @@ import { initials } from "@/lib/theme";
 import type { Customer } from "@/lib/types";
 import { ListEditor } from "@/components/ListEditor";
 import { ImportDialog } from "@/components/ImportDialog";
+import { CustomerFormDialog } from "@/components/CustomerFormDialog";
 import { SAMPLE_CSV, planImport, readCustomerFile } from "@/lib/customerImport";
 
 // friendly avatar colours, picked from the initials so each customer keeps theirs
@@ -58,6 +59,8 @@ export default function CustomersPage() {
       blank={() => ({ id: uid(), name: "", phone: "", address: "", updatedAt: Date.now() })}
       touch={(c) => ({ ...c, updatedAt: Date.now() })}
       actions={
+        <>
+        <CustomerFormDialog />
         <ImportDialog
           title="Import customers"
           hint="From Excel (.xlsx) or CSV - duplicates are skipped."
@@ -87,6 +90,7 @@ export default function CustomersPage() {
             };
           }}
         />
+        </>
       }
       sorts={[
         { label: "Recently updated", compare: (a, b) => updated(b) - updated(a) },

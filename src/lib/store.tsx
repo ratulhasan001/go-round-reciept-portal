@@ -38,6 +38,8 @@ interface Store extends Data {
   importBackup: (json: string) => void;
   resetAll: () => void;
   logout: () => Promise<void>;
+  /** Pulls the latest data from the database (e.g. after a customer filled in a form), unless local changes are still being sent. */
+  reload: () => void;
 }
 
 const seed = (): Data => ({
@@ -141,7 +143,9 @@ const writeJSON = (key: string, value: unknown) => {
 };
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const onLogin = usePathname() === "/login";
+  const path = usePathname();
+  // the login page and the public customer form (/f/…) never load the shop's data
+  const offApp = path === "/login" || path.startsWith("/f/");
   const [data, setData] = useState<Data>(seed);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<Mode>("loading");
@@ -257,7 +261,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // initial load
   useEffect(() => {
-    if (onLogin) return;
+    if (offApp) return;
     let cancelled = false;
     (async () => {
       const local = readJSON<Partial<Data>>(KEY);
@@ -282,7 +286,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [onLogin, loadFromServer]);
+  }, [offApp, loadFromServer]);
 
   // keep this device's copy, and queue changes for the database
   useEffect(() => {
@@ -384,8 +388,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
       resetAll: () => setData(seed()),
       logout,
+      reload: () => {
+        if (mode === "cloud" && outbox.current.size === 0 && !flushing.current) void loadFromServer();
+      },
     }),
-    [data, ready, mode, sync, authEnabled, saveInvoice, nextInvoiceNumber, logout],
+    [data, ready, mode, sync, authEnabled, saveInvoice, nextInvoiceNumber, logout, loadFromServer],
   );
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

@@ -25,7 +25,7 @@ function PageTransition({ path, children }: { path: string; children: React.Reac
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
 
-  if (path === "/login") return <>{children}</>;
+  if (path === "/login" || path.startsWith("/f/")) return <>{children}</>;
   if (path === "/") return <PageTransition path={path}>{children}</PageTransition>;
 
   return (

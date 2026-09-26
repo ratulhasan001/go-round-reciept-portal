@@ -35,7 +35,19 @@ export function ensureSchema() {
       data jsonb not null,
       updated_at timestamptz not null default now(),
       primary key (kind, id)
-    )`.catch((e) => {
+    )`
+    // one row per customer-form link; only a hash of the link's token is kept
+    .then(
+      () => db()`
+        create table if not exists gr_forms (
+          token_hash text primary key,
+          created_at timestamptz not null default now(),
+          expires_at timestamptz not null,
+          used_at timestamptz,
+          customer_name text
+        )`,
+    )
+    .catch((e) => {
     g.__grSchema = undefined; // retry on the next request
     throw e;
   });

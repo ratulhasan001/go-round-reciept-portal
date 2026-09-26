@@ -3,6 +3,7 @@
 import type { Customer } from "./types";
 import { uid } from "./calc";
 import { readSheet } from "./sheet";
+import { clean, normPhone, phoneKey } from "./phone";
 
 export interface ImportRow {
   name: string;
@@ -18,19 +19,8 @@ export interface ImportPlan {
   total: number; // data rows read from the file
 }
 
-const clean = (s: unknown) => String(s ?? "").replace(/\s+/g, " ").trim();
 const normName = (s: string) => clean(s).toLowerCase();
-
-/** Bangladeshi numbers in any common shape (+880 17…, 88017…, 1743…, 017-43…) become 01XXXXXXXXX. */
-export function normPhone(raw: string) {
-  const s = clean(raw);
-  let d = s.replace(/\D/g, "");
-  if (d.startsWith("880")) d = d.slice(2);
-  else if (d.startsWith("88") && d.length === 13) d = d.slice(2);
-  if (d.length === 10 && d.startsWith("1")) d = "0" + d;
-  return /^01\d{9}$/.test(d) ? d : s;
-}
-const phoneKey = (p: string) => normPhone(p).replace(/\D/g, "");
+export { normPhone };
 
 /** Reads a .csv or .xlsx file into customer rows, finding the columns by their headings. */
 export async function readCustomerFile(file: File): Promise<ImportRow[]> {
