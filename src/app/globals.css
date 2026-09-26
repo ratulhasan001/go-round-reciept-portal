@@ -770,25 +770,20 @@ input[type="number"] {
   animation: pond-shimmer 4s ease-in-out var(--delay, 0s) infinite;
 }
 
-/* big home aquarium (timing per element via --dur / --delay / --dir / --sway) */
+/* ---------- big home aquarium (creatures are moved by aquarium/engine.ts) ---------- */
 .tank-sway,
 .tank-tuft,
 .tank-bell,
 .tank-tentacles,
-.tank-tail {
+.tank-tail,
+.tank-flipper,
+.tank-octo-arms,
+.tank-seahorse-fin,
+.shark-tail,
+.chest-lid {
   transform-box: fill-box;
 }
-@keyframes tank-swim {
-  from {
-    transform: translateX(-30%);
-  }
-  to {
-    transform: translateX(105%);
-  }
-}
-.tank-swim {
-  animation: tank-swim var(--dur, 20s) linear var(--delay, 0s) infinite var(--dir, normal);
-}
+/* plants sway on their own, and lean with a current (--flow is set by the engine, -1 … 1) */
 @keyframes tank-sway {
   0%,
   100% {
@@ -800,6 +795,8 @@ input[type="number"] {
 }
 .tank-sway {
   transform-origin: bottom;
+  rotate: calc(var(--flow, 0) * 9deg);
+  transition: rotate 0.8s ease-out;
   animation: tank-sway 5s ease-in-out var(--delay, 0s) infinite;
 }
 @keyframes tank-tuft {
@@ -813,6 +810,8 @@ input[type="number"] {
 }
 .tank-tuft {
   transform-origin: bottom;
+  rotate: calc(var(--flow, 0) * 14deg);
+  transition: rotate 0.6s ease-out;
   animation: tank-tuft 3.2s ease-in-out var(--delay, 0s) infinite;
 }
 @keyframes tank-ray {
@@ -827,48 +826,48 @@ input[type="number"] {
 .tank-ray {
   animation: tank-ray 6s ease-in-out var(--delay, 0s) infinite;
 }
-@keyframes tank-bubble {
-  0% {
-    transform: translateY(0);
-    opacity: 0;
+@keyframes tank-caustics {
+  from {
+    background-position:
+      0 0,
+      45px 30px;
   }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100%);
-    opacity: 0;
+  to {
+    background-position:
+      90px 60px,
+      -45px 90px;
   }
 }
-.tank-bubble {
-  animation: tank-bubble var(--dur, 4s) ease-in var(--delay, 0s) infinite;
+.tank-caustics {
+  background:
+    radial-gradient(ellipse 38px 16px at 50% 50%, rgb(255 255 255 / 0.55), transparent 70%) 0 0 / 90px 60px,
+    radial-gradient(ellipse 28px 12px at 50% 50%, rgb(255 255 255 / 0.45), transparent 70%) 45px 30px / 90px 60px;
+  animation: tank-caustics 12s linear infinite;
 }
-@keyframes tank-wobble {
-  0%,
-  100% {
-    translate: -2px 0;
-  }
-  50% {
-    translate: 2px 0;
-  }
+
+/* creatures */
+.tank-root[data-tool="explore"] {
+  cursor: pointer;
+  touch-action: pan-y;
 }
-.tank-wobble {
-  animation: tank-wobble 0.9s ease-in-out infinite;
+.tank-root[data-tool="feed"] {
+  cursor: crosshair;
+  touch-action: manipulation;
 }
-@keyframes tank-jelly {
-  0%,
-  100% {
-    transform: translate(0, 10px);
-  }
-  50% {
-    transform: translate(-14px, -18px);
-  }
+.tank-root[data-tool="clean"] {
+  cursor: grab;
+  touch-action: none;
 }
-.tank-jelly {
-  animation: tank-jelly 9s ease-in-out infinite;
+.tank-agent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: center;
+  will-change: transform;
+  transition: opacity 0.3s;
+}
+.tank-agent.is-picked > svg {
+  filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 8px rgb(255 255 255 / 0.8));
 }
 @keyframes tank-bell {
   0%,
@@ -909,35 +908,6 @@ input[type="number"] {
   transform-origin: right;
   animation: tank-tail 0.8s ease-in-out infinite;
 }
-@keyframes tank-crab {
-  0%,
-  10% {
-    transform: translateX(8%);
-  }
-  45%,
-  55% {
-    transform: translateX(34%);
-  }
-  90%,
-  100% {
-    transform: translateX(8%);
-  }
-}
-.tank-crab {
-  animation: tank-crab 18s ease-in-out infinite;
-}
-@keyframes tank-crab-step {
-  0%,
-  100% {
-    transform: rotate(-3deg);
-  }
-  50% {
-    transform: rotate(3deg) translateY(-1px);
-  }
-}
-.tank-crab-step {
-  animation: tank-crab-step 0.5s ease-in-out infinite;
-}
 @keyframes tank-flipper {
   0%,
   100% {
@@ -948,68 +918,32 @@ input[type="number"] {
   }
 }
 .tank-flipper {
-  transform-box: fill-box;
   transform-origin: top left;
   animation: tank-flipper 2.4s ease-in-out var(--delay, 0s) infinite;
 }
-@keyframes tank-caustics {
-  from {
-    background-position:
-      0 0,
-      45px 30px;
-  }
-  to {
-    background-position:
-      90px 60px,
-      -45px 90px;
-  }
-}
-.tank-caustics {
-  background:
-    radial-gradient(ellipse 38px 16px at 50% 50%, rgb(255 255 255 / 0.55), transparent 70%) 0 0 / 90px 60px,
-    radial-gradient(ellipse 28px 12px at 50% 50%, rgb(255 255 255 / 0.45), transparent 70%) 45px 30px / 90px 60px;
-  animation: tank-caustics 12s linear infinite;
-}
-@keyframes tank-jet {
-  0% {
-    transform: translate(0, 0) scale(0.6);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-70px, 14px) scale(1);
-    opacity: 0;
-  }
-}
-.tank-jet {
-  animation: tank-jet 1.4s ease-out var(--delay, 0s) infinite;
-}
-@keyframes tank-pilot {
+@keyframes tank-crab-step {
   0%,
-  60%,
   100% {
-    opacity: 1;
-    box-shadow: 0 0 5px #ef4444;
+    transform: rotate(-3deg);
   }
-  80% {
-    opacity: 0.3;
-    box-shadow: none;
+  50% {
+    transform: rotate(3deg) translateY(-1px);
   }
 }
-.tank-pilot {
-  animation: tank-pilot 2.5s ease-in-out infinite;
+.tank-crab.is-walking .tank-crab-step {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tank-crab-step 0.45s ease-in-out infinite;
 }
-/* shark jaw (SharkChase toggles data-open) and tail */
-.shark .shark-jaw {
+/* the shark: jaw opens while it lunges or bites (engine sets data-open) */
+.tank-shark .shark-jaw {
   opacity: 0;
   transition: opacity 0.12s;
 }
-.shark[data-open="1"] .shark-jaw {
+.tank-shark[data-open="1"] .shark-jaw {
   opacity: 1;
 }
-.shark[data-open="1"] .shark-shut {
+.tank-shark[data-open="1"] .shark-shut {
   opacity: 0;
 }
 @keyframes shark-tail {
@@ -1022,11 +956,199 @@ input[type="number"] {
   }
 }
 .shark-tail {
-  transform-box: fill-box;
   transform-origin: right;
   animation: shark-tail 0.9s ease-in-out infinite;
 }
-/* food flakes and the bite burst are created by SharkChase */
+/* the octopus shifts colour on its own; a tap jumps it to a new --hue */
+@keyframes tank-octo {
+  0%,
+  100% {
+    filter: hue-rotate(var(--hue, 0deg));
+  }
+  50% {
+    filter: hue-rotate(calc(var(--hue, 0deg) + 90deg)) saturate(1.3);
+  }
+}
+.tank-octopus > svg {
+  animation: tank-octo 5s ease-in-out infinite;
+}
+@keyframes tank-octo-arms {
+  0%,
+  100% {
+    transform: skewX(-6deg) scaleY(1);
+  }
+  50% {
+    transform: skewX(8deg) scaleY(0.9);
+  }
+}
+.tank-octo-arms {
+  transform-origin: top;
+  animation: tank-octo-arms 1.2s ease-in-out infinite;
+}
+@keyframes tank-fin {
+  50% {
+    transform: scaleX(0.6);
+  }
+}
+.tank-seahorse-fin {
+  transform-origin: right;
+  animation: tank-fin 0.3s ease-in-out infinite;
+}
+.tank-whale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  filter: blur(3px);
+  opacity: 0.16;
+  transition: opacity 2s;
+}
+.tank-glow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgb(245 208 254 / 0.9), rgb(232 121 249 / 0.35) 40%, transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+.tank-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.9);
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #e11d48;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+}
+
+/* bubbles, food and effects */
+.tank-bubble-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.85);
+  background: radial-gradient(circle at 30% 30%, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.08) 60%);
+}
+.tank-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.7);
+  background: rgb(255 255 255 / 0.18);
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(2px);
+}
+@keyframes tank-splash {
+  from {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0.9;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1.6);
+    opacity: 0;
+  }
+}
+.tank-splash {
+  position: absolute;
+  width: 12px;
+  height: 4px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.9);
+  animation: tank-splash 0.55s ease-out forwards;
+}
+@keyframes tank-ripple {
+  from {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0.9;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(3.2);
+    opacity: 0;
+  }
+}
+.tank-ripple {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  border: 2px solid rgb(255 255 255 / 0.85);
+  box-shadow: 0 0 12px rgb(255 255 255 / 0.5);
+  animation: tank-ripple 0.8s ease-out forwards;
+}
+@keyframes tank-puff {
+  from {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0.8;
+  }
+  to {
+    transform: translate(-50%, -90%) scale(1.8);
+    opacity: 0;
+  }
+}
+.tank-puff {
+  position: absolute;
+  width: 12px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #e8d6a4;
+  filter: blur(1px);
+  animation: tank-puff 0.9s ease-out forwards;
+}
+.tank-eggs {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(4, 5px);
+  gap: 1px;
+  transform: translate(-50%, -50%);
+}
+.tank-eggs i {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: #fb923c;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.5);
+  animation: tank-egg 1.2s ease-in-out infinite;
+}
+.tank-eggs i:nth-child(odd) {
+  animation-delay: -0.6s;
+}
+@keyframes tank-egg {
+  50% {
+    transform: scale(1.2);
+  }
+}
+@keyframes tank-coin {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4) rotateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotateY(720deg);
+    opacity: 0;
+  }
+}
+.tank-coin {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 35%, #fde68a, #f59e0b 70%);
+  box-shadow: 0 0 8px #fde68a;
+  animation: tank-coin 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 .tank-food {
   position: absolute;
   left: 0;
@@ -1062,29 +1184,137 @@ input[type="number"] {
     opacity: 0;
   }
 }
+
+/* treasure chest */
+.chest-lid {
+  transform-origin: 0% 100%;
+  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tank-chest.is-open .chest-lid {
+  transform: rotate(-32deg);
+}
+.chest-glow,
+.chest-coins {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.tank-chest.is-open .chest-glow,
+.tank-chest.is-open .chest-coins {
+  opacity: 1;
+}
+@keyframes chest-crack {
+  50% {
+    opacity: 0.25;
+  }
+}
+.chest-crack {
+  animation: chest-crack 2.4s ease-in-out infinite;
+}
+.tank-chest.is-open .chest-crack {
+  opacity: 0;
+  animation: none;
+}
+
+/* equipment */
+@keyframes tank-jet {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-70px, 14px) scale(1);
+    opacity: 0;
+  }
+}
+.tank-jet {
+  animation: tank-jet 1.4s ease-out var(--delay, 0s) infinite;
+}
+@keyframes tank-pilot {
+  0%,
+  60%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 5px #ef4444;
+  }
+  80% {
+    opacity: 0.3;
+    box-shadow: none;
+  }
+}
+.tank-pilot {
+  animation: tank-pilot 2.5s ease-in-out infinite;
+}
+
+/* night plankton, announcements, the fish card */
+@keyframes tank-plankton {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate(10px, -14px);
+    opacity: 1;
+  }
+}
+.tank-plankton {
+  box-shadow: 0 0 6px 2px rgb(103 232 249 / 0.8);
+  animation: tank-plankton 5s ease-in-out infinite;
+}
+@keyframes tank-toast {
+  0% {
+    transform: translateY(-120%) scale(0.9);
+    opacity: 0;
+  }
+  8%,
+  88% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40%);
+    opacity: 0;
+  }
+}
+.tank-toast {
+  animation: tank-toast 4.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes tank-card {
+  from {
+    transform: translateY(8px) scale(0.92);
+    opacity: 0;
+  }
+}
+.tank-card {
+  animation: tank-card 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tank-swim,
   .tank-sway,
   .tank-tuft,
   .tank-ray,
-  .tank-wobble,
-  .tank-jelly,
+  .tank-caustics,
   .tank-bell,
   .tank-tentacles,
   .tank-tail,
-  .tank-crab,
-  .tank-crab-step,
   .tank-flipper,
-  .tank-caustics,
+  .tank-crab.is-walking .tank-crab-step,
+  .shark-tail,
+  .tank-octopus > svg,
+  .tank-octo-arms,
+  .tank-seahorse-fin,
+  .tank-eggs i,
+  .chest-crack,
   .tank-jet,
   .tank-pilot,
-  .shark-tail {
+  .tank-plankton {
     animation: none !important;
   }
-  .tank-bubble {
-    display: none;
-  }
 }
+
 
 /* live clock: each new second rolls up into place */
 @keyframes tick {

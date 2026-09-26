@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, CheckCheck, Hourglass, Link2Off, Loader2, Lock, MapPin, Phone, Timer, User } from "lucide-react";
+import { ArrowRight, CheckCheck, Hourglass, Link2Off, Loader2, Lock, MapPin, MessageCircle, Phone, Timer, User } from "lucide-react";
 import { WAVE_BACK, WAVE_FRONT } from "@/lib/theme";
 import { cx } from "./ui";
 
@@ -177,9 +177,21 @@ export function CustomerFormView({
 
               <div key={shake} className={cx("mt-6 space-y-4", shake > 0 && "animate-confirm-shake")}>
                 <FormField i={0} icon={<User className="size-[18px]" />} label="Full name" error={errors.name}>
-                  <input value={form.name} onChange={set("name")} autoComplete="name" placeholder="e.g. Amit Biswas" maxLength={80} className={inputClass(!!errors.name)} />
+                  <input value={form.name} onChange={set("name")} autoComplete="name" placeholder="e.g. Go Round" maxLength={80} className={inputClass(!!errors.name)} />
                 </FormField>
-                <FormField i={1} icon={<Phone className="size-[18px]" />} label="Phone number" error={errors.phone}>
+                <FormField
+                  i={1}
+                  icon={<Phone className="size-[18px]" />}
+                  label={
+                    <>
+                      Phone number{" "}
+                      <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-[#e7f8ee] px-2 py-0.5 align-middle text-[11px] font-bold text-[#128c4a]">
+                        <MessageCircle className="size-3" /> WhatsApp
+                      </span>
+                    </>
+                  }
+                  error={errors.phone}
+                >
                   <input
                     value={form.phone}
                     onChange={set("phone")}
@@ -263,7 +275,7 @@ const inputClass = (bad: boolean) =>
     bad ? "border-red-300 bg-red-50/50" : "border-line",
   );
 
-function FormField({ i, icon, label, error, top, children }: { i: number; icon: React.ReactNode; label: string; error?: string; top?: boolean; children: React.ReactNode }) {
+function FormField({ i, icon, label, error, top, children }: { i: number; icon: React.ReactNode; label: React.ReactNode; error?: string; top?: boolean; children: React.ReactNode }) {
   return (
     <label className="animate-home-in group/field block" style={{ animationDelay: `${220 + i * 80}ms` }}>
       <span className="mb-1.5 block text-[12.5px] font-bold text-body">{label}</span>

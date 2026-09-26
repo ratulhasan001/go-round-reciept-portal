@@ -12,7 +12,7 @@ import { Mark, SECTIONS, SectionIcon, SyncDot, syncLabel } from "@/components/na
 import { cx, useClientValue } from "@/components/ui";
 import { FlipClock } from "@/components/FlipClock";
 import { Aquarium } from "@/components/Aquarium";
-import { AquariumTank } from "@/components/AquariumTank";
+import { AquariumTank } from "@/components/aquarium/AquariumTank";
 import { CalendarTile } from "@/components/CalendarTile";
 
 const greeting = () => {
