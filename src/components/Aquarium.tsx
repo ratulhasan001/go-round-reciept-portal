@@ -36,7 +36,7 @@ export function Aquarium({ className }: { className?: string }) {
         <path d="M4 54 C 16 50, 28 56, 40 52 S 56 52, 60 52 V 64 H 4 Z" fill="#e8d9a8" />
         {/* weed */}
         <path className="aq-weed" d="M20 56 C 17 49, 23 45, 19 38 C 17 34, 20 31, 20 29" fill="none" stroke="#4e8a23" strokeWidth="3" strokeLinecap="round" />
-        <path className="aq-weed [animation-delay:-1.5s]" d="M45 55 C 48 49, 43 45, 46 40" fill="none" stroke="#8cc556" strokeWidth="3" strokeLinecap="round" />
+        <path className="aq-weed [--delay:-1.5s]" d="M45 55 C 48 49, 43 45, 46 40" fill="none" stroke="#8cc556" strokeWidth="3" strokeLinecap="round" />
         {/* fish (faces right) */}
         <g className="aq-fish">
           <path d="M23 39 L 16 34 L 17.5 39 L 16 44 Z" fill="#8cc556" />
@@ -47,8 +47,8 @@ export function Aquarium({ className }: { className?: string }) {
         </g>
         {/* bubbles */}
         <circle className="aq-bubble" cx="42" cy="48" r="2" fill="none" stroke="#ffffff" strokeWidth="1.2" />
-        <circle className="aq-bubble [animation-delay:-1.1s]" cx="45" cy="48" r="1.3" fill="none" stroke="#ffffff" strokeWidth="1" />
-        <circle className="aq-bubble [animation-delay:-2.2s]" cx="40" cy="48" r="1.6" fill="none" stroke="#ffffff" strokeWidth="1" />
+        <circle className="aq-bubble [--delay:-1.1s]" cx="45" cy="48" r="1.3" fill="none" stroke="#ffffff" strokeWidth="1" />
+        <circle className="aq-bubble [--delay:-2.2s]" cx="40" cy="48" r="1.6" fill="none" stroke="#ffffff" strokeWidth="1" />
       </g>
 
       {/* glass */}

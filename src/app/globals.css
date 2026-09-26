@@ -680,7 +680,7 @@ input[type="number"] {
 }
 .aq-weed {
   transform-origin: bottom;
-  animation: aq-sway 3s ease-in-out infinite;
+  animation: aq-sway 3s ease-in-out var(--delay, 0s) infinite;
 }
 @keyframes aq-rise {
   0% {
@@ -696,7 +696,7 @@ input[type="number"] {
   }
 }
 .aq-bubble {
-  animation: aq-rise 3.3s ease-in infinite;
+  animation: aq-rise 3.3s ease-in var(--delay, 0s) infinite;
 }
 @keyframes aq-ripple {
   0%,
@@ -735,7 +735,151 @@ input[type="number"] {
   .aq-weed,
   .aq-bubble,
   .aq-ripple,
+  .pond-shimmer,
+  .pond-swim,
+  .pond-bob,
   .animate-wave {
+    animation: none !important;
+  }
+}
+
+/* greeting pond (delays and speeds come from --delay / --dur so each fish can differ) */
+@keyframes pond-swim {
+  from {
+    transform: translateX(-10%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.pond-swim {
+  animation: pond-swim var(--dur, 16s) linear var(--delay, 0s) infinite var(--dir, normal);
+}
+@keyframes pond-bob {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 3px;
+  }
+}
+.pond-bob {
+  animation: pond-bob 2.2s ease-in-out infinite;
+}
+@keyframes pond-shimmer {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: translateX(0) scaleX(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(12px) scaleX(1.2);
+  }
+}
+.pond-shimmer {
+  animation: pond-shimmer 4s ease-in-out var(--delay, 0s) infinite;
+}
+/* one leap every 6.4s: out of the water, over the top, back in */
+@keyframes pond-jump {
+  0% {
+    opacity: 0;
+    transform: translate(0, 14px) rotate(-60deg);
+  }
+  3% {
+    opacity: 1;
+    transform: translate(3px, 2px) rotate(-58deg);
+  }
+  8% {
+    transform: translate(14px, -34px) rotate(-38deg);
+  }
+  13% {
+    transform: translate(29px, -50px) rotate(0deg);
+  }
+  18% {
+    transform: translate(44px, -34px) rotate(38deg);
+  }
+  23% {
+    opacity: 1;
+    transform: translate(55px, 2px) rotate(58deg);
+  }
+  26%,
+  100% {
+    opacity: 0;
+    transform: translate(58px, 14px) rotate(62deg);
+  }
+}
+@keyframes pond-ripple {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  2% {
+    opacity: 0.9;
+  }
+  13%,
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@keyframes pond-ripple-land {
+  0%,
+  22% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  24% {
+    opacity: 0.9;
+  }
+  36%,
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@keyframes pond-drop {
+  0%,
+  22% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  23% {
+    opacity: 1;
+  }
+  28% {
+    transform: translate(var(--dx), -14px);
+  }
+  34%,
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--dx) * 1.5), 3px);
+  }
+}
+.pond-jump,
+.pond-ripple,
+.pond-drop {
+  opacity: 0; /* hidden unless animating (reduced motion keeps them hidden) */
+  animation: 6.4s linear var(--delay, 0s) infinite;
+}
+.pond-jump {
+  transform-origin: center;
+  animation-name: pond-jump;
+}
+.pond-ripple {
+  animation-name: pond-ripple;
+}
+.pond-ripple-land {
+  animation-name: pond-ripple-land;
+}
+.pond-drop {
+  animation-name: pond-drop;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pond-jump,
+  .pond-ripple,
+  .pond-drop {
     animation: none !important;
   }
 }

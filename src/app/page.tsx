@@ -12,6 +12,7 @@ import { Mark, SECTIONS, SectionIcon, SyncDot, syncLabel } from "@/components/na
 import { cx, useClientValue } from "@/components/ui";
 import { FlipClock } from "@/components/FlipClock";
 import { Aquarium } from "@/components/Aquarium";
+import { Pond } from "@/components/Pond";
 import { CALENDAR_H, CalendarTile } from "@/components/CalendarTile";
 
 const greeting = () => {
@@ -110,11 +111,14 @@ export default function Home() {
           </div>
 
           {/* greeting */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-6 sm:mt-8">
-            <h1 className="animate-home-in flex items-center gap-3 font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl [animation-delay:80ms]">
-              {greet}
-              <Aquarium className="size-[1.15em] shrink-0" />
-            </h1>
+          <div className="mt-6 flex flex-wrap items-stretch justify-between gap-6 sm:mt-8">
+            <div className="flex min-w-[min(100%,24rem)] flex-1 flex-col gap-2">
+              <h1 className="animate-home-in flex items-center gap-3 font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl [animation-delay:80ms]">
+                {greet}
+                <Aquarium className="size-[1.15em] shrink-0" />
+              </h1>
+              <Pond className="animate-home-in mt-auto w-full [animation-delay:200ms]" />
+            </div>
             <div className="animate-home-in flex flex-wrap items-end gap-x-5 gap-y-4 [animation-delay:140ms]">
               <CalendarTile />
               {/* clock cards are 2.3em tall and the three together 8.01em wide: match the calendar, but never overflow a phone */}
