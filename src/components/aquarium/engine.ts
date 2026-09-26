@@ -121,7 +121,7 @@ const SPECIES: Record<Kind, Spec> = {
   shark: { species: "Reef shark", names: ["Captain Chomp"], fact: "", w: 150, z: [0.3, 0.3], speed: 45, band: [0.15, 0.7] },
   jelly: { species: "Moon jellyfish", names: ["Glow"], fact: "No brain, no heart - and it glows at night.", w: 40, z: [0.7, 0.7], speed: 10, band: [0.08, 0.45] },
   crab: { species: "Red crab", names: ["Pincher"], fact: "Walks sideways and kicks up little puffs of sand.", w: 44, z: [0.1, 0.1], speed: 34, band: [1, 1] },
-  diver: { species: "Treasure diver", names: ["Captain Deep"], fact: "Opens the treasure chest on days the shop hits its sales goal.", w: 40, z: [0.3, 0.3], speed: 16, band: [1, 1] },
+  diver: { species: "Treasure diver", names: ["Captain Deep"], fact: "Strolls the sand hunting for sunken treasure.", w: 40, z: [0.3, 0.3], speed: 16, band: [1, 1] },
   octopus: { species: "Octopus · visitor", names: ["Ink"], fact: "Changes colour in a blink - tap it again!", w: 72, z: [0.2, 0.2], speed: 34, band: [0.3, 0.6] },
   seahorse: { species: "Seahorse · visitor", names: ["Twirl"], fact: "Seahorse dads are the ones who carry the babies.", w: 30, z: [0.25, 0.25], speed: 12, band: [0.3, 0.6] },
   goby: { species: "Shy goby", names: ["Peekaboo"], fact: "Loves hide and seek - and you found it!", w: 30, z: [0.3, 0.3], speed: 40, band: [0.5, 0.85] },
@@ -236,7 +236,6 @@ export function createEngine(
   let nextShy = rand(30, 45);
   let luckyAt: number | null = null;
   let nextSparkle = 0;
-  let diverTask: "chest" | null = null;
 
   // ---------- scenery anchors (measured from the React-rendered scenery) ----------
   const rectOf = (el: Element): Rect => {
@@ -346,7 +345,6 @@ export function createEngine(
 
   for (const [kind, n] of CAST) for (let i = 0; i < n; i++) spawn(kind, `${kind}-${i}`);
   const sharkA = () => agents.find((a) => a.kind === "shark")!;
-  const diverA = () => agents.find((a) => a.kind === "diver");
 
   // ---------- effects ----------
   const fx = (cls: string, x: number, y: number, html = "", life = 1000, parent = layers.fx) => {
@@ -863,20 +861,14 @@ export function createEngine(
         const isCrab = a.kind === "crab";
         const lying = isCrab ? food.find((f) => f.settled && Math.abs(f.x - a.x) < 200 * k) : undefined;
         if (lying) a.goal = { x: lying.x, y: a.y };
-        if (a.kind === "diver" && diverTask === "chest") a.goal = { x: spots.chest.x - spots.chest.w * 0.7, y: a.y };
-        const moving = (!asleep || diverTask !== null) && (!a.pause || t > a.pause);
+        const moving = !asleep && (!a.pause || t > a.pause);
         const dx = a.goal.x - a.x;
         if (Math.abs(dx) < 6) {
           if (lying) eat(food.indexOf(lying));
-          if (a.kind === "diver" && diverTask === "chest") {
-            diverTask = null;
-            coins();
-            toast("🤿 Daily goal reached! The diver opened the treasure chest");
-            a.pause = t + 4;
-          } else a.pause = t + rand(1, 3.5);
+          a.pause = t + rand(1, 3.5);
           a.goal = { x: rand(W * 0.08, W * 0.92), y: a.y };
         }
-        a.vx = moving ? Math.sign(dx) * a.speed * k * (a.kind === "diver" && diverTask ? 2.2 : 1) : 0;
+        a.vx = moving ? Math.sign(dx) * a.speed * k : 0;
         a.x += a.vx * dt;
         a.y = walkY(a);
         a.el.classList.toggle("is-walking", moving && Math.abs(dx) >= 6);
@@ -1181,11 +1173,6 @@ export function createEngine(
       play("chime");
     },
     payoff: coins,
-    /** The treasure diver walks over and opens the chest. */
-    diverToChest() {
-      if (diverA()) diverTask = "chest";
-      else coins();
-    },
     heart(seconds = 10) {
       heartUntil = t + seconds;
       play("chime");

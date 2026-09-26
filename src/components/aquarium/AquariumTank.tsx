@@ -94,7 +94,7 @@ const SHOP: { kind: ExtraKind; name: string; blurb: string; emoji: string }[] = 
  * The aquarium. React draws the scenery, controls and cards; the engine (engine.ts) runs every creature.
  *
  * In the shop (default) it is tied to the business: a fish for every receipt and customer, bubbles from the chest for
- * today's sales, celebrations, the fish shop, the daily goal and the anniversary. With `guest` (the public customer
+ * today's sales, celebrations, the fish shop and the anniversary. With `guest` (the public customer
  * form) none of that is read or shown - only the fish, games and events - and it keeps its own records on the device.
  */
 export function AquariumTank({
@@ -154,12 +154,8 @@ export function AquariumTank({
       byDay.set(inv.date, (byDay.get(inv.date) ?? 0) + g);
     }
     const count = invoices.filter((i) => i.date === today).length;
-    // daily goal: a bit above the average selling day of the last 30 days
-    const cutoff = new Date(Date.parse(`${today}T00:00:00Z`) - 30 * 86_400_000).toISOString().slice(0, 10);
-    const recent = [...byDay].filter(([d]) => d >= cutoff && d < today).map(([, v]) => v);
-    const avg = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0;
     const first = invoices.reduce<string | null>((m, i) => (!m || i.date < m ? i.date : m), null);
-    return { today: byDay.get(today) ?? 0, count, goal: Math.max(2000, Math.round((avg * 1.2) / 500) * 500), first };
+    return { today: byDay.get(today) ?? 0, count, first };
   }, [invoices, today]);
   const receiptFish = useMemo<SchoolFish[]>(
     () =>
@@ -316,14 +312,6 @@ export function AquariumTank({
       );
     }, 1200);
   }, [guest, ready, invoices, toast, K, totals.first, today, shopName]);
-
-  // the treasure diver opens the chest once a day, when today's sales reach the goal
-  useEffect(() => {
-    if (guest || !ready || !engine.current || totals.today < totals.goal) return;
-    if (load(`${K}goal-day`, "") === today) return;
-    keep(`${K}goal-day`, today);
-    engine.current.diverToChest();
-  }, [guest, ready, totals.today, totals.goal, today, K]);
 
   // anniversary: the heart comes back every minute that day
   useEffect(() => {
@@ -638,16 +626,6 @@ export function AquariumTank({
             tone={clean < 35 ? "bg-red-400" : clean < 65 ? "bg-amber-400" : "bg-lime"}
             onClick={clean < 90 ? () => setTool("clean") : undefined}
           />
-          {!guest && (
-            <Meter
-              dark={dark}
-              icon={<Target className="size-4" />}
-              label="Daily goal"
-              value={`৳ ${money(totals.today)} / ${money(totals.goal)}`}
-              frac={totals.today / totals.goal}
-              tone={totals.today >= totals.goal ? "bg-amber-400" : "bg-lime"}
-            />
-          )}
         </div>
       </div>
       <p key={tool} className={cx("animate-fade-up mt-3 text-center text-[12.5px]", dark ? "text-mint/75" : "text-muted")}>
