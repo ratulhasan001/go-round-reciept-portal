@@ -706,3 +706,38 @@ input[type="number"] {
     animation: none;
   }
 }
+
+/* ---------- Flip clock (Fliqlo style) ---------- */
+/* the old top half folds down to the hinge, then the new bottom half falls from the hinge into place */
+@keyframes flap-top {
+  from {
+    transform: rotateX(0deg);
+    filter: brightness(1);
+  }
+  to {
+    transform: rotateX(-90deg);
+    filter: brightness(0.55);
+  }
+}
+@keyframes flap-bottom {
+  from {
+    transform: rotateX(90deg);
+    filter: brightness(0.55);
+  }
+  to {
+    transform: rotateX(0deg);
+    filter: brightness(1);
+  }
+}
+.animate-flap-top {
+  animation: flap-top 0.3s cubic-bezier(0.55, 0, 0.9, 0.45) both;
+}
+.animate-flap-bottom {
+  animation: flap-bottom 0.3s cubic-bezier(0.1, 0.55, 0.45, 1) 0.3s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-flap-top,
+  .animate-flap-bottom {
+    animation: none;
+  }
+}
