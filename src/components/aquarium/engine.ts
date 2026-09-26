@@ -15,7 +15,7 @@ import { type Sfx, sfx } from "./sound";
 
 export type Tool = "explore" | "feed" | "clean" | "play" | "fish" | "decorate";
 export type Kind = ArtKind;
-export type ExtraKind = "dolphin" | "manta" | "lionfish";
+export type ExtraKind = "dolphin" | "manta" | "lionfish" | "koi" | "stingray";
 
 export interface FishInfo {
   key: string;
@@ -59,7 +59,9 @@ interface Agent extends Vec {
   z: number; // 0 near … 1 far
   speed: number;
   goal: Vec;
-  flip: number;
+  flip: number; // which way it faces (±1)
+  turn: number; // what's drawn: eases from one side to the other, so a turn is a quick swing, not a snap
+  lastFlip: number;
   phase: number;
   puff: number; // pufferfish inflation, 1 = normal
   alive: boolean;
@@ -127,6 +129,14 @@ const SPECIES: Record<Kind, Spec> = {
   dolphin: { species: "Baby dolphin", names: ["Splash"], fact: "Clicks and whistles to chat with its friends.", w: 110, z: [0.2, 0.25], speed: 70, band: [0.12, 0.6], eats: true, follows: true },
   manta: { species: "Manta ray", names: ["Glider"], fact: "Flies through the water on wide, slow wings.", w: 120, z: [0.55, 0.6], speed: 24, band: [0.15, 0.5], follows: true },
   lionfish: { species: "Lionfish", names: ["Leo"], fact: "Those frilly spines are venomous - look, don't touch!", w: 64, z: [0.3, 0.35], speed: 14, band: [0.3, 0.72], eats: true },
+  butterfly: { species: "Butterflyfish", names: ["Flutter"], fact: "The fake eye-spot near its tail fools hungry predators.", w: 50, z: [0.2, 0.4], speed: 30, band: [0.25, 0.75], eats: true, flees: true, catchable: true, follows: true },
+  parrot: { species: "Parrotfish", names: ["Rio"], fact: "Nibbles coral with its beak - and poops out white sand!", w: 72, z: [0.35, 0.45], speed: 32, band: [0.3, 0.75], eats: true, flees: true, follows: true },
+  mandarin: { species: "Mandarin fish", names: ["Swirl"], fact: "One of the few fish that are truly blue.", w: 50, z: [0.1, 0.25], speed: 20, band: [0.6, 0.85], eats: true, flees: true, catchable: true, follows: true },
+  betta: { species: "Betta", names: ["Ruby"], fact: "Shows off those flowing fins to anyone watching.", w: 64, z: [0.15, 0.3], speed: 18, band: [0.15, 0.5], eats: true, flees: true, follows: true },
+  discus: { species: "Discus", names: ["Disco"], fact: "Round as a plate and the king of the aquarium.", w: 50, z: [0.4, 0.55], speed: 22, band: [0.3, 0.7], eats: true, flees: true, follows: true },
+  guppy: { species: "Guppy", names: ["Gup"], fact: "Tiny, colourful and never stops moving.", w: 26, z: [0.2, 0.45], speed: 46, band: [0.15, 0.6], eats: true, flees: true, group: "guppy", catchable: true, follows: true },
+  koi: { species: "Koi", names: ["Sakura"], fact: "Koi can live for more than 50 years.", w: 80, z: [0.3, 0.4], speed: 26, band: [0.2, 0.7], eats: true, follows: true },
+  stingray: { species: "Stingray", names: ["Pebble"], fact: "Glides low over the sand, hunting for snacks.", w: 96, z: [0.25, 0.35], speed: 22, band: [0.78, 0.88] },
   whale: { species: "Whale", names: [], fact: "", w: 0, z: [1, 1], speed: 0, band: [0.3, 0.3] },
 };
 const CAST: [Kind, number][] = [
@@ -139,6 +149,12 @@ const CAST: [Kind, number][] = [
   ["tang", 1],
   ["prey", 7],
   ["clown", 2],
+  ["butterfly", 1],
+  ["parrot", 1],
+  ["mandarin", 1],
+  ["betta", 1],
+  ["discus", 1],
+  ["guppy", 6],
   ["shark", 1],
   ["crab", 1],
   ["diver", 1],
@@ -277,7 +293,7 @@ export function createEngine(
     }
     (layer ? layers[layer] : z > 0.55 ? layers.far : layers.near).appendChild(el);
     const idx = Number(key.split("-").pop()) || 0;
-    const name = sp.names.length > 1 ? sp.names[idx % sp.names.length]! : sp.names.length ? `${sp.names[0]}${["tetra", "prey"].includes(kind) ? ` ${idx + 1}` : ""}` : "";
+    const name = sp.names.length > 1 ? sp.names[idx % sp.names.length]! : sp.names.length ? `${sp.names[0]}${["tetra", "prey", "guppy"].includes(kind) ? ` ${idx + 1}` : ""}` : "";
     const a: Agent = {
       key,
       kind,
@@ -291,7 +307,9 @@ export function createEngine(
       z,
       speed: sp.speed * rand(0.85, 1.15),
       goal: { x: 0, y: 0 },
-      flip: Math.random() < 0.5 ? -1 : 1,
+      flip: 1,
+      turn: 1,
+      lastFlip: -9,
       phase: rand(0, 6.28),
       puff: 1,
       alive: true,
@@ -569,7 +587,7 @@ export function createEngine(
     lastNow = now;
     t += dt;
     step(dt);
-    render();
+    render(dt);
     raf = requestAnimationFrame(frame);
   };
 
@@ -871,7 +889,7 @@ export function createEngine(
         agility = 1.6;
         if (game.reel && !asleep) {
           // a fish on the line is irresistible
-          want = toward(mouth, game.hook, 118 * k);
+          want = toward(a, game.hook, 118 * k);
           if (len(game.hook.x - mouth.x, game.hook.y - mouth.y) < 26 * k) {
             const f = game.reel;
             f.hooked = false;
@@ -887,14 +905,14 @@ export function createEngine(
           }
         } else if ((frenzy || feeding) && food.length) {
           const f = food.reduce((b, x) => (len(x.x - mouth.x, x.y - mouth.y) < len(b.x - mouth.x, b.y - mouth.y) ? x : b));
-          want = toward(mouth, f, 120 * k);
+          want = toward(a, f, 120 * k);
         } else if (tool === "play" && laser.on && len(laser.x - a.x, laser.y - a.y) < 320 * k && !asleep) {
           // curious: circles the dot at a respectful distance
           const d = len(laser.x - a.x, laser.y - a.y);
           want = d > 110 * k ? toward(a, laser, 55 * k) : { x: -(laser.y - a.y) * 0.4, y: (laser.x - a.x) * 0.4 };
         } else if (shark.hunting) {
           const target = targets.reduce((b, p) => (len(p.x - mouth.x, p.y - mouth.y) < len(b.x - mouth.x, b.y - mouth.y) ? p : b));
-          want = toward(mouth, target, 125 * k);
+          want = toward(a, target, 125 * k);
           if (len(target.x - mouth.x, target.y - mouth.y) < 18 * k) {
             target.alive = false;
             target.respawn = t + rand(5, 8);
@@ -1041,14 +1059,21 @@ export function createEngine(
     }
   }
 
-  function render() {
+  function render(dt = 0) {
     for (const a of agents) {
       if (!a.alive) continue;
       const upright = a.kind === "jelly" || WALKERS.includes(a.kind) || a.kind === "seahorse";
-      if (Math.abs(a.vx) > 4 && a.kind !== "jelly") a.flip = a.vx < 0 ? -1 : 1;
+      // turn around only when clearly swimming the other way, and not again straight after a turn -
+      // otherwise a fish hovering at a spot (or the shark lining up a bite) flips left-right every frame
+      const side = a.vx < 0 ? -1 : 1;
+      if (a.kind !== "jelly" && !a.hooked && side !== a.flip && Math.abs(a.vx) > 18 * k && t - a.lastFlip > 0.9) {
+        a.flip = side;
+        a.lastFlip = t;
+      }
+      a.turn = dt ? a.turn + (a.flip - a.turn) * Math.min(1, dt * 11) : a.flip;
       const s = (1 - a.z * 0.4) * a.puff;
       const tilt = upright ? 0 : a.hooked ? Math.sin(t * 20) * 0.4 - 0.9 : clamp(Math.atan2(a.vy, Math.abs(a.vx) + 1), -0.45, 0.45) + Math.sin(t * 7 + a.phase) * 0.035;
-      a.el.style.transform = `translate3d(${a.x - a.w / 2}px, ${a.y - a.h / 2}px, 0) scale(${a.flip * s}, ${s}) rotate(${tilt}rad)`;
+      a.el.style.transform = `translate3d(${a.x - a.w / 2}px, ${a.y - a.h / 2}px, 0) scale(${a.turn * s}, ${s}) rotate(${tilt}rad)`;
       if (a.kind === "jelly") {
         let g = glows.get(a.key);
         if (!g) {
@@ -1099,7 +1124,7 @@ export function createEngine(
     if (e?.isIntersecting && !reduce) raf = requestAnimationFrame(frame);
   });
   io.observe(root);
-  if (reduce) window.setTimeout(render, 60);
+  if (reduce) window.setTimeout(() => render(), 60);
 
   return {
     setTool(next: Tool) {

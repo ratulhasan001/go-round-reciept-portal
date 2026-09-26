@@ -7,7 +7,6 @@ import {
   Droplet,
   Hand,
   Heart,
-  Lock,
   Moon,
   Palette,
   RotateCcw,
@@ -82,11 +81,13 @@ const DECOR = [
 ] as const;
 type DecorId = (typeof DECOR)[number]["id"];
 
-/** Fish from the shop, unlocked by all-time sales. */
-const SHOP: { kind: ExtraKind; name: string; blurb: string; unlock: number; emoji: string }[] = [
-  { kind: "lionfish", name: "Lionfish", blurb: "Frilly, spiky and very slow", unlock: 10_000, emoji: "🦁" },
-  { kind: "manta", name: "Manta ray", blurb: "Glides on huge wings", unlock: 50_000, emoji: "🪽" },
-  { kind: "dolphin", name: "Baby dolphin", blurb: "Fast, playful, chatty", unlock: 150_000, emoji: "🐬" },
+/** Extra fish anyone can add to the tank - nothing is locked. */
+const SHOP: { kind: ExtraKind; name: string; blurb: string; emoji: string }[] = [
+  { kind: "lionfish", name: "Lionfish", blurb: "Frilly, spiky and very slow", emoji: "🦁" },
+  { kind: "manta", name: "Manta ray", blurb: "Glides on huge wings", emoji: "🪽" },
+  { kind: "dolphin", name: "Baby dolphin", blurb: "Fast, playful, chatty", emoji: "🐬" },
+  { kind: "koi", name: "Koi", blurb: "Calm, lucky, lives for decades", emoji: "🎏" },
+  { kind: "stingray", name: "Stingray", blurb: "Glides low over the sand", emoji: "🌊" },
 ];
 
 /**
@@ -148,10 +149,8 @@ export function AquariumTank({
   const today = todayISO();
   const totals = useMemo(() => {
     const byDay = new Map<string, number>();
-    let all = 0;
     for (const inv of invoices) {
       const g = computeTotals(inv).grandTotal;
-      all += g;
       byDay.set(inv.date, (byDay.get(inv.date) ?? 0) + g);
     }
     const count = invoices.filter((i) => i.date === today).length;
@@ -160,7 +159,7 @@ export function AquariumTank({
     const recent = [...byDay].filter(([d]) => d >= cutoff && d < today).map(([, v]) => v);
     const avg = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0;
     const first = invoices.reduce<string | null>((m, i) => (!m || i.date < m ? i.date : m), null);
-    return { today: byDay.get(today) ?? 0, count, all, goal: Math.max(2000, Math.round((avg * 1.2) / 500) * 500), first };
+    return { today: byDay.get(today) ?? 0, count, goal: Math.max(2000, Math.round((avg * 1.2) / 500) * 500), first };
   }, [invoices, today]);
   const receiptFish = useMemo<SchoolFish[]>(
     () =>
@@ -233,7 +232,7 @@ export function AquariumTank({
       setNames(load(`${K}names`, {}));
       setLight(load(`${K}light`, "auto"));
       setLayout(load(`${K}layout`, {}));
-      setExtras(guest ? [] : load(`${K}extras`, []));
+      setExtras(load(`${K}extras`, []));
       setClockNight(nightFromClock());
       setHour(new Date().getHours());
       // once a day this device gets a chance to meet the lucky fish
@@ -603,11 +602,9 @@ export function AquariumTank({
             <button onClick={() => setTool(decorating ? "explore" : "decorate")} className={cx(chip, decorating && "!bg-deep !text-lime ring-lime/40")}>
               <Palette className="size-4" /> Decorate
             </button>
-            {!guest && (
-              <button onClick={() => setShopOpen((o) => !o)} className={cx(chip, shopOpen && "!bg-deep !text-lime")}>
-                <Store className="size-4" /> Fish shop
-              </button>
-            )}
+            <button onClick={() => setShopOpen((o) => !o)} className={cx(chip, shopOpen && "!bg-deep !text-lime")}>
+              <Store className="size-4" /> Fish shop
+            </button>
             <button onClick={shake} className={chip} title="Shake the tank">
               <Vibrate className="size-4" /> Shake
             </button>
@@ -627,7 +624,7 @@ export function AquariumTank({
           </div>
         </div>
 
-        {shopOpen && !guest && <FishShop owned={extras} total={totals.all} onToggle={toggleExtra} onClose={() => setShopOpen(false)} />}
+        {shopOpen && <FishShop owned={extras} onToggle={toggleExtra} onClose={() => setShopOpen(false)} />}
 
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Meter dark={dark} icon={<Thermometer className="size-4" />} label="Temp" value={`${temp.toFixed(1)}°C`} frac={(temp - 24) / 4} tone={temp < 25.8 ? "bg-orange-400" : "bg-lime"} />
@@ -677,57 +674,33 @@ function Rock() {
   );
 }
 
-function FishShop({ owned, total, onToggle, onClose }: { owned: ExtraKind[]; total: number; onToggle: (k: ExtraKind) => void; onClose: () => void }) {
-  const next = SHOP.find((s) => total < s.unlock);
+function FishShop({ owned, onToggle, onClose }: { owned: ExtraKind[]; onToggle: (k: ExtraKind) => void; onClose: () => void }) {
   return (
-    <div className="animate-fade-up mx-auto w-full max-w-xl rounded-3xl bg-white p-4 shadow-lg ring-1 ring-line">
+    <div className="animate-fade-up mx-auto w-full max-w-2xl rounded-3xl bg-white p-4 text-ink shadow-lg ring-1 ring-line">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="flex items-center gap-2 font-display text-[16px] font-extrabold">
             <Store className="size-4 text-brand" /> Fish shop
           </h3>
-          <p className="text-[12.5px] text-muted">New fish unlock as your all-time sales grow.</p>
+          <p className="text-[12.5px] text-muted">Tap a fish to add it to the tank - tap again to let it go.</p>
         </div>
         <button onClick={onClose} className="grid size-8 place-items-center rounded-xl text-muted hover:rotate-90 hover:bg-canvas" aria-label="Close shop">
           <X className="size-4" />
         </button>
       </div>
-      {next && (
-        <div className="mt-3">
-          <div className="flex justify-between text-[11.5px] font-semibold text-muted">
-            <span>
-              Next: {next.emoji} {next.name}
-            </span>
-            <span>
-              ৳ {money(total)} / {money(next.unlock)}
-            </span>
-          </div>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-line">
-            <div className="h-full rounded-full bg-gradient-to-r from-lime to-aqua transition-all duration-700" style={{ width: `${Math.min(100, (total / next.unlock) * 100)}%` }} />
-          </div>
-        </div>
-      )}
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {SHOP.map((s) => {
-          const open = total >= s.unlock;
           const have = owned.includes(s.kind);
           return (
             <button
               key={s.kind}
-              disabled={!open}
               onClick={() => onToggle(s.kind)}
-              className={cx(
-                "flex flex-col items-start rounded-2xl p-3 text-left ring-1 transition",
-                have ? "bg-soft ring-lime" : open ? "bg-canvas ring-line hover:-translate-y-0.5 hover:shadow-md" : "cursor-not-allowed bg-canvas/60 opacity-70 ring-line",
-              )}
+              className={cx("flex flex-col items-start rounded-2xl p-3 text-left ring-1 transition active:scale-95", have ? "bg-soft ring-lime" : "bg-canvas ring-line hover:-translate-y-0.5 hover:shadow-md")}
             >
               <span className="text-2xl">{s.emoji}</span>
               <span className="mt-1 text-[13.5px] font-extrabold text-ink">{s.name}</span>
               <span className="text-[11.5px] text-muted">{s.blurb}</span>
-              <span className={cx("mt-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold", have ? "bg-lime/30 text-brand" : open ? "bg-deep text-lime" : "bg-line text-muted")}>
-                {!open && <Lock className="size-3" />}
-                {have ? "In your tank · tap to remove" : open ? "Add to tank" : `Unlocks at ৳ ${money(s.unlock)}`}
-              </span>
+              <span className={cx("mt-2 rounded-full px-2 py-0.5 text-[11px] font-bold", have ? "bg-lime/30 text-brand" : "bg-deep text-lime")}>{have ? "In the tank ✓" : "Add to tank"}</span>
             </button>
           );
         })}

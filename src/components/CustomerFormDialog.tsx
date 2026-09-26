@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, CloudOff, Copy, ExternalLink, Hourglass, Link2, Loader2, MessageCircle, RefreshCw, Send, Share2, Sparkles, UserCheck, X } from "lucide-react";
+import { Ban, Check, CloudOff, Copy, ExternalLink, Hourglass, Link2, List, Loader2, MessageCircle, RefreshCw, Send, Share2, Sparkles, UserCheck, X } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { Button, cx, useToast } from "./ui";
 
@@ -11,6 +11,14 @@ const TTL = 30 * 60 * 1000;
 const POLL_MS = 4000;
 
 type Phase = "intro" | "creating" | "live" | "used" | "expired";
+interface LinkRow {
+  id: string;
+  state: "active" | "used" | "expired" | "cancelled";
+  createdAt: number;
+  endedAt: number | null;
+  msLeft: number;
+  customerName: string | null;
+}
 interface Live {
   token: string;
   url: string;
@@ -51,6 +59,10 @@ export function CustomerFormDialog() {
   const [copied, setCopied] = useState<"auto" | "manual" | null>(null);
   const [who, setWho] = useState("");
   const [error, setError] = useState("");
+  // every link (from any device): what's live, used, expired or cancelled
+  const [links, setLinks] = useState<{ rows: LinkRow[]; at: number } | null>(null);
+  const [now, setNow] = useState(0);
+  const [ownId, setOwnId] = useState("");
   const linkBox = useRef<HTMLInputElement>(null);
   // latest values for the polling loop, which shouldn't restart every time the store changes
   const openRef = useRef(open);
@@ -70,6 +82,44 @@ export function CustomerFormDialog() {
     }, 0);
     return () => clearTimeout(id);
   }, []);
+
+  const loadLinks = useCallback(async () => {
+    const res = await fetch("/api/forms?list=1", { cache: "no-store" }).catch(() => null);
+    const body = res?.ok ? await res.json().catch(() => null) : null;
+    if (body?.links) setLinks({ rows: body.links, at: Date.now() });
+  }, []);
+  useEffect(() => {
+    if (mode !== "cloud") return;
+    const first = window.setTimeout(loadLinks, 0);
+    const id = window.setInterval(loadLinks, open ? 4000 : 20_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
+  }, [mode, open, loadLinks, phase]);
+  useEffect(() => {
+    if (!open) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [open]);
+  // this device's link, recognised in the list by the start of its hash
+  useEffect(() => {
+    if (!live) return;
+    let off = false;
+    void crypto.subtle.digest("SHA-256", new TextEncoder().encode(live.token)).then((buf) => {
+      if (!off) setOwnId([...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16));
+    });
+    return () => {
+      off = true;
+    };
+  }, [live]);
+  const cancelById = async (row: LinkRow) => {
+    if (row.id === ownId) return cancel();
+    await fetch(`/api/forms?id=${row.id}`, { method: "DELETE" }).catch(() => null);
+    toast("Link cancelled");
+    void loadLinks();
+  };
+  const activeCount = links?.rows.filter((r) => r.state === "active" && r.msLeft > 0).length ?? 0; // as of the last refresh
 
   const close = () => {
     setOpen(false);
@@ -200,6 +250,12 @@ export function CustomerFormDialog() {
             {clock(left)}
           </span>
         )}
+        {phase !== "live" && activeCount > 0 && (
+          <span className="ml-0.5 flex items-center gap-1 rounded-full bg-soft px-1.5 py-0.5 text-[11px] font-bold text-brand">
+            <span className="relative inline-flex size-1.5 rounded-full bg-brand" />
+            {activeCount} live
+          </span>
+        )}
       </Button>
 
       {/* portalled to <body>: the page wrapper is animated with a transform, which would trap a fixed element */}
@@ -230,7 +286,8 @@ export function CustomerFormDialog() {
                 </div>
               </div>
 
-              <div key={phase} className="animate-fade-up overflow-y-auto p-5">
+              <div className="overflow-y-auto">
+              <div key={phase} className="animate-fade-up p-5">
                 {mode !== "cloud" ? (
                   <State
                     icon={<CloudOff className="size-8" />}
@@ -243,7 +300,7 @@ export function CustomerFormDialog() {
                     <ol className="space-y-3">
                       {[
                         { icon: <Sparkles className="size-4" />, title: "Create a link", text: "It's copied for you, ready to paste." },
-                        { icon: <Send className="size-4" />, title: "Your customer fills it in", text: "Name, phone and address - from any phone." },
+                        { icon: <Send className="size-4" />, title: "Your customer fills it in", text: "Name, WhatsApp number and address - from any phone." },
                         { icon: <UserCheck className="size-4" />, title: "Saved automatically", text: "They appear in Customers, and the link closes." },
                       ].map((s, i) => (
                         <li key={s.title} className="animate-row-in flex items-start gap-3 rounded-2xl bg-canvas p-3" style={{ animationDelay: `${i * 70}ms` }}>
@@ -414,6 +471,8 @@ export function CustomerFormDialog() {
                   />
                 )}
               </div>
+              {mode === "cloud" && links && <LinkList rows={links.rows} fetchedAt={links.at} now={now || links.at} ownId={ownId} onCancel={cancelById} />}
+              </div>
             </div>
           </div>,
           document.body,
@@ -429,6 +488,72 @@ function State({ icon, tone, title, text, action }: { icon: React.ReactNode; ton
       <h3 className="mt-4 font-display text-xl font-extrabold">{title}</h3>
       <p className="mt-1.5 max-w-xs text-[13.5px] text-muted">{text}</p>
       {action}
+    </div>
+  );
+}
+
+const time = (ms: number) => new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+const day = (ms: number) => {
+  const d = new Date(ms);
+  const today = new Date();
+  return d.toDateString() === today.toDateString() ? time(ms) : `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}, ${time(ms)}`;
+};
+
+/** Every recent link and where it stands; live ones count down and can be cancelled from here. */
+function LinkList({ rows, fetchedAt, now, ownId, onCancel }: { rows: LinkRow[]; fetchedAt: number; now: number; ownId: string; onCancel: (r: LinkRow) => void }) {
+  const live = rows.filter((r) => r.state === "active" && r.msLeft - (now - fetchedAt) > 0);
+  return (
+    <div className="border-t border-line bg-canvas/60 px-5 pb-5 pt-4">
+      <div className="flex items-center justify-between">
+        <h3 className="flex items-center gap-2 text-[13px] font-extrabold text-ink">
+          <List className="size-4 text-muted" /> All links
+        </h3>
+        <span className={cx("rounded-full px-2 py-0.5 text-[11.5px] font-bold", live.length ? "bg-soft text-brand" : "bg-line text-muted")}>
+          {live.length ? `${live.length} live now` : "None live right now"}
+        </span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-center text-[12.5px] text-muted">No links yet - create one above.</p>
+      ) : (
+        <ul className="mt-3 space-y-1.5">
+          {rows.slice(0, 12).map((r, i) => {
+            const left = Math.max(0, r.msLeft - (now - fetchedAt));
+            const state = r.state === "active" && left === 0 ? "expired" : r.state;
+            const tone = { active: "bg-lime", used: "bg-aqua", expired: "bg-faint", cancelled: "bg-red-300" }[state];
+            return (
+              <li key={r.id} className="animate-row-in flex items-center gap-3 rounded-2xl bg-white px-3 py-2.5 ring-1 ring-line" style={{ animationDelay: `${i * 30}ms` }}>
+                <span className="relative flex size-2.5 shrink-0">
+                  {state === "active" && <span className="absolute inline-flex size-full animate-ping rounded-full bg-lime" />}
+                  <span className={cx("relative inline-flex size-2.5 rounded-full", tone)} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-bold text-ink">
+                    {state === "active" && "Live - waiting for a customer"}
+                    {state === "used" && <>Filled in by {r.customerName ?? "a customer"}</>}
+                    {state === "expired" && "Expired unused"}
+                    {state === "cancelled" && "Cancelled"}
+                    {r.id === ownId && <span className="ml-1.5 rounded-full bg-aqua-soft px-1.5 py-px text-[10.5px] font-bold text-aqua-deep">this device</span>}
+                  </p>
+                  <p className="text-[11.5px] text-muted">
+                    Made {day(r.createdAt)}
+                    {r.endedAt && state !== "active" ? ` · ${state === "used" ? "sent" : state === "cancelled" ? "cancelled" : "closed"} ${time(r.endedAt)}` : ""}
+                  </p>
+                </div>
+                {state === "active" ? (
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className={cx("font-display text-[14px] font-extrabold tabular-nums", left < 60_000 ? "text-red-500" : left < 300_000 ? "text-amber-500" : "text-brand")}>{clock(left)}</span>
+                    <button onClick={() => onCancel(r)} title="Cancel this link" className="grid size-7 place-items-center rounded-lg text-muted transition hover:bg-red-50 hover:text-red-600" aria-label="Cancel link">
+                      <Ban className="size-3.5" />
+                    </button>
+                  </div>
+                ) : state === "used" ? (
+                  <UserCheck className="size-4 shrink-0 text-aqua-deep" />
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

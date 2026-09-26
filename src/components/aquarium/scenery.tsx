@@ -25,6 +25,14 @@ export function TankDefs() {
           <stop offset="0.5" stopColor="#facc15" />
           <stop offset="1" stopColor="#d97706" />
         </linearGradient>
+        <clipPath id="gr-discus-body">
+          <circle cx="28" cy="26" r="21" />
+        </clipPath>
+        <linearGradient id="gr-guppy-tail" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#f472b6" />
+          <stop offset="0.5" stopColor="#a78bfa" />
+          <stop offset="1" stopColor="#22d3ee" />
+        </linearGradient>
         <radialGradient id="gr-jelly-bell" cx="0.5" cy="0.35" r="0.7">
           <stop offset="0" stopColor="#fbe7ff" stopOpacity="0.95" />
           <stop offset="1" stopColor="#e879f9" stopOpacity="0.55" />

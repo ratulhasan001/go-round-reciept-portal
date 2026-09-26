@@ -47,6 +47,7 @@ export function ensureSchema() {
           customer_name text
         )`,
     )
+    .then(() => db()`alter table gr_forms add column if not exists cancelled_at timestamptz`)
     .catch((e) => {
     g.__grSchema = undefined; // retry on the next request
     throw e;

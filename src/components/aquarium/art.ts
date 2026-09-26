@@ -24,7 +24,15 @@ export type ArtKind =
   | "dolphin"
   | "manta"
   | "lionfish"
-  | "diver";
+  | "diver"
+  | "butterfly"
+  | "parrot"
+  | "mandarin"
+  | "betta"
+  | "discus"
+  | "guppy"
+  | "koi"
+  | "stingray";
 
 /** [viewBox width, viewBox height, markup] */
 export const ART: Record<ArtKind, [number, number, string]> = {
@@ -261,6 +269,85 @@ export const ART: Record<ArtKind, [number, number, string]> = {
     <circle cx="27" cy="12" r="6" fill="#bae6fd" stroke="#52525b" stroke-width="1.5"/>
     <path d="M24 9 Q27 7 29 9" stroke="#fff" stroke-width="1" fill="none"/>
     </g>`,
+  ],
+  butterfly: [
+    54,
+    44,
+    `<path d="M12 22 L2 14 L4 22 L2 30 Z" fill="#facc15"/>
+    <path d="M16 8 Q30 -4 44 12 L40 16 Z" fill="#fde047"/><path d="M16 36 Q30 48 42 32 L38 28 Z" fill="#fde047"/>
+    <ellipse cx="30" cy="22" rx="17" ry="15" fill="#fef08a"/>
+    <path d="M24 8 Q30 22 24 36 L30 36 Q36 22 30 8 Z" fill="#111827" fill-opacity="0.85"/>
+    <path d="M38 12 Q46 18 46 22 Q46 26 38 32 Q42 22 38 12 Z" fill="#fff"/>
+    <path d="M45 21 L53 22 L45 23 Z" fill="#facc15"/>
+    <circle cx="27" cy="18" r="2.2" fill="#fff"/><circle cx="27" cy="18" r="1.1" fill="#111"/>
+    <circle cx="16" cy="28" r="3" fill="#111827"/><circle cx="16" cy="28" r="1.3" fill="#fef08a"/>`,
+  ],
+  parrot: [
+    72,
+    36,
+    `<path d="M14 18 L2 8 Q7 18 2 28 Z" fill="#ec4899"/>
+    <path d="M24 6 Q40 -2 56 8 Z" fill="#14b8a6"/>
+    <ellipse cx="38" cy="18" rx="25" ry="12.5" fill="#2dd4bf"/>
+    <g fill="#f472b6" fill-opacity="0.55"><path d="M22 14 q4 -3 8 0 q-4 3 -8 0 Z"/><path d="M30 20 q4 -3 8 0 q-4 3 -8 0 Z"/><path d="M38 13 q4 -3 8 0 q-4 3 -8 0 Z"/><path d="M26 25 q4 -3 8 0 q-4 3 -8 0 Z"/></g>
+    <path d="M58 13 Q70 14 70 19 Q68 24 58 24 Z" fill="#f9a8d4"/><path d="M60 19 H69" stroke="#be185d" stroke-width="1"/>
+    <circle cx="55" cy="14" r="2.3" fill="#111"/><circle cx="55.7" cy="13.4" r="0.7" fill="#fff"/>
+    <path d="M36 26 L32 34 L42 27 Z" fill="#14b8a6"/>`,
+  ],
+  mandarin: [
+    58,
+    34,
+    `<path d="M12 17 L2 9 L4 17 L2 25 Z" fill="#f97316"/>
+    <path d="M18 7 Q26 -2 36 6 Z" fill="#2563eb"/><path d="M18 27 Q28 36 38 27 Z" fill="#2563eb"/>
+    <ellipse cx="30" cy="17" rx="19" ry="11" fill="#fb923c"/>
+    <g fill="none" stroke="#1d4ed8" stroke-width="2.2" stroke-linecap="round"><path d="M16 12 Q22 8 26 14 T36 13"/><path d="M15 20 Q21 16 27 22 T40 20"/><path d="M22 26 Q28 24 34 27"/></g>
+    <g fill="none" stroke="#22c55e" stroke-width="1.2"><path d="M18 16 Q24 13 30 17"/><path d="M26 23 Q32 21 38 24"/></g>
+    <circle cx="43" cy="14" r="3" fill="#fde047"/><circle cx="43.5" cy="14" r="1.5" fill="#111"/>`,
+  ],
+  betta: [
+    70,
+    54,
+    `<path class="tank-tail" d="M28 26 C 12 6, -2 8, 2 26 C -2 44, 12 48, 28 28 Z" fill="#dc2626" fill-opacity="0.85"/>
+    <path class="tank-tail" style="--delay:-0.3s" d="M30 20 C 26 0, 44 -2, 46 14 Z" fill="#b91c1c" fill-opacity="0.8"/>
+    <path class="tank-tail" style="--delay:-0.5s" d="M32 32 C 28 52, 44 54, 46 36 Z" fill="#1d4ed8" fill-opacity="0.75"/>
+    <ellipse cx="44" cy="26" rx="16" ry="8" fill="#ef4444"/>
+    <path d="M36 22 Q44 18 54 22" stroke="#60a5fa" stroke-width="1.5" fill="none" stroke-opacity="0.8"/>
+    <circle cx="54" cy="24" r="2.2" fill="#111"/><circle cx="54.6" cy="23.4" r="0.7" fill="#fff"/>`,
+  ],
+  discus: [
+    52,
+    52,
+    `<path d="M10 26 L1 19 L3 26 L1 33 Z" fill="#c2410c"/>
+    <circle cx="28" cy="26" r="21" fill="#ea580c"/>
+    <g clip-path="url(#gr-discus-body)" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M14 4 Q18 26 14 48"/><path d="M22 3 Q26 26 22 49"/><path d="M30 3 Q34 26 30 49"/><path d="M38 5 Q42 26 38 47"/></g>
+    <circle cx="28" cy="26" r="21" fill="none" stroke="#9a3412" stroke-width="1.5"/>
+    <circle cx="41" cy="21" r="2.6" fill="#b91c1c"/><circle cx="41" cy="21" r="1.2" fill="#111"/>`,
+  ],
+  guppy: [
+    34,
+    18,
+    `<path class="tank-tail" d="M12 9 C 6 0, 0 2, 1 9 C 0 16, 6 18, 12 9 Z" fill="url(#gr-guppy-tail)"/>
+    <ellipse cx="21" cy="9" rx="10" ry="4.5" fill="#cbd5e1"/>
+    <path d="M14 8 Q21 6 28 8" stroke="#a78bfa" stroke-width="1.2" fill="none"/>
+    <circle cx="27" cy="8" r="1.2" fill="#111"/>`,
+  ],
+  koi: [
+    76,
+    36,
+    `<path class="tank-tail" d="M18 18 C 8 6, 0 8, 2 14 C 5 16, 5 20, 2 22 C 0 28, 8 30, 18 18 Z" fill="#fff7ed" fill-opacity="0.9"/>
+    <path d="M30 8 Q42 0 52 8 Z" fill="#fed7aa"/>
+    <ellipse cx="42" cy="18" rx="26" ry="11" fill="#fffbf5"/>
+    <g fill="#f97316"><path d="M24 12 Q32 6 40 11 Q36 17 26 16 Z"/><path d="M44 20 Q52 16 58 22 Q52 27 44 25 Z"/><circle cx="60" cy="13" r="4"/></g>
+    <g fill="#111827" fill-opacity="0.8"><circle cx="34" cy="21" r="2"/><circle cx="50" cy="12" r="1.6"/></g>
+    <path d="M66 20 Q72 22 68 24" stroke="#fdba74" stroke-width="1.5" fill="none"/>
+    <circle cx="61" cy="16" r="2" fill="#111"/>`,
+  ],
+  stingray: [
+    100,
+    40,
+    `<path d="M4 22 C 30 22, 40 20, 50 20" stroke="#57534e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path class="tank-manta-wing" d="M40 20 C 50 4, 80 2, 98 16 C 90 26, 72 30, 58 30 C 50 30, 44 26, 40 20 Z" fill="#a8a29e"/>
+    <g fill="#78716c" fill-opacity="0.6"><circle cx="64" cy="14" r="2"/><circle cx="74" cy="18" r="2.4"/><circle cx="82" cy="12" r="1.6"/><circle cx="68" cy="22" r="1.8"/></g>
+    <circle cx="86" cy="16" r="1.8" fill="#111"/><circle cx="90" cy="18" r="1.4" fill="#111"/>`,
   ],
   whale: [
     300,

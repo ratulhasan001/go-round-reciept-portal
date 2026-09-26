@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, CheckCheck, Hourglass, Link2Off, Loader2, Lock, MapPin, MessageCircle, Phone, Timer, User } from "lucide-react";
+import { ArrowRight, CheckCheck, Hourglass, Link2Off, Loader2, Lock, MapPin, MessageCircle, Timer, User } from "lucide-react";
 import { WAVE_BACK, WAVE_FRONT } from "@/lib/theme";
 import { cx } from "./ui";
 import { AquariumTank } from "./aquarium/AquariumTank";
@@ -56,7 +56,7 @@ export function CustomerFormView({
     e.preventDefault();
     const errs: Partial<Fields> = {};
     if (form.name.trim().length < 2) errs.name = "Please enter your full name.";
-    if (form.phone.replace(/\D/g, "").length < 6) errs.phone = "Please enter a valid phone number.";
+    if (form.phone.replace(/\D/g, "").length < 6) errs.phone = "Please enter a valid WhatsApp number.";
     if (form.address.trim().length < 3) errs.address = "Please enter your address.";
     setErrors(errs);
     setFailure("");
@@ -185,14 +185,11 @@ export function CustomerFormView({
                 </FormField>
                 <FormField
                   i={1}
-                  icon={<Phone className="size-[18px]" />}
+                  icon={<MessageCircle className="size-[18px]" />}
                   label={
-                    <>
-                      Phone number{" "}
-                      <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-[#e7f8ee] px-2 py-0.5 align-middle text-[11px] font-bold text-[#128c4a]">
-                        <MessageCircle className="size-3" /> WhatsApp
-                      </span>
-                    </>
+                    <span className="inline-flex items-center gap-1.5">
+                      <MessageCircle className="size-3.5 text-[#128c4a]" /> WhatsApp number
+                    </span>
                   }
                   error={errors.phone}
                 >

@@ -27,7 +27,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/f/[token]">) {
   const digits = phoneKey(phone);
   const errors: Record<string, string> = {};
   if (name.length < 2) errors.name = "Please enter your full name.";
-  if (digits.length < 6 || digits.length > 15) errors.phone = "Please enter a valid phone number.";
+  if (digits.length < 6 || digits.length > 15) errors.phone = "Please enter a valid WhatsApp number.";
   if (address.length < 3) errors.address = "Please enter your address.";
   if (Object.keys(errors).length) return NextResponse.json({ error: "invalid", fields: errors }, { status: 422 });
 
