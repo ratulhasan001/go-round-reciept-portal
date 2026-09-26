@@ -110,12 +110,12 @@ export default function Home() {
           </div>
 
           {/* greeting */}
-          <div className="mt-10 flex flex-col gap-5 sm:mt-14 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mt-6 flex flex-col gap-6 sm:mt-8 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="animate-home-in flex items-center gap-3 font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl [animation-delay:80ms]">
               {greet}
               <Aquarium className="size-[1.15em] shrink-0" />
             </h1>
-            <div className="animate-home-in flex flex-col items-center gap-4 self-start sm:self-end [animation-delay:140ms]">
+            <div className="animate-home-in flex flex-wrap items-center gap-x-5 gap-y-4 [animation-delay:140ms]">
               <CalendarTile />
               <FlipClock size={22} />
             </div>
