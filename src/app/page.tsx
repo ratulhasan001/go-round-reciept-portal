@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, CalendarDays, Clock3, LogOut, ReceiptText, TrendingUp, Wallet } from "lucide-react";
+import { ArrowUpRight, Clock3, LogOut, ReceiptText, TrendingUp, Wallet } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { computeTotals, money, todayISO } from "@/lib/calc";
 import { couponStatus } from "@/lib/coupons";
@@ -12,13 +12,13 @@ import { Mark, SECTIONS, SectionIcon, SyncDot, syncLabel } from "@/components/na
 import { cx, useClientValue } from "@/components/ui";
 import { FlipClock } from "@/components/FlipClock";
 import { Aquarium } from "@/components/Aquarium";
+import { CalendarTile } from "@/components/CalendarTile";
 
 const greeting = () => {
   const hour = new Date().getHours();
   return hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 };
 const plural = (n: number, one: string, many = one + "s") => `${n} ${n === 1 ? one : many}`;
-const longDate = () => new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
 // each tile's colour story
 const TONE: Record<string, { badge: string; glow: string }> = {
@@ -34,7 +34,6 @@ export default function Home() {
   const { shop, invoices, products, customers, coupons, mode, sync, authEnabled, logout } = useStore();
   const router = useRouter();
   const greet = useClientValue(greeting, "Welcome back");
-  const today = useClientValue(longDate, "");
 
   const month = todayISO().slice(0, 7);
   const stats = useMemo(() => {
@@ -116,10 +115,8 @@ export default function Home() {
               {greet}
               <Aquarium className="size-[1.15em] shrink-0" />
             </h1>
-            <div className="animate-home-in flex flex-col items-start gap-2.5 text-sm font-semibold text-lime sm:items-end [animation-delay:140ms]">
-              <span className="flex items-center gap-2">
-                <CalendarDays className="size-4" /> {today || " "}
-              </span>
+            <div className="animate-home-in flex flex-col items-center gap-4 self-start sm:self-end [animation-delay:140ms]">
+              <CalendarTile />
               <FlipClock size={22} />
             </div>
           </div>

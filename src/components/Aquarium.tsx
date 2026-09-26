@@ -1,6 +1,9 @@
 import { cx } from "./ui";
 
-/** Small animated fish tank: a glass tank of logo-aqua water, swaying weed, a lime fish and rising bubbles. Scales with font size. */
+// round bowl: flared neck at the top, a 24-radius globe below
+const BOWL = "M19 12 C 19 17, 8 21, 8 37 A 24 24 0 0 0 56 37 C 56 21, 45 17, 45 12 Z";
+
+/** Small animated fish bowl: a round glass bowl of logo-aqua water, swaying weed, a lime fish and rising bubbles. Scales with font size. */
 export function Aquarium({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={cx("inline-block h-[1em] w-[1em] overflow-visible", className)} aria-hidden>
@@ -17,40 +20,42 @@ export function Aquarium({ className }: { className?: string }) {
           <stop offset="0" stopColor="#c4ec8f" />
           <stop offset="1" stopColor="#8cc556" />
         </linearGradient>
-        <clipPath id="aq-tank">
-          <rect x="6" y="10" width="52" height="46" rx="11" />
+        <clipPath id="aq-bowl">
+          <path d={BOWL} />
         </clipPath>
       </defs>
 
-      {/* lid */}
-      <rect x="12" y="5" width="40" height="5" rx="2.5" fill="#8cc556" />
+      {/* shadow the bowl sits on */}
+      <ellipse cx="32" cy="61.5" rx="15" ry="2" fill="#000000" fillOpacity="0.28" />
 
-      <g clipPath="url(#aq-tank)">
-        <rect x="6" y="10" width="52" height="46" fill="#ffffff" fillOpacity="0.06" />
+      <g clipPath="url(#aq-bowl)">
+        <rect x="0" y="0" width="64" height="64" fill="#ffffff" fillOpacity="0.07" />
         {/* water with a rippling surface */}
-        <path className="aq-ripple" d="M0 20 C 10 17, 18 23, 28 20 S 46 17, 56 20 S 70 23, 76 20 V 60 H 0 Z" fill="url(#aq-water)" />
+        <path className="aq-ripple" d="M0 25 C 10 22, 18 28, 28 25 S 46 22, 56 25 S 70 28, 78 25 V 64 H 0 Z" fill="url(#aq-water)" />
         {/* sand */}
-        <path d="M6 51 C 18 47, 30 53, 42 49 S 56 50, 58 49 V 56 H 6 Z" fill="#e8d9a8" />
+        <path d="M4 54 C 16 50, 28 56, 40 52 S 56 52, 60 52 V 64 H 4 Z" fill="#e8d9a8" />
         {/* weed */}
-        <path className="aq-weed" d="M16 52 C 13 45, 19 41, 15 34 C 13 30, 16 27, 16 25" fill="none" stroke="#4e8a23" strokeWidth="3" strokeLinecap="round" />
-        <path className="aq-weed [animation-delay:-1.5s]" d="M48 51 C 51 45, 46 41, 49 36" fill="none" stroke="#8cc556" strokeWidth="3" strokeLinecap="round" />
+        <path className="aq-weed" d="M20 56 C 17 49, 23 45, 19 38 C 17 34, 20 31, 20 29" fill="none" stroke="#4e8a23" strokeWidth="3" strokeLinecap="round" />
+        <path className="aq-weed [animation-delay:-1.5s]" d="M45 55 C 48 49, 43 45, 46 40" fill="none" stroke="#8cc556" strokeWidth="3" strokeLinecap="round" />
         {/* fish (faces right) */}
         <g className="aq-fish">
-          <path d="M22 35 L 15 30 L 16.5 35 L 15 40 Z" fill="#8cc556" />
-          <ellipse cx="31" cy="35" rx="10" ry="6.5" fill="url(#aq-fish)" />
-          <path d="M28 29.5 Q 31 26 34 29" fill="#8cc556" />
-          <circle cx="36" cy="33.5" r="1.6" fill="#0e2a23" />
-          <circle cx="36.5" cy="33" r="0.5" fill="#ffffff" />
+          <path d="M23 39 L 16 34 L 17.5 39 L 16 44 Z" fill="#8cc556" />
+          <ellipse cx="32" cy="39" rx="10" ry="6.5" fill="url(#aq-fish)" />
+          <path d="M29 33.5 Q 32 30, 35 33" fill="#8cc556" />
+          <circle cx="37" cy="37.5" r="1.6" fill="#0e2a23" />
+          <circle cx="37.5" cy="37" r="0.5" fill="#ffffff" />
         </g>
         {/* bubbles */}
-        <circle className="aq-bubble" cx="42" cy="44" r="2" fill="none" stroke="#ffffff" strokeWidth="1.2" />
-        <circle className="aq-bubble [animation-delay:-1.1s]" cx="45" cy="44" r="1.3" fill="none" stroke="#ffffff" strokeWidth="1" />
-        <circle className="aq-bubble [animation-delay:-2.2s]" cx="40" cy="44" r="1.6" fill="none" stroke="#ffffff" strokeWidth="1" />
+        <circle className="aq-bubble" cx="42" cy="48" r="2" fill="none" stroke="#ffffff" strokeWidth="1.2" />
+        <circle className="aq-bubble [animation-delay:-1.1s]" cx="45" cy="48" r="1.3" fill="none" stroke="#ffffff" strokeWidth="1" />
+        <circle className="aq-bubble [animation-delay:-2.2s]" cx="40" cy="48" r="1.6" fill="none" stroke="#ffffff" strokeWidth="1" />
       </g>
 
       {/* glass */}
-      <rect x="6" y="10" width="52" height="46" rx="11" fill="none" stroke="url(#aq-glass)" strokeWidth="2.5" />
-      <path d="M12 20 V 34" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="2.5" strokeLinecap="round" />
+      <path d={BOWL} fill="none" stroke="url(#aq-glass)" strokeWidth="2.5" strokeLinejoin="round" />
+      <ellipse cx="32" cy="12" rx="13" ry="2.6" fill="none" stroke="#8cc556" strokeWidth="2.5" />
+      <path d="M13 30 A 20 20 0 0 0 17 47" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="19" cy="25.5" r="1.3" fill="#ffffff" fillOpacity="0.6" />
     </svg>
   );
 }
