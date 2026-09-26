@@ -18,7 +18,13 @@ export type ArtKind =
   | "baby"
   | "octopus"
   | "seahorse"
-  | "whale";
+  | "whale"
+  | "goby"
+  | "lucky"
+  | "dolphin"
+  | "manta"
+  | "lionfish"
+  | "diver";
 
 /** [viewBox width, viewBox height, markup] */
 export const ART: Record<ArtKind, [number, number, string]> = {
@@ -188,6 +194,73 @@ export const ART: Record<ArtKind, [number, number, string]> = {
     <g stroke="#d97706" stroke-width="1" fill="none" stroke-linecap="round"><path d="M17 20 H23"/><path d="M16 26 H24"/><path d="M17 32 H26"/><path d="M18 38 H27"/><path d="M20 44 H28"/></g>
     <path d="M20 4 L22 8 L25 4" fill="#f59e0b"/>
     <circle cx="27" cy="13" r="1.8" fill="#111"/>`,
+  ],
+  goby: [
+    40,
+    20,
+    `<path d="M9 10 L1 4 L3 10 L1 16 Z" fill="#a855f7"/>
+    <path d="M14 4 Q20 -2 27 4 Z" fill="#facc15"/>
+    <ellipse cx="22" cy="11" rx="14" ry="7.5" fill="#c084fc"/>
+    <path d="M8 11 Q22 20 36 11 Q22 15 8 11 Z" fill="#fde047"/>
+    <circle cx="31" cy="8" r="3.2" fill="#fff"/><circle cx="32" cy="8" r="1.8" fill="#111"/>
+    <path d="M34 13 Q36 14 34 15" stroke="#6b21a8" stroke-width="1" fill="none"/>`,
+  ],
+  lucky: [
+    64,
+    40,
+    `<path class="tank-tail" d="M26 20 C 16 8, 4 4, 2 11 C 8 15, 9 20, 2 29 C 6 36, 16 32, 26 20 Z" fill="#fde047"/>
+    <path d="M32 9 Q40 -1 48 9 Z" fill="#facc15"/>
+    <ellipse cx="40" cy="21" rx="17" ry="12.5" fill="url(#gr-lucky)"/>
+    <g fill="#fff" opacity="0.9"><path d="M36 14 l1.2 2.4 2.4 1.2 -2.4 1.2 -1.2 2.4 -1.2 -2.4 -2.4 -1.2 2.4 -1.2 Z"/><circle cx="46" cy="26" r="1.2"/></g>
+    <circle cx="50" cy="17" r="2.4" fill="#111"/><circle cx="50.8" cy="16.3" r="0.8" fill="#fff"/>`,
+  ],
+  dolphin: [
+    120,
+    50,
+    `<path d="M20 26 L4 14 Q10 26 4 38 Z" fill="#7aa7c7"/>
+    <path d="M56 12 L66 0 L72 14 Z" fill="#6b98b9"/>
+    <path d="M16 27 C 34 10, 80 6, 104 20 C 112 24, 118 26, 119 28 C 112 30, 104 30, 100 31 C 80 42, 38 44, 16 27 Z" fill="#8fb9d6"/>
+    <path d="M26 30 C 50 40, 84 38, 100 31 C 90 36, 60 42, 36 36 Z" fill="#e6f1f8"/>
+    <path d="M62 34 L56 46 L72 36 Z" fill="#6b98b9"/>
+    <circle cx="96" cy="22" r="2.2" fill="#0f172a"/><circle cx="96.7" cy="21.4" r="0.7" fill="#fff"/>
+    <path d="M104 28 Q110 30 116 28" stroke="#5b86a6" stroke-width="1.2" fill="none" stroke-linecap="round"/>`,
+  ],
+  manta: [
+    120,
+    70,
+    `<path class="tank-manta-wing" d="M60 30 C 40 10, 14 8, 2 22 C 20 26, 34 34, 46 44 Z" fill="#334155"/>
+    <path class="tank-manta-wing" style="--delay:-0.1s" d="M60 30 C 80 10, 106 8, 118 22 C 100 26, 86 34, 74 44 Z" fill="#334155"/>
+    <path d="M44 30 C 48 20, 72 20, 76 30 C 76 44, 66 52, 60 52 C 54 52, 44 44, 44 30 Z" fill="#475569"/>
+    <path d="M60 52 C 60 60, 56 66, 50 70" stroke="#334155" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M48 26 C 46 20, 50 16, 52 20 M72 26 C 74 20, 70 16, 68 20" stroke="#334155" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <g fill="#e2e8f0" opacity="0.5"><circle cx="54" cy="36" r="1.5"/><circle cx="60" cy="40" r="1.5"/><circle cx="66" cy="36" r="1.5"/></g>`,
+  ],
+  lionfish: [
+    70,
+    56,
+    `<g stroke="#b91c1c" stroke-width="2.2" stroke-linecap="round" fill="none">
+      <path d="M22 22 L14 2"/><path d="M28 20 L24 0"/><path d="M34 19 L34 1"/><path d="M40 20 L44 2"/><path d="M46 22 L54 6"/>
+      <path d="M24 36 L8 50"/><path d="M30 38 L20 54"/><path d="M38 38 L36 55"/>
+    </g>
+    <path d="M14 28 L2 20 L5 28 L2 36 Z" fill="#fecaca"/>
+    <ellipse cx="36" cy="29" rx="22" ry="11" fill="#fef2f2"/>
+    <g clip-path="url(#gr-lion-body)" fill="#dc2626"><rect x="18" y="0" width="4" height="60"/><rect x="27" y="0" width="4" height="60"/><rect x="36" y="0" width="4" height="60"/><rect x="45" y="0" width="4" height="60"/></g>
+    <path d="M52 34 C 58 40, 60 48, 56 52" stroke="#f87171" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle cx="51" cy="26" r="2.2" fill="#111"/><circle cx="51.7" cy="25.4" r="0.7" fill="#fff"/>`,
+  ],
+  diver: [
+    44,
+    60,
+    `<g class="tank-diver-walk">
+    <rect x="6" y="18" width="10" height="22" rx="4" fill="#facc15" stroke="#a16207" stroke-width="1"/>
+    <rect x="12" y="20" width="22" height="24" rx="8" fill="#2563eb"/>
+    <path d="M16 44 L14 58 M28 44 L30 58" stroke="#1e3a8a" stroke-width="6" stroke-linecap="round"/>
+    <path d="M10 58 H18 M26 58 H36" stroke="#111827" stroke-width="4" stroke-linecap="round"/>
+    <path d="M32 26 L40 34" stroke="#1d4ed8" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="24" cy="12" r="11" fill="#d4d4d8" stroke="#71717a" stroke-width="1.5"/>
+    <circle cx="27" cy="12" r="6" fill="#bae6fd" stroke="#52525b" stroke-width="1.5"/>
+    <path d="M24 9 Q27 7 29 9" stroke="#fff" stroke-width="1" fill="none"/>
+    </g>`,
   ],
   whale: [
     300,

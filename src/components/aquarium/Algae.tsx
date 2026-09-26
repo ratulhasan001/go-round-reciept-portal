@@ -2,16 +2,15 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 
-const KEY = "gr-tank-cleaned"; // when the glass was last wiped clean
 const FULL_MS = 72 * 3600_000; // fully green after three days
-const read = () => {
+const read = (KEY: string) => {
   try {
     return Number(localStorage.getItem(KEY)) || 0;
   } catch {
     return 0;
   }
 };
-const write = (v: number) => {
+const write = (KEY: string, v: number) => {
   try {
     localStorage.setItem(KEY, String(v));
   } catch {
@@ -38,7 +37,8 @@ export interface AlgaeHandle {
  * Algae on the front glass: it builds up over the days since the last clean and is scrubbed off with the
  * Clean tool. Reports how dirty the glass is (0 … 1), and calls onClean once it is wiped spotless.
  */
-export const Algae = forwardRef<AlgaeHandle, { onDirt: (d: number) => void; onClean: () => void }>(function Algae({ onDirt, onClean }, ref) {
+export const Algae = forwardRef<AlgaeHandle, { onDirt: (d: number) => void; onClean: () => void; storage: string }>(function Algae({ onDirt, onClean, storage }, ref) {
+  const KEY = `${storage}cleaned`; // when the glass was last wiped clean
   const canvas = useRef<HTMLCanvasElement>(null);
   const sponge = useRef<HTMLDivElement>(null);
   const hideSponge = useRef(0);
@@ -47,11 +47,11 @@ export const Algae = forwardRef<AlgaeHandle, { onDirt: (d: number) => void; onCl
   const draw = useCallback(() => {
     const c = canvas.current;
     if (!c) return;
-    let cleaned = read();
+    let cleaned = read(KEY);
     if (!cleaned) {
       // first visit: start a little grubby so there is something to clean
       cleaned = Date.now() - 30 * 3600_000;
-      write(cleaned);
+      write(KEY, cleaned);
     }
     const level = Math.min(1, Math.max(0, (Date.now() - cleaned) / FULL_MS));
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -88,7 +88,7 @@ export const Algae = forwardRef<AlgaeHandle, { onDirt: (d: number) => void; onCl
     state.current.level = level;
     state.current.baseline = coverage() || 1;
     onDirt(level);
-  }, [onDirt]);
+  }, [onDirt, KEY]);
 
   /** Total alpha left on the glass, measured on a small copy. */
   const coverage = () => {
@@ -112,14 +112,14 @@ export const Algae = forwardRef<AlgaeHandle, { onDirt: (d: number) => void; onCl
     // it keeps growing while the page is open
     const id = window.setInterval(() => {
       const s = state.current;
-      const fresh = Math.min(1, (Date.now() - read()) / FULL_MS);
+      const fresh = Math.min(1, (Date.now() - read(KEY)) / FULL_MS);
       if (fresh - s.level > 0.04 && coverage() / s.baseline > 0.95) draw();
     }, 60_000);
     return () => {
       ro.disconnect();
       clearInterval(id);
     };
-  }, [draw]);
+  }, [draw, KEY]);
 
   useImperativeHandle(ref, () => ({
     wipe(x, y, start) {
@@ -154,7 +154,7 @@ export const Algae = forwardRef<AlgaeHandle, { onDirt: (d: number) => void; onCl
       const left = coverage() / s.baseline;
       if (left < 0.08) {
         g.clearRect(0, 0, c.width, c.height);
-        write(Date.now());
+        write(KEY, Date.now());
         s.level = 0;
         onDirt(0);
         onClean();

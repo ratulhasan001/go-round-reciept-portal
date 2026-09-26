@@ -17,6 +17,14 @@ export function TankDefs() {
         <clipPath id="gr-tetra-body">
           <ellipse cx="16" cy="6" rx="12" ry="4.5" />
         </clipPath>
+        <clipPath id="gr-lion-body">
+          <ellipse cx="36" cy="29" rx="22" ry="11" />
+        </clipPath>
+        <linearGradient id="gr-lucky" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fef9c3" />
+          <stop offset="0.5" stopColor="#facc15" />
+          <stop offset="1" stopColor="#d97706" />
+        </linearGradient>
         <radialGradient id="gr-jelly-bell" cx="0.5" cy="0.35" r="0.7">
           <stop offset="0" stopColor="#fbe7ff" stopOpacity="0.95" />
           <stop offset="1" stopColor="#e879f9" stopOpacity="0.55" />
@@ -36,7 +44,7 @@ export function Anemone({ className }: { className?: string }) {
     return { x, y, i };
   });
   return (
-    <svg data-anemone viewBox="0 0 100 64" className={cx("absolute overflow-visible", className)} aria-hidden>
+    <svg data-anemone viewBox="0 0 100 64" className={cx("block w-full overflow-visible", className)} aria-hidden>
       {arms.map(({ x, y, i }) => (
         <g key={i} className="tank-tuft" style={{ "--delay": `${-i * 0.23}s` } as React.CSSProperties}>
           <path d={`M50 58 Q ${(50 + x) / 2 + (i % 2 ? 6 : -6)} ${(58 + y) / 2}, ${x} ${y}`} stroke={i % 2 ? "#f472b6" : "#c084fc"} strokeWidth="5" strokeLinecap="round" fill="none" />
@@ -51,7 +59,7 @@ export function Anemone({ className }: { className?: string }) {
 /** Treasure chest: glows through the crack, and flies open for pay-offs (the engine toggles .is-open). */
 export function Chest({ className }: { className?: string }) {
   return (
-    <div data-chest className={cx("tank-chest absolute", className)} aria-hidden>
+    <div data-chest className={cx("tank-chest w-full", className)} aria-hidden>
       <svg viewBox="0 0 80 64" className="w-full overflow-visible">
         <ellipse className="chest-glow" cx="40" cy="26" rx="34" ry="16" fill="url(#gr-chest-glow)" />
         <defs>
@@ -105,7 +113,7 @@ export function Sword({ className, rest }: { className?: string; rest?: boolean 
     { d: "M50 100 C 36 84, 18 76, 0 74 C 16 90, 34 98, 50 100 Z", fill: "#8cc556" },
   ];
   return (
-    <svg data-rest={rest || undefined} viewBox="0 0 100 100" className={cx("tank-sway absolute overflow-visible", className)}>
+    <svg data-rest={rest || undefined} viewBox="0 0 100 100" className={cx("tank-sway block w-full overflow-visible", className)}>
       {leaves.map((l, i) => (
         <path key={i} d={l.d} fill={l.fill} />
       ))}
@@ -136,7 +144,7 @@ export function Grass({ className }: { className?: string }) {
 
 export function Coral({ className, tone = "#fb7185" }: { className?: string; tone?: string }) {
   return (
-    <svg viewBox="0 0 60 60" className={cx("tank-sway absolute overflow-visible [--sway:2deg]", className)}>
+    <svg viewBox="0 0 60 60" className={cx("tank-sway block w-full overflow-visible [--sway:2deg]", className)}>
       <g fill="none" stroke={tone} strokeWidth="6" strokeLinecap="round">
         <path d="M30 60 V36 C 30 26, 20 24, 18 12" />
         <path d="M30 40 C 38 34, 44 28, 42 14" />
@@ -173,3 +181,48 @@ export function Pebbles() {
 }
 
 /** Hang-on filter, heater, thermometer and the airline feeding the air stone. */
+
+/** Little sand castle with towers, flags and an arched door fish can dart through. */
+export function Castle({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 90" className={cx("block w-full overflow-visible", className)} aria-hidden>
+      <path className="tank-flag" d="M22 6 L34 10 L22 14 Z" fill="#ef4444" />
+      <path className="tank-flag" style={{ "--delay": "-0.4s" } as React.CSSProperties} d="M78 6 L90 10 L78 14 Z" fill="#8cc556" />
+      <path d="M22 6 V26 M78 6 V26" stroke="#57534e" strokeWidth="1.5" />
+      <rect x="12" y="26" width="20" height="62" fill="#a8a29e" />
+      <rect x="68" y="26" width="20" height="62" fill="#a8a29e" />
+      <rect x="30" y="44" width="40" height="44" fill="#d6d3d1" />
+      <path d="M12 26 h4 v-5 h4 v5 h4 v-5 h4 v5 h4 v6 H12 Z M68 26 h4 v-5 h4 v5 h4 v-5 h4 v5 h4 v6 H68 Z M30 44 h5 v-5 h5 v5 h5 v-5 h5 v5 h5 v-5 h5 v5 h5 v6 H30 Z" fill="#78716c" />
+      <path d="M42 88 V70 a8 8 0 0 1 16 0 V88 Z" fill="#1c1917" fillOpacity="0.85" />
+      <rect x="18" y="40" width="7" height="10" rx="3.5" fill="#1c1917" fillOpacity="0.8" />
+      <rect x="74" y="40" width="7" height="10" rx="3.5" fill="#1c1917" fillOpacity="0.8" />
+      <g fill="#8cc556" fillOpacity="0.8">
+        <circle cx="14" cy="86" r="4" />
+        <circle cx="86" cy="85" r="5" />
+        <circle cx="33" cy="87" r="3" />
+      </g>
+    </svg>
+  );
+}
+
+/** Ornament: an old-school diver in a brass helmet, bubbles rising from the valve. */
+export function DiverStatue({ className }: { className?: string }) {
+  return (
+    <div className={cx("relative w-full", className)} aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <span key={i} className="tank-statue-bubble absolute left-[58%] top-0 size-1.5 rounded-full border border-white/80" style={{ animationDelay: `${i * 0.9}s` }} />
+      ))}
+      <svg viewBox="0 0 50 80" className="block w-full overflow-visible">
+        <ellipse cx="25" cy="77" rx="20" ry="3" fill="#000" fillOpacity="0.2" />
+        <rect x="12" y="36" width="26" height="30" rx="8" fill="#78716c" />
+        <path d="M16 66 V78 M34 66 V78" stroke="#57534e" strokeWidth="7" strokeLinecap="round" />
+        <path d="M12 42 L4 58 M38 42 L46 56" stroke="#78716c" strokeWidth="6" strokeLinecap="round" />
+        <circle cx="25" cy="22" r="16" fill="#d97706" stroke="#92400e" strokeWidth="2" />
+        <circle cx="25" cy="22" r="8" fill="#7dd3fc" stroke="#92400e" strokeWidth="2.5" />
+        <circle cx="13" cy="22" r="3.5" fill="#fbbf24" stroke="#92400e" />
+        <circle cx="37" cy="22" r="3.5" fill="#fbbf24" stroke="#92400e" />
+        <rect x="27" y="3" width="4" height="5" fill="#92400e" />
+      </svg>
+    </div>
+  );
+}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CheckCheck, Hourglass, Link2Off, Loader2, Lock, MapPin, MessageCircle, Phone, Timer, User } from "lucide-react";
 import { WAVE_BACK, WAVE_FRONT } from "@/lib/theme";
 import { cx } from "./ui";
+import { AquariumTank } from "./aquarium/AquariumTank";
 
 type View = "active" | "used" | "expired" | "missing" | "done";
 type Fields = { name: string; phone: string; address: string };
@@ -29,6 +30,7 @@ export function CustomerFormView({
   const [shake, setShake] = useState(0);
   const [failure, setFailure] = useState("");
   const [savedName, setSavedName] = useState("");
+  const withTank = view === "active" || view === "done";
 
   // countdown: the deadline is fixed when the page arrives, from the server's own measurement
   const deadline = useRef(0);
@@ -123,9 +125,11 @@ export function CustomerFormView({
         {shop.tagline && <p className="mt-1 max-w-xs text-[13px] text-mint/80">{shop.tagline}</p>}
       </header>
 
+      {/* desktop: tank on the left, form on the right · mobile: form first, the tank under it */}
+      <div className={cx("relative mt-7 grid w-full gap-8", withTank ? "max-w-6xl lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-start" : "max-w-md")}>
       <section
         key={view}
-        className="animate-home-in relative mt-7 w-full max-w-md overflow-hidden rounded-3xl bg-white text-ink shadow-[0_30px_80px_-20px_rgb(0_0_0/0.6)]"
+        className="animate-home-in relative mx-auto w-full max-w-md overflow-hidden rounded-3xl bg-white text-ink shadow-[0_30px_80px_-20px_rgb(0_0_0/0.6)] lg:order-2 lg:max-w-none"
         style={{ animationDelay: "120ms" }}
       >
         {view === "active" && (
@@ -264,6 +268,18 @@ export function CustomerFormView({
           <Message icon={<Link2Off className="size-9" />} tone="bg-red-50 text-red-500" title="This link isn't valid" text={`Please check the link, or ask ${shop.name} to send a new one.`} />
         )}
       </section>
+
+      {/* the shop's aquarium, in guest mode: fish, games and events only - none of the shop's data. It stays through
+          the thank-you screen; once the page is closed the link is used up, so it can't be opened again. */}
+      {withTank && (
+        <div className="animate-home-in min-w-0 lg:order-1" style={{ animationDelay: "240ms" }}>
+          <p className="mb-4 text-center text-[13px] font-semibold text-mint/85">
+            {view === "done" ? "🐠 Your fish just joined our tank - say hello!" : `🐠 Explore ${shop.name}'s aquarium while you're here`}
+          </p>
+          <AquariumTank guest dark guestFish={view === "done" ? savedName || form.name : null} />
+        </div>
+      )}
+      </div>
     </main>
   );
 }

@@ -1,18 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Cookie, Droplet, Hand, Heart, Moon, Sparkles, SprayCan, Sun, SunMoon, Thermometer, Volume2, VolumeX, X } from "lucide-react";
+import {
+  CloudLightning,
+  Cookie,
+  Droplet,
+  Hand,
+  Heart,
+  Lock,
+  Moon,
+  Palette,
+  RotateCcw,
+  Sparkles,
+  SprayCan,
+  Store,
+  Sun,
+  SunMoon,
+  Target,
+  Thermometer,
+  Trophy,
+  Vibrate,
+  Volume2,
+  VolumeX,
+  Wand2,
+  X,
+} from "lucide-react";
 import { useStore } from "@/lib/store";
 import { computeTotals, money, todayISO } from "@/lib/calc";
 import { cx } from "../ui";
-import { type Engine, type FishInfo, type SchoolFish, type Tool, createEngine } from "./engine";
+import { type Engine, type ExtraKind, type FishInfo, type GameState, type SchoolFish, type Tool, createEngine } from "./engine";
 import { setSound } from "./sound";
 import { Algae, type AlgaeHandle } from "./Algae";
-import { Anemone, Chest, Coral, Grass, Kelp, Pebbles, Sword, TankDefs } from "./scenery";
-
-const NAMES = "gr-tank-names"; // adopted fish: { key: name }
-const LIGHT = "gr-tank-light";
-const SEEN = "gr-tank-seen"; // receipts count and dues at the last visit, for celebrations
+import { Anemone, Castle, Chest, Coral, DiverStatue, Grass, Kelp, Pebbles, Sword, TankDefs } from "./scenery";
 
 const load = <T,>(k: string, fallback: T): T => {
   try {
@@ -22,7 +41,7 @@ const load = <T,>(k: string, fallback: T): T => {
     return fallback;
   }
 };
-const store = (k: string, v: unknown) => {
+const keep = (k: string, v: unknown) => {
   try {
     localStorage.setItem(k, JSON.stringify(v));
   } catch {
@@ -43,16 +62,61 @@ const nightFromClock = () => {
 const TOOL_HINT: Record<Tool, string> = {
   explore: "Tap a fish to meet it · tap the glass to startle them · swipe to stir up a current",
   feed: "Tap to drop food - feed quickly and the shark forgets to hunt",
+  play: "Move your finger or mouse - the fish chase the laser dot, and the shark gets curious",
   clean: "Scrub the glass to wipe off the algae",
+  fish: "Move the hook next to a fish to catch it - then keep it away from the shark!",
+  decorate: "Drag the decorations along the sand - your layout is saved",
 };
 
+/** Movable decorations: default spot (% across the tank), how high they sit, and their size. */
+const DECOR = [
+  { id: "sword-a", x: 13, bottom: 16, w: "w-20 sm:w-28", hide: true, el: () => <Sword rest /> },
+  { id: "anemone", x: 24, bottom: 12, w: "w-20 sm:w-28", el: () => <Anemone /> },
+  { id: "diver", x: 33, bottom: 12, w: "w-8 sm:w-11", el: () => <DiverStatue /> },
+  { id: "rock", x: 42, bottom: 12, w: "w-24 sm:w-36", hide: true, el: () => <Rock /> },
+  { id: "coral-pink", x: 51, bottom: 20, w: "w-14 sm:w-20", el: () => <Coral /> },
+  { id: "chest", x: 67, bottom: 12, w: "w-16 sm:w-20", el: () => <Chest /> },
+  { id: "castle", x: 79, bottom: 10, w: "w-20 sm:w-28", hide: true, el: () => <Castle /> },
+  { id: "coral-orange", x: 87, bottom: 16, w: "w-10 sm:w-14", el: () => <Coral tone="#f59e0b" className="-scale-x-100 [--delay:-1.5s]" /> },
+  { id: "sword-b", x: 93, bottom: 16, w: "w-16 sm:w-24", hide: true, el: () => <Sword rest className="[--delay:-2s]" /> },
+] as const;
+type DecorId = (typeof DECOR)[number]["id"];
+
+/** Fish from the shop, unlocked by all-time sales. */
+const SHOP: { kind: ExtraKind; name: string; blurb: string; unlock: number; emoji: string }[] = [
+  { kind: "lionfish", name: "Lionfish", blurb: "Frilly, spiky and very slow", unlock: 10_000, emoji: "🦁" },
+  { kind: "manta", name: "Manta ray", blurb: "Glides on huge wings", unlock: 50_000, emoji: "🪽" },
+  { kind: "dolphin", name: "Baby dolphin", blurb: "Fast, playful, chatty", unlock: 150_000, emoji: "🐬" },
+];
+
 /**
- * The big home-page aquarium. React draws the scenery, controls and cards; the engine (engine.ts) runs every
- * creature. It is tied to the shop: a fish for every receipt and customer, bubbles from the treasure chest for
- * today's sales, a celebration for new receipts and a chest full of coins when a customer clears their dues.
+ * The aquarium. React draws the scenery, controls and cards; the engine (engine.ts) runs every creature.
+ *
+ * In the shop (default) it is tied to the business: a fish for every receipt and customer, bubbles from the chest for
+ * today's sales, celebrations, the fish shop, the daily goal and the anniversary. With `guest` (the public customer
+ * form) none of that is read or shown - only the fish, games and events - and it keeps its own records on the device.
  */
-export function AquariumTank({ className }: { className?: string }) {
-  const { invoices, customers, ready } = useStore();
+export function AquariumTank({
+  className,
+  guest = false,
+  guestFish = null,
+  dark = false,
+}: {
+  className?: string;
+  guest?: boolean;
+  /** Customer form: the name of the fish that joins after the form is sent. */
+  guestFish?: string | null;
+  /** Controls sit on a dark page. */
+  dark?: boolean;
+}) {
+  const storeData = useStore();
+  // a guest never gets the shop's data - not even the demo data a logged-out browser holds
+  const invoices = useMemo(() => (guest ? [] : storeData.invoices), [guest, storeData.invoices]);
+  const customers = useMemo(() => (guest ? [] : storeData.customers), [guest, storeData.customers]);
+  const ready = guest || storeData.ready;
+  const shopName = guest ? "" : storeData.shop.name;
+  const K = guest ? "gr-guest-tank-" : "gr-tank-";
+
   const root = useRef<HTMLDivElement>(null);
   const shadowLayer = useRef<HTMLDivElement>(null);
   const farLayer = useRef<HTMLDivElement>(null);
@@ -66,19 +130,37 @@ export function AquariumTank({ className }: { className?: string }) {
   const [soundOn, setSoundOn] = useState(false);
   const [light, setLight] = useState<"auto" | "day" | "night">("auto");
   const [clockNight, setClockNight] = useState(0);
+  const [hour, setHour] = useState(12);
+  const [tick, setTick] = useState(0);
   const [names, setNames] = useState<Record<string, string>>({});
   const [card, setCard] = useState<FishInfo | null>(null);
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([]);
   const [dirt, setDirt] = useState(0);
-  const [tick, setTick] = useState(0);
-  const [hour, setHour] = useState(12);
+  const [game, setGame] = useState<GameState | null>(null);
+  const [layout, setLayout] = useState<Partial<Record<DecorId, number>>>({});
+  const [extras, setExtras] = useState<ExtraKind[]>([]);
+  const [shopOpen, setShopOpen] = useState(false);
+  const [shaking, setShaking] = useState(false);
   const night = light === "auto" ? clockNight : light === "night" ? 1 : 0;
+  const decorating = tool === "decorate";
 
-  // ---------- shop numbers ----------
+  // ---------- shop numbers (never for guests) ----------
   const today = todayISO();
-  const sales = useMemo(() => {
-    const list = invoices.filter((i) => i.date === today);
-    return { total: list.reduce((s, i) => s + computeTotals(i).grandTotal, 0), count: list.length };
+  const totals = useMemo(() => {
+    const byDay = new Map<string, number>();
+    let all = 0;
+    for (const inv of invoices) {
+      const g = computeTotals(inv).grandTotal;
+      all += g;
+      byDay.set(inv.date, (byDay.get(inv.date) ?? 0) + g);
+    }
+    const count = invoices.filter((i) => i.date === today).length;
+    // daily goal: a bit above the average selling day of the last 30 days
+    const cutoff = new Date(Date.parse(`${today}T00:00:00Z`) - 30 * 86_400_000).toISOString().slice(0, 10);
+    const recent = [...byDay].filter(([d]) => d >= cutoff && d < today).map(([, v]) => v);
+    const avg = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0;
+    const first = invoices.reduce<string | null>((m, i) => (!m || i.date < m ? i.date : m), null);
+    return { today: byDay.get(today) ?? 0, count, all, goal: Math.max(2000, Math.round((avg * 1.2) / 500) * 500), first };
   }, [invoices, today]);
   const receiptFish = useMemo<SchoolFish[]>(
     () =>
@@ -104,9 +186,9 @@ export function AquariumTank({ className }: { className?: string }) {
   }, []);
 
   // latest values the engine asks for
-  const live = useRef({ sales, toast });
+  const live = useRef({ totals, toast, guest, K });
   useEffect(() => {
-    live.current = { sales, toast };
+    live.current = { totals, toast, guest, K };
   });
 
   // ---------- engine ----------
@@ -118,17 +200,24 @@ export function AquariumTank({ className }: { className?: string }) {
         onSelect: setCard,
         onToast: (text) => live.current.toast(text),
         onWipe: (x, y, start) => algae.current?.wipe(x, y, start),
+        onGame: (g) => {
+          setGame(g.active ? g : null);
+          if (!g.active) setTool("explore");
+        },
+        onLuckySeen: () => keep(`${live.current.K}lucky-day`, todayISO()),
         chestInfo: () => {
-          const s = live.current.sales;
+          const s = live.current.totals;
+          if (live.current.guest) return { key: "chest", kind: "chest", species: "Treasure chest", name: "Sunken treasure", fact: "Full of surprises - keep exploring the tank!", adoptable: false };
           return {
             key: "chest",
             kind: "chest",
             species: "Treasure chest",
-            name: s.count ? `৳ ${money(s.total)} today` : "No sales yet today",
+            name: s.count ? `৳ ${money(s.today)} today` : "No sales yet today",
             fact: s.count ? `${s.count} receipt${s.count === 1 ? "" : "s"} so far today - the bubbles rise faster the more you sell.` : "Save a receipt and watch the bubbles start rising.",
             adoptable: false,
           };
         },
+        storage: K,
       },
     );
     engine.current = e;
@@ -136,58 +225,81 @@ export function AquariumTank({ className }: { className?: string }) {
       e.destroy();
       engine.current = null;
     };
-  }, []);
+  }, [K]);
 
-  // saved preferences (after mount, so the server render matches)
+  // saved preferences and the clock (after mount, so the server render matches)
   useEffect(() => {
     const id = window.setTimeout(() => {
-      setNames(load(NAMES, {}));
-      setLight(load(LIGHT, "auto"));
+      setNames(load(`${K}names`, {}));
+      setLight(load(`${K}light`, "auto"));
+      setLayout(load(`${K}layout`, {}));
+      setExtras(guest ? [] : load(`${K}extras`, []));
       setClockNight(nightFromClock());
       setHour(new Date().getHours());
+      // once a day this device gets a chance to meet the lucky fish
+      if (load(`${K}lucky-day`, "") !== todayISO()) engine.current?.scheduleLucky(20 + Math.random() * 100);
     }, 0);
     const clock = window.setInterval(() => {
       setClockNight(nightFromClock());
       setHour(new Date().getHours());
     }, 30_000);
+    const ticker = window.setInterval(() => setTick((n) => n + 1), 4000);
     return () => {
       clearTimeout(id);
       clearInterval(clock);
+      clearInterval(ticker);
     };
-  }, []);
-  useEffect(() => {
-    const id = window.setInterval(() => setTick((n) => n + 1), 4000);
-    return () => clearInterval(id);
-  }, []);
+  }, [K, guest]);
 
   useEffect(() => engine.current?.setTool(tool), [tool]);
   useEffect(() => engine.current?.setNight(night), [night]);
-  useEffect(() => engine.current?.setNames(names), [names]);
-  useEffect(() => engine.current?.setSales(0.15 + Math.min(2.5, sales.total / 4000), sales.count ? `৳ ${money(sales.total)} today` : ""), [sales]);
+  useEffect(() => engine.current?.setExtras(extras), [extras]);
+  useEffect(() => {
+    const first = guestFish?.trim().split(/\s+/)[0];
+    engine.current?.setNames(first ? { ...names, "guest-you": first } : names);
+  }, [names, guestFish]);
+  useEffect(() => {
+    if (guestFish) engine.current?.addGuest(guestFish);
+  }, [guestFish]);
+  useEffect(() => {
+    if (!guest) engine.current?.setSales(0.15 + Math.min(2.5, totals.today / 4000), totals.count ? `৳ ${money(totals.today)} today` : "");
+  }, [guest, totals]);
+  // decorations moved: let the engine find the chest, anemone and hiding places again
+  useEffect(() => {
+    const id = window.setTimeout(() => engine.current?.measure(), 60);
+    return () => clearTimeout(id);
+  }, [layout]);
 
   // the scoreboard schools; members added later swim in from the side
   const placed = useRef(false);
   useEffect(() => {
-    if (!ready || !engine.current) return;
+    if (guest || !ready || !engine.current) return;
     engine.current.setSchool("receipt", receiptFish, placed.current);
     engine.current.setSchool("customer", customerFish, placed.current);
     placed.current = true;
-  }, [ready, receiptFish, customerFish]);
+  }, [guest, ready, receiptFish, customerFish]);
 
-  // celebrations: new receipts since the last visit, and customers whose dues are now fully paid
+  // celebrations: new receipts since the last visit, customers whose dues are now fully paid, and the anniversary
   const celebrated = useRef(false);
   useEffect(() => {
-    if (!ready || celebrated.current || !engine.current) return;
+    if (guest || !ready || celebrated.current || !engine.current) return;
     celebrated.current = true;
+    const e = engine.current;
     const dues: Record<string, number> = {};
     for (const inv of invoices) {
       const name = inv.customer.name.trim();
       if (name) dues[name] = (dues[name] ?? 0) + Math.max(0, computeTotals(inv).due);
     }
-    const seen = load<{ invoices: number; dues: Record<string, number> } | null>(SEEN, null);
-    store(SEEN, { invoices: invoices.length, dues });
+    const seen = load<{ invoices: number; dues: Record<string, number> } | null>(`${K}seen`, null);
+    keep(`${K}seen`, { invoices: invoices.length, dues });
+    if (totals.first && totals.first.slice(5) === today.slice(5) && totals.first.slice(0, 4) < today.slice(0, 4)) {
+      const years = Number(today.slice(0, 4)) - Number(totals.first.slice(0, 4));
+      window.setTimeout(() => {
+        e.heart(12);
+        toast(`🎂 Happy ${years}-year anniversary, ${shopName}! The fish made you a heart`);
+      }, 2500);
+    }
     if (!seen) return;
-    const e = engine.current;
     const fresh = invoices.length - seen.invoices;
     const cleared = Object.entries(seen.dues)
       .filter(([name, was]) => was > 0.5 && name in dues && dues[name]! <= 0.5)
@@ -204,7 +316,22 @@ export function AquariumTank({ className }: { className?: string }) {
         }, (fresh > 0 ? 4500 : 0) + i * 5000),
       );
     }, 1200);
-  }, [ready, invoices, toast]);
+  }, [guest, ready, invoices, toast, K, totals.first, today, shopName]);
+
+  // the treasure diver opens the chest once a day, when today's sales reach the goal
+  useEffect(() => {
+    if (guest || !ready || !engine.current || totals.today < totals.goal) return;
+    if (load(`${K}goal-day`, "") === today) return;
+    keep(`${K}goal-day`, today);
+    engine.current.diverToChest();
+  }, [guest, ready, totals.today, totals.goal, today, K]);
+
+  // anniversary: the heart comes back every minute that day
+  useEffect(() => {
+    if (guest || !totals.first || totals.first.slice(5) !== today.slice(5) || totals.first.slice(0, 4) >= today.slice(0, 4)) return;
+    const id = window.setInterval(() => engine.current?.heart(12), 60_000);
+    return () => clearInterval(id);
+  }, [guest, totals.first, today]);
 
   // ---------- controls ----------
   const toggleSound = () => {
@@ -215,7 +342,7 @@ export function AquariumTank({ className }: { className?: string }) {
   const cycleLight = () => {
     const next = light === "auto" ? "day" : light === "day" ? "night" : "auto";
     setLight(next);
-    store(LIGHT, next);
+    keep(`${K}light`, next);
     toast(next === "auto" ? "💡 Lights follow your clock" : next === "day" ? "☀️ Daylight on" : "🌙 Night mode - the tank goes to sleep");
   };
   const adopt = (key: string, name: string | null) => {
@@ -223,18 +350,57 @@ export function AquariumTank({ className }: { className?: string }) {
       const next = { ...n };
       if (name) next[key] = name;
       else delete next[key];
-      store(NAMES, next);
+      keep(`${K}names`, next);
       return next;
     });
     if (name) toast(`♥ You adopted ${name}!`);
   };
-
+  const fishing = () => {
+    if (game?.active) return engine.current?.stopGame();
+    setShopOpen(false);
+    setTool("fish");
+    engine.current?.startGame();
+  };
+  const shake = () => {
+    setShaking(true);
+    window.setTimeout(() => setShaking(false), 700);
+    engine.current?.shake();
+  };
+  const toggleExtra = (kind: ExtraKind) => {
+    setExtras((x) => {
+      const next = x.includes(kind) ? x.filter((k) => k !== kind) : [...x, kind];
+      keep(`${K}extras`, next);
+      return next;
+    });
+  };
   const closeCard = useCallback(() => engine.current?.select(null), []);
+
+  // decorate: drag along the sand
+  const dragging = useRef<DecorId | null>(null);
+  const moveDecor = (e: React.PointerEvent) => {
+    const id = dragging.current; // read now: the state update below runs later, after a drop may have cleared it
+    if (!id || !root.current) return;
+    const r = root.current.getBoundingClientRect();
+    const x = Math.max(4, Math.min(96, ((e.clientX - r.left) / r.width) * 100));
+    setLayout((l) => ({ ...l, [id]: Math.round(x * 10) / 10 }));
+  };
+  const endDecor = () => {
+    if (!dragging.current) return;
+    dragging.current = null;
+    setLayout((l) => {
+      keep(`${K}layout`, l);
+      return l;
+    });
+  };
 
   // care readings drift gently with the time of day; the heater kicks in below 25.8°
   const temp = 25.7 + Math.sin(((hour - 9) / 24) * Math.PI * 2) * 0.45 + Math.sin(tick * 0.9) * 0.05;
   const ph = 7.45 - dirt * 0.4 + Math.sin(tick * 0.7) * 0.02;
   const clean = Math.round((1 - dirt) * 100);
+  const chip = cx(
+    "flex h-10 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-[13px] font-bold shadow-sm ring-1 transition active:scale-95",
+    dark ? "bg-white/10 text-mint ring-white/15 hover:bg-white/15 hover:text-white" : "bg-white text-muted ring-line hover:text-ink",
+  );
 
   return (
     <div className={cx("relative select-none", className)}>
@@ -248,7 +414,7 @@ export function AquariumTank({ className }: { className?: string }) {
       </div>
 
       {/* frame */}
-      <div className="rounded-[1.75rem] bg-deep p-2 shadow-[0_24px_60px_-20px_rgb(14_42_35/0.6)] sm:p-2.5">
+      <div className={cx("rounded-[1.75rem] bg-deep p-2 shadow-[0_24px_60px_-20px_rgb(14_42_35/0.6)] sm:p-2.5", shaking && "tank-shake")}>
         <div
           ref={root}
           data-tool={tool}
@@ -269,35 +435,51 @@ export function AquariumTank({ className }: { className?: string }) {
           <div className="pond-shimmer pointer-events-none absolute left-[10%] top-3 h-1 w-1/5 rounded-full bg-white/50 blur-[1px]" />
           <div className="pond-shimmer pointer-events-none absolute left-[55%] top-4 h-1 w-1/4 rounded-full bg-white/40 blur-[1px] [--delay:-2s]" />
 
-          {/* far: the whale's shadow, then distant fish, then background plants */}
+          {/* far: the whale's shadow, distant fish (and the shy fish), background plants */}
           <div ref={shadowLayer} className="pointer-events-none absolute inset-0" />
           <div ref={farLayer} className="pointer-events-none absolute inset-0" />
           <svg viewBox="0 0 200 70" className="pointer-events-none absolute bottom-6 left-[50%] w-40 opacity-90 sm:w-56">
             <path d="M4 66 C 30 50, 60 52, 90 40 C 110 32, 120 14, 140 6 C 136 20, 128 30, 122 40 C 150 36, 176 40, 196 30 C 180 48, 150 54, 120 56 C 90 60, 50 68, 4 66 Z" fill="#6d4c32" />
             <path d="M30 60 C 60 54, 90 50, 118 44 M126 30 C 130 22, 134 16, 138 10" stroke="#4f3522" strokeWidth="2" fill="none" strokeLinecap="round" />
           </svg>
-          <Kelp className="bottom-6 left-[4%] h-[70%] opacity-60 [--delay:-1s]" tone="#3c7a2a" rest />
-          <Kelp className="bottom-6 left-[56%] h-[62%] opacity-50 [--delay:-3s] max-sm:hidden" tone="#3c7a2a" />
-          <Kelp className="bottom-6 right-[3%] h-[78%] opacity-60 [--delay:-2s]" tone="#3c7a2a" rest />
+          <Kelp className="absolute bottom-6 left-[4%] h-[70%] opacity-60 [--delay:-1s]" tone="#3c7a2a" rest />
+          <Kelp className="absolute bottom-6 left-[58%] h-[62%] opacity-50 [--delay:-3s] max-sm:hidden" tone="#3c7a2a" />
+          <Kelp className="absolute bottom-6 right-[3%] h-[78%] opacity-60 [--delay:-2s]" tone="#3c7a2a" rest />
 
-          {/* sand and the things resting on it */}
+          {/* sand */}
           <svg viewBox="0 0 400 40" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-0 h-14 w-full sm:h-16">
             <path d="M0 16 C 60 6, 120 20, 190 12 S 320 4, 400 14 V40 H0 Z" fill="#d4bd83" />
             <path d="M0 24 C 70 16, 150 30, 230 22 S 350 16, 400 22 V40 H0 Z" fill="#e8d6a4" />
           </svg>
           <Pebbles />
-          <svg viewBox="0 0 120 60" className="pointer-events-none absolute bottom-3 left-[34%] w-24 sm:w-36">
-            <path d="M6 58 C 2 40, 18 26, 38 30 C 50 18, 76 20, 82 36 C 100 34, 116 46, 114 58 Z" fill="#5b6b66" />
-            <path d="M38 30 C 50 18, 76 20, 82 36 C 70 30, 52 30, 38 30 Z" fill="#7d8e88" />
-            <path d="M20 44 C 26 40, 34 42, 36 46" stroke="#48554f" strokeWidth="2" fill="none" strokeLinecap="round" />
-          </svg>
-          <Anemone className="bottom-3 left-[20%] w-20 sm:w-28" />
-          <Coral className="bottom-5 left-[47%] w-14 sm:w-20" />
-          <Chest className="bottom-3 left-[64%] w-16 sm:w-20" />
-          <Coral className="bottom-4 right-[17%] w-10 -scale-x-100 sm:w-14 [--delay:-1.5s]" tone="#f59e0b" />
-          <Sword className="bottom-4 left-[10%] w-20 sm:w-28" rest />
-          <Sword className="bottom-4 right-[7%] w-16 sm:w-24 [--delay:-2s]" rest />
-          <Kelp className="bottom-4 left-[29%] h-[55%]" tone="#6fae3b" rest />
+          <Kelp className="absolute bottom-4 left-[29%] h-[55%]" tone="#6fae3b" rest />
+
+          {/* decorations (draggable in Decorate) */}
+          {DECOR.map((d) => (
+            <div
+              key={d.id}
+              data-hide={"hide" in d && d.hide ? true : undefined}
+              className={cx("absolute -translate-x-1/2", d.w, decorating ? "tank-decor-edit z-10 cursor-grab touch-none active:cursor-grabbing" : "pointer-events-none")}
+              style={{ left: `${layout[d.id] ?? d.x}%`, bottom: d.bottom }}
+              onPointerDown={
+                decorating
+                  ? (e) => {
+                      dragging.current = d.id;
+                      try {
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                      } catch {
+                        /* pointer already gone */
+                      }
+                    }
+                  : undefined
+              }
+              onPointerMove={decorating ? moveDecor : undefined}
+              onPointerUp={decorating ? endDecor : undefined}
+              onPointerCancel={decorating ? endDecor : undefined}
+            >
+              {d.el()}
+            </div>
+          ))}
 
           {/* near creatures, their bubbles and food */}
           <div ref={nearLayer} className="pointer-events-none absolute inset-0" />
@@ -310,8 +492,10 @@ export function AquariumTank({ className }: { className?: string }) {
 
           <Equipment temp={temp} />
 
-          {/* night shade and plankton that glows in the dark */}
+          {/* night shade, storm clouds and lightning, plankton that glows in the dark */}
           <div className="pointer-events-none absolute inset-0 bg-[#03182b] transition-opacity duration-[2000ms]" style={{ opacity: night * 0.55 }} />
+          <div className="tank-storm pointer-events-none absolute inset-0 bg-[#1e293b]" />
+          <div data-flash className="tank-flash pointer-events-none absolute inset-0 bg-white" />
           <div className="pointer-events-none absolute inset-0 transition-opacity duration-[2000ms]" style={{ opacity: night }}>
             {Array.from({ length: 16 }, (_, i) => (
               <span
@@ -323,13 +507,15 @@ export function AquariumTank({ className }: { className?: string }) {
           </div>
 
           {/* the glass: algae, reflections */}
-          <Algae ref={algae} onDirt={setDirt} onClean={() => toast("✨ Sparkling clean! The fish can see you again")} />
+          <Algae ref={algae} storage={K} onDirt={setDirt} onClean={() => toast("✨ Sparkling clean! The fish can see you again")} />
           <div className="pointer-events-none absolute -left-10 top-0 h-full w-40 -skew-x-12 bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
           <div className="pointer-events-none absolute left-40 top-0 h-full w-8 -skew-x-12 bg-white/10" />
           <div className="pointer-events-none absolute inset-0 rounded-[1.3rem] shadow-[inset_0_0_40px_rgb(0_0_0/0.25),inset_0_0_0_1px_rgb(255_255_255/0.2)]" />
 
-          {/* name tags, glows, announcements, the fish card */}
+          {/* name tags, glows, laser, fishing line */}
           <div ref={uiLayer} className="pointer-events-none absolute inset-0" />
+
+          {/* on-glass HUD: announcements, game, decorate, closing countdown */}
           <div className="pointer-events-none absolute inset-x-0 top-3 z-20 flex flex-col items-center gap-2 px-3">
             {toasts.map((t) => (
               <div key={t.id} className="tank-toast rounded-full bg-deep/80 px-3.5 py-1.5 text-center text-[12.5px] font-semibold text-white shadow-lg ring-1 ring-white/15 backdrop-blur-md sm:text-[13px]">
@@ -337,25 +523,57 @@ export function AquariumTank({ className }: { className?: string }) {
               </div>
             ))}
           </div>
+          {game?.active && (
+            <div data-tank-ui className="tank-card absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-2xl bg-deep/85 py-1.5 pl-3 pr-1.5 text-white shadow-xl ring-1 ring-white/15 backdrop-blur-md">
+              <span className={cx("font-display text-[18px] font-extrabold tabular-nums", game.left < 6 && "animate-pulse text-amber-300")}>0:{String(Math.ceil(game.left)).padStart(2, "0")}</span>
+              <span className="text-[12.5px] font-bold text-lime">🎣 {game.score}</span>
+              <span className="flex items-center gap-1 text-[11.5px] text-mint/70">
+                <Trophy className="size-3" /> {game.best}
+              </span>
+              <button onClick={() => engine.current?.stopGame()} className="ml-1 grid size-7 place-items-center rounded-xl bg-white/10 hover:bg-white/20" aria-label="Stop fishing">
+                <X className="size-3.5" />
+              </button>
+            </div>
+          )}
+          {decorating && (
+            <div data-tank-ui className="tank-card absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-2xl bg-white/95 py-1.5 pl-3 pr-1.5 text-[12.5px] font-semibold text-ink shadow-xl">
+              <Palette className="size-4 text-brand" /> Drag along the sand
+              <button
+                onClick={() => {
+                  setLayout({});
+                  keep(`${K}layout`, {});
+                }}
+                className="flex items-center gap-1 rounded-xl px-2 py-1 text-muted hover:bg-canvas hover:text-ink"
+              >
+                <RotateCcw className="size-3.5" /> Reset
+              </button>
+              <button onClick={() => setTool("explore")} className="rounded-xl bg-deep px-3 py-1 font-bold text-lime">
+                Done
+              </button>
+            </div>
+          )}
           {card && <FishCard key={card.key} info={card} engine={engine} root={root} adopted={names[card.key]} onAdopt={adopt} onClose={closeCard} />}
         </div>
       </div>
       {/* stand */}
       <div className="mx-auto h-3 w-[92%] rounded-b-2xl bg-gradient-to-b from-deep to-[#081a15]" />
 
-      {/* controls and readings */}
-      <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-          <div role="radiogroup" aria-label="Aquarium tool" className="relative grid grid-cols-3 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-line">
-            <span
-              aria-hidden
-              className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-xl bg-deep shadow transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-              style={{ transform: `translateX(${["explore", "feed", "clean"].indexOf(tool) * 100}%)` }}
-            />
+      {/* controls */}
+      <div className="mt-4 flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <div role="radiogroup" aria-label="Aquarium tool" className={cx("relative grid grid-cols-4 rounded-2xl p-1 shadow-sm ring-1", dark ? "bg-white/10 ring-white/15" : "bg-white ring-line")}>
+            {(["explore", "feed", "play", "clean"] as const).includes(tool as "explore") && (
+              <span
+                aria-hidden
+                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/4)] rounded-xl bg-deep shadow ring-1 ring-lime/30 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                style={{ transform: `translateX(${["explore", "feed", "play", "clean"].indexOf(tool) * 100}%)` }}
+              />
+            )}
             {(
               [
                 ["explore", "Explore", <Hand key="h" className="size-4" />],
                 ["feed", "Feed", <Cookie key="c" className="size-4" />],
+                ["play", "Play", <Wand2 key="p" className="size-4" />],
                 ["clean", "Clean", <SprayCan key="s" className="size-4" />],
               ] as const
             ).map(([id, label, icon]) => (
@@ -363,36 +581,59 @@ export function AquariumTank({ className }: { className?: string }) {
                 key={id}
                 role="radio"
                 aria-checked={tool === id}
-                onClick={() => setTool(id)}
-                className={cx("relative z-10 flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-bold transition-colors sm:px-4", tool === id ? "text-lime" : "text-muted hover:text-ink")}
+                onClick={() => {
+                  engine.current?.stopGame();
+                  setTool(id);
+                }}
+                className={cx(
+                  "relative z-10 flex items-center justify-center gap-1.5 px-2.5 py-2 text-[13px] font-bold transition-colors sm:px-3.5",
+                  tool === id ? "text-lime" : dark ? "text-mint/80 hover:text-white" : "text-muted hover:text-ink",
+                )}
               >
                 {icon}
                 {label}
               </button>
             ))}
           </div>
-          <button
-            onClick={toggleSound}
-            aria-pressed={soundOn}
-            title={soundOn ? "Mute" : "Turn on water sounds"}
-            className={cx("grid size-11 place-items-center rounded-2xl shadow-sm ring-1 transition active:scale-90", soundOn ? "bg-aqua-soft text-aqua-deep ring-aqua/40" : "bg-white text-muted ring-line hover:text-ink")}
-          >
-            {soundOn ? <Volume2 className="size-[18px]" /> : <VolumeX className="size-[18px]" />}
-          </button>
-          <button
-            onClick={cycleLight}
-            title={light === "auto" ? "Lights follow the clock" : light === "day" ? "Always day" : "Always night"}
-            className="flex h-11 items-center gap-1.5 rounded-2xl bg-white px-3 text-[13px] font-bold text-muted shadow-sm ring-1 ring-line transition hover:text-ink active:scale-95"
-          >
-            {light === "auto" ? <SunMoon className="size-[18px]" /> : light === "day" ? <Sun className="size-[18px] text-amber-500" /> : <Moon className="size-[18px] text-indigo-500" />}
-            {light === "auto" ? "Auto" : light === "day" ? "Day" : "Night"}
-          </button>
+
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
+            <button onClick={fishing} className={cx(chip, game?.active && "!bg-deep !text-lime ring-lime/40")}>
+              <Target className="size-4" /> {game?.active ? "Stop" : "Fishing"}
+            </button>
+            <button onClick={() => setTool(decorating ? "explore" : "decorate")} className={cx(chip, decorating && "!bg-deep !text-lime ring-lime/40")}>
+              <Palette className="size-4" /> Decorate
+            </button>
+            {!guest && (
+              <button onClick={() => setShopOpen((o) => !o)} className={cx(chip, shopOpen && "!bg-deep !text-lime")}>
+                <Store className="size-4" /> Fish shop
+              </button>
+            )}
+            <button onClick={shake} className={chip} title="Shake the tank">
+              <Vibrate className="size-4" /> Shake
+            </button>
+            <button onClick={() => engine.current?.storm()} className={chip} title="Call a storm">
+              <CloudLightning className="size-4" /> Storm
+            </button>
+            <button onClick={() => engine.current?.heart(10)} className={chip} title="The fish make a heart">
+              <Heart className="size-4" /> Heart
+            </button>
+            <button onClick={toggleSound} aria-pressed={soundOn} title={soundOn ? "Mute" : "Turn on water sounds"} className={cx(chip, soundOn && "!text-aqua-deep")}>
+              {soundOn ? <Volume2 className="size-[18px]" /> : <VolumeX className="size-[18px]" />}
+            </button>
+            <button onClick={cycleLight} title={light === "auto" ? "Lights follow the clock" : light === "day" ? "Always day" : "Always night"} className={chip}>
+              {light === "auto" ? <SunMoon className="size-[18px]" /> : light === "day" ? <Sun className="size-[18px] text-amber-500" /> : <Moon className="size-[18px] text-indigo-400" />}
+              {light === "auto" ? "Auto" : light === "day" ? "Day" : "Night"}
+            </button>
+          </div>
         </div>
 
+        {shopOpen && !guest && <FishShop owned={extras} total={totals.all} onToggle={toggleExtra} onClose={() => setShopOpen(false)} />}
+
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <Meter icon={<Thermometer className="size-4" />} label="Temp" value={`${temp.toFixed(1)}°C`} frac={(temp - 24) / 4} tone={temp < 25.8 ? "bg-orange-400" : "bg-lime"} />
-          <Meter icon={<Droplet className="size-4" />} label="pH" value={ph.toFixed(1)} frac={(ph - 6.6) / 1.2} tone={ph < 7.1 ? "bg-amber-400" : "bg-aqua"} />
+          <Meter dark={dark} icon={<Thermometer className="size-4" />} label="Temp" value={`${temp.toFixed(1)}°C`} frac={(temp - 24) / 4} tone={temp < 25.8 ? "bg-orange-400" : "bg-lime"} />
+          <Meter dark={dark} icon={<Droplet className="size-4" />} label="pH" value={ph.toFixed(1)} frac={(ph - 6.6) / 1.2} tone={ph < 7.1 ? "bg-amber-400" : "bg-aqua"} />
           <Meter
+            dark={dark}
             icon={<Sparkles className="size-4" />}
             label="Clean"
             value={`${clean}%`}
@@ -400,38 +641,160 @@ export function AquariumTank({ className }: { className?: string }) {
             tone={clean < 35 ? "bg-red-400" : clean < 65 ? "bg-amber-400" : "bg-lime"}
             onClick={clean < 90 ? () => setTool("clean") : undefined}
           />
+          {!guest && (
+            <Meter
+              dark={dark}
+              icon={<Target className="size-4" />}
+              label="Daily goal"
+              value={`৳ ${money(totals.today)} / ${money(totals.goal)}`}
+              frac={totals.today / totals.goal}
+              tone={totals.today >= totals.goal ? "bg-amber-400" : "bg-lime"}
+            />
+          )}
         </div>
       </div>
-      <p key={tool} className="animate-fade-up mt-3 text-center text-[12.5px] text-muted">
+      <p key={tool} className={cx("animate-fade-up mt-3 text-center text-[12.5px]", dark ? "text-mint/75" : "text-muted")}>
         {TOOL_HINT[tool]}
       </p>
-      <p className="mt-1 text-center text-[12px] text-faint">
-        <span className="font-semibold text-amber-600">{invoices.length}</span> receipt fish ·{" "}
-        <span className="font-semibold text-teal-600">{customers.filter((c) => c.name.trim()).length}</span> customer fish · chest bubbles:{" "}
-        <span className="font-semibold text-body">{sales.count ? `৳ ${money(sales.total)} sold today` : "no sales yet today"}</span>
-      </p>
+      {!guest && (
+        <p className="mt-1 text-center text-[12px] text-faint">
+          <span className="font-semibold text-amber-600">{invoices.length}</span> receipt fish ·{" "}
+          <span className="font-semibold text-teal-600">{customers.filter((c) => c.name.trim()).length}</span> customer fish · chest bubbles:{" "}
+          <span className="font-semibold text-body">{totals.count ? `৳ ${money(totals.today)} sold today` : "no sales yet today"}</span>
+        </p>
+      )}
     </div>
   );
 }
 
-function Meter({ icon, label, value, frac, tone, onClick }: { icon: React.ReactNode; label: string; value: string; frac: number; tone: string; onClick?: () => void }) {
+function Rock() {
+  return (
+    <svg viewBox="0 0 120 60" className="block w-full">
+      <path d="M6 58 C 2 40, 18 26, 38 30 C 50 18, 76 20, 82 36 C 100 34, 116 46, 114 58 Z" fill="#5b6b66" />
+      <path d="M38 30 C 50 18, 76 20, 82 36 C 70 30, 52 30, 38 30 Z" fill="#7d8e88" />
+      <path d="M20 44 C 26 40, 34 42, 36 46" stroke="#48554f" strokeWidth="2" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FishShop({ owned, total, onToggle, onClose }: { owned: ExtraKind[]; total: number; onToggle: (k: ExtraKind) => void; onClose: () => void }) {
+  const next = SHOP.find((s) => total < s.unlock);
+  return (
+    <div className="animate-fade-up mx-auto w-full max-w-xl rounded-3xl bg-white p-4 shadow-lg ring-1 ring-line">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="flex items-center gap-2 font-display text-[16px] font-extrabold">
+            <Store className="size-4 text-brand" /> Fish shop
+          </h3>
+          <p className="text-[12.5px] text-muted">New fish unlock as your all-time sales grow.</p>
+        </div>
+        <button onClick={onClose} className="grid size-8 place-items-center rounded-xl text-muted hover:rotate-90 hover:bg-canvas" aria-label="Close shop">
+          <X className="size-4" />
+        </button>
+      </div>
+      {next && (
+        <div className="mt-3">
+          <div className="flex justify-between text-[11.5px] font-semibold text-muted">
+            <span>
+              Next: {next.emoji} {next.name}
+            </span>
+            <span>
+              ৳ {money(total)} / {money(next.unlock)}
+            </span>
+          </div>
+          <div className="mt-1 h-2 overflow-hidden rounded-full bg-line">
+            <div className="h-full rounded-full bg-gradient-to-r from-lime to-aqua transition-all duration-700" style={{ width: `${Math.min(100, (total / next.unlock) * 100)}%` }} />
+          </div>
+        </div>
+      )}
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        {SHOP.map((s) => {
+          const open = total >= s.unlock;
+          const have = owned.includes(s.kind);
+          return (
+            <button
+              key={s.kind}
+              disabled={!open}
+              onClick={() => onToggle(s.kind)}
+              className={cx(
+                "flex flex-col items-start rounded-2xl p-3 text-left ring-1 transition",
+                have ? "bg-soft ring-lime" : open ? "bg-canvas ring-line hover:-translate-y-0.5 hover:shadow-md" : "cursor-not-allowed bg-canvas/60 opacity-70 ring-line",
+              )}
+            >
+              <span className="text-2xl">{s.emoji}</span>
+              <span className="mt-1 text-[13.5px] font-extrabold text-ink">{s.name}</span>
+              <span className="text-[11.5px] text-muted">{s.blurb}</span>
+              <span className={cx("mt-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold", have ? "bg-lime/30 text-brand" : open ? "bg-deep text-lime" : "bg-line text-muted")}>
+                {!open && <Lock className="size-3" />}
+                {have ? "In your tank · tap to remove" : open ? "Add to tank" : `Unlocks at ৳ ${money(s.unlock)}`}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Meter({ icon, label, value, frac, tone, onClick, dark }: { icon: React.ReactNode; label: string; value: string; frac: number; tone: string; onClick?: () => void; dark?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className="flex h-11 items-center gap-2 rounded-2xl bg-white px-3 shadow-sm ring-1 ring-line transition enabled:hover:-translate-y-0.5 enabled:hover:shadow-md disabled:cursor-default"
+      className={cx(
+        "flex h-11 items-center gap-2 rounded-2xl px-3 shadow-sm ring-1 transition enabled:hover:-translate-y-0.5 enabled:hover:shadow-md disabled:cursor-default",
+        dark ? "bg-white/10 ring-white/15" : "bg-white ring-line",
+      )}
       title={onClick ? "The glass needs a clean - tap to pick up the sponge" : undefined}
     >
-      <span className="text-muted">{icon}</span>
+      <span className={dark ? "text-mint/70" : "text-muted"}>{icon}</span>
       <span className="text-left">
-        <span className="block text-[10px] font-bold uppercase leading-none tracking-wider text-faint">{label}</span>
-        <span className="block text-[13px] font-extrabold tabular-nums leading-tight text-ink">{value}</span>
+        <span className={cx("block text-[10px] font-bold uppercase leading-none tracking-wider", dark ? "text-mint/60" : "text-faint")}>{label}</span>
+        <span className={cx("block text-[13px] font-extrabold tabular-nums leading-tight", dark ? "text-white" : "text-ink")}>{value}</span>
       </span>
-      <span className="h-1.5 w-12 overflow-hidden rounded-full bg-line">
+      <span className={cx("h-1.5 w-12 overflow-hidden rounded-full", dark ? "bg-white/15" : "bg-line")}>
         <span className={cx("block h-full rounded-full transition-all duration-700", tone)} style={{ width: `${Math.max(4, Math.min(100, frac * 100))}%` }} />
       </span>
     </button>
+  );
+}
+
+/** Live hunger bar on the shark's card. */
+function SharkMood({ engine }: { engine: React.RefObject<Engine | null> }) {
+  const [mood, setMood] = useState<{ hunger: number; label: string; emoji: string } | null>(null);
+  useEffect(() => {
+    const read = () => setMood(engine.current?.sharkMood() ?? null);
+    const id = window.setInterval(read, 400);
+    const first = window.setTimeout(read, 0);
+    return () => {
+      clearInterval(id);
+      clearTimeout(first);
+    };
+  }, [engine]);
+  if (!mood) return null;
+  return (
+    <div className="mt-2">
+      <div className="flex items-center justify-between text-[12px] font-bold">
+        <span>
+          {mood.emoji} {mood.label}
+        </span>
+        <span className="tabular-nums text-muted">hunger {mood.hunger}%</span>
+      </div>
+      <div className="mt-1 h-2 overflow-hidden rounded-full bg-line">
+        <div
+          className={cx("h-full rounded-full transition-all duration-500", mood.hunger < 25 ? "bg-lime" : mood.hunger < 45 ? "bg-aqua" : mood.hunger < 75 ? "bg-amber-400" : "bg-red-500")}
+          style={{ width: `${mood.hunger}%` }}
+        />
+      </div>
+      <p className="mt-1.5 text-[12px] leading-snug text-muted">{mood.hunger < 45 ? "Too full to hunt right now." : "Hungry sharks hunt - feed it to calm it down."}</p>
+      <button
+        onClick={() => engine.current?.feedShark()}
+        className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-deep text-[12.5px] font-bold text-lime transition active:scale-95"
+      >
+        <Cookie className="size-3.5" /> Feed the shark
+      </button>
+    </div>
   );
 }
 
@@ -492,6 +855,7 @@ function FishCard({
           </button>
         </div>
         {info.fact && <p className="mt-1.5 text-[12.5px] leading-snug text-muted">{info.fact}</p>}
+        {info.kind === "shark" && <SharkMood engine={engine} />}
         {info.adoptable &&
           (naming ? (
             <form
@@ -570,8 +934,8 @@ function Equipment({ temp }: { temp: number }) {
       </div>
 
       {/* airline down to the air stone */}
-      <div className="pointer-events-none absolute bottom-7 left-[58.4%] top-0 w-[2px] bg-white/30" />
-      <div data-airstone className="pointer-events-none absolute bottom-5 left-[57.5%] h-2.5 w-7 rounded-full bg-[#4a5a55]" />
+      <div className="pointer-events-none absolute bottom-7 left-[60.4%] top-0 w-[2px] bg-white/30" />
+      <div data-airstone className="pointer-events-none absolute bottom-5 left-[59.5%] h-2.5 w-7 rounded-full bg-[#4a5a55]" />
     </>
   );
 }

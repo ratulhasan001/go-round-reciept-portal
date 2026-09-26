@@ -70,14 +70,14 @@ export function setSound(on: boolean) {
   }
 }
 
-export type Sfx = "bubble" | "splash" | "tap" | "plop" | "chomp" | "chime" | "coins";
+export type Sfx = "bubble" | "splash" | "tap" | "plop" | "chomp" | "chime" | "coins" | "thunder" | "rumble" | "sparkle" | "catch";
 
 /** Plays an effect (quietly, and not too often). */
 export function sfx(name: Sfx) {
   if (!enabled || !ctx || !master) return;
   const c = ctx;
   const t = c.currentTime;
-  const gap = { bubble: 0.09, splash: 0.12, tap: 0.08, plop: 0.05, chomp: 0.2, chime: 0.5, coins: 0.5 }[name];
+  const gap = { bubble: 0.09, splash: 0.12, tap: 0.08, plop: 0.05, chomp: 0.2, chime: 0.5, coins: 0.5, thunder: 1.5, rumble: 0.6, sparkle: 0.3, catch: 0.3 }[name];
   if (t - (last[name] ?? -1) < gap) return;
   last[name] = t;
 
@@ -130,6 +130,21 @@ export function sfx(name: Sfx) {
       break;
     case "chime":
       [523, 659, 784, 1047].forEach((f, i) => tone("sine", f, f, 0.5, 0.07, t + i * 0.11));
+      break;
+    case "thunder":
+      hiss("lowpass", 140, 2.2, 0.6);
+      hiss("lowpass", 600, 0.35, 0.25);
+      break;
+    case "rumble":
+      hiss("lowpass", 220, 0.7, 0.4);
+      tone("sine", 70, 45, 0.6, 0.2);
+      break;
+    case "sparkle":
+      [1568, 2093, 2637, 3136].forEach((f, i) => tone("sine", f, f, 0.25, 0.05, t + i * 0.06));
+      break;
+    case "catch":
+      tone("triangle", 660, 990, 0.18, 0.1);
+      tone("sine", 990, 1320, 0.25, 0.07, t + 0.12);
       break;
     case "coins":
       for (let i = 0; i < 7; i++) {
