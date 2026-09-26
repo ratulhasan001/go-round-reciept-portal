@@ -5,7 +5,7 @@ import { cx } from "./ui";
 
 const FLIP_MS = 600; // whole flip: top flap folds down (first half), bottom flap lands (second half)
 
-/** Fliqlo-style flip clock: hh · mm · ss on black cards, AM/PM tucked into the hour card. */
+/** Fliqlo-style flip clock: hh · mm · ss on deep-green cards, AM/PM tucked into the hour card. */
 export function FlipClock({ size = 22, seconds = true, className }: { size?: number; seconds?: boolean; className?: string }) {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
@@ -40,7 +40,7 @@ function Card({ value, label }: { value: string; label?: string }) {
   const flipping = prev !== value;
 
   return (
-    <div className="relative h-[2.3em] w-[2.55em] rounded-[0.24em] bg-[#0b0b0b] shadow-[0_0.2em_0.5em_rgb(0_0_0/0.45)] [perspective:16em]">
+    <div className="relative h-[2.3em] w-[2.55em] rounded-[0.24em] bg-deep shadow-[0_0.2em_0.5em_rgb(0_0_0/0.35)] ring-1 ring-white/10 [perspective:16em]">
       {/* static halves: new number on top, old number underneath until the flap covers it */}
       <Half pos="top" text={value} />
       <Half pos="bottom" text={flipping ? prev : value} />
@@ -51,8 +51,8 @@ function Card({ value, label }: { value: string; label?: string }) {
         </>
       )}
       {/* the hinge */}
-      <span className="absolute inset-x-0 top-1/2 z-20 h-[0.06em] -translate-y-1/2 bg-black/90" />
-      {label && <span className="absolute left-[0.3em] top-[0.22em] z-30 font-[Helvetica_Neue,Helvetica,Arial,sans-serif] text-[0.3em] font-bold leading-none text-[#b8b8b8]">{label}</span>}
+      <span className="absolute inset-x-0 top-1/2 z-20 h-[0.06em] -translate-y-1/2 bg-deep/90" />
+      {label && <span className="absolute left-[0.3em] top-[0.22em] z-30 font-[Helvetica_Neue,Helvetica,Arial,sans-serif] text-[0.3em] font-bold leading-none text-lime">{label}</span>}
     </div>
   );
 }
@@ -62,13 +62,13 @@ function Half({ pos, text, className }: { pos: "top" | "bottom"; text: string; c
     <div
       className={cx(
         "absolute inset-x-0 h-1/2 overflow-hidden [backface-visibility:hidden]",
-        pos === "top" ? "top-0 rounded-t-[0.24em] bg-[#141414]" : "bottom-0 rounded-b-[0.24em] bg-[#0f0f0f]",
+        pos === "top" ? "top-0 rounded-t-[0.24em] bg-[#17463a]" : "bottom-0 rounded-b-[0.24em] bg-[#123a30]",
         className,
       )}
     >
       <div
         className={cx(
-          "absolute inset-x-0 grid h-[200%] place-items-center font-[Helvetica_Neue,Helvetica,Arial,sans-serif] text-[1.65em] font-bold tabular-nums leading-none tracking-[-0.02em] text-[#d6d6d6]",
+          "absolute inset-x-0 grid h-[200%] place-items-center font-[Helvetica_Neue,Helvetica,Arial,sans-serif] text-[1.65em] font-bold tabular-nums leading-none tracking-[-0.02em] text-mint",
           pos === "top" ? "top-0" : "bottom-0",
         )}
       >

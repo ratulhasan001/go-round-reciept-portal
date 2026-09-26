@@ -88,10 +88,10 @@ export default function Home() {
         <div className="relative mx-auto max-w-[1300px]">
           {/* top bar */}
           <div className="animate-home-in flex items-center gap-3">
-            <Mark className="size-10 text-[14px]" />
+            <Mark className="size-14 text-[20px] sm:size-16 sm:text-[22px]" />
             <div className="mr-auto min-w-0">
-              <div className="truncate font-display text-[17px] font-bold leading-tight">{shop.name}</div>
-              <div className="text-[12px] text-mint/75">Receipt Studio</div>
+              <div className="truncate font-display text-2xl font-extrabold leading-tight sm:text-3xl">{shop.name}</div>
+              <div className="text-[13px] text-mint/85 sm:text-sm">Witness the Underwater World Through Us</div>
             </div>
             <span className="flex items-center gap-2 rounded-full bg-white/8 px-3 py-1.5 text-[12px] font-semibold text-mint/90 backdrop-blur" title={syncLabel(mode, sync)}>
               <SyncDot mode={mode} sync={sync} />
@@ -121,7 +121,6 @@ export default function Home() {
               {greet}
               <span className="inline-block origin-[70%_70%] animate-wave-hand">👋</span>
             </h1>
-            <p className="animate-home-in mt-3 max-w-xl text-[15px] text-mint/85 sm:text-base [animation-delay:200ms]">Witness the Underwater World Through Us</p>
           </div>
 
           {/* this month */}
