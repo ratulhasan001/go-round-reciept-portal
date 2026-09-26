@@ -11,6 +11,7 @@ import { WAVE_BACK, WAVE_FRONT } from "@/lib/theme";
 import { Mark, SECTIONS, SectionIcon, SyncDot, syncLabel } from "@/components/nav";
 import { cx, useClientValue } from "@/components/ui";
 import { FlipClock } from "@/components/FlipClock";
+import { Aquarium } from "@/components/Aquarium";
 
 const greeting = () => {
   const hour = new Date().getHours();
@@ -110,17 +111,17 @@ export default function Home() {
           </div>
 
           {/* greeting */}
-          <div className="mt-10 sm:mt-14">
-            <div className="animate-home-in flex flex-wrap items-center gap-x-4 gap-y-3 text-sm font-semibold text-lime [animation-delay:80ms]">
+          <div className="mt-10 flex flex-col gap-5 sm:mt-14 sm:flex-row sm:items-end sm:justify-between">
+            <h1 className="animate-home-in flex items-center gap-3 font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl [animation-delay:80ms]">
+              {greet}
+              <Aquarium className="size-[1.15em] shrink-0" />
+            </h1>
+            <div className="animate-home-in flex flex-col items-start gap-2.5 text-sm font-semibold text-lime sm:items-end [animation-delay:140ms]">
               <span className="flex items-center gap-2">
                 <CalendarDays className="size-4" /> {today || " "}
               </span>
-              <FlipClock size={20} />
+              <FlipClock size={22} />
             </div>
-            <h1 className="animate-home-in mt-3 font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl [animation-delay:140ms]">
-              {greet}
-              <span className="inline-block origin-[70%_70%] animate-wave-hand">👋</span>
-            </h1>
           </div>
 
           {/* this month */}

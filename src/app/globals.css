@@ -642,23 +642,73 @@ input[type="number"] {
   animation: shine 4.5s ease-in-out 1.2s infinite;
 }
 
-@keyframes wave-hand {
-  0%,
-  60%,
+/* greeting aquarium */
+.aq-fish,
+.aq-weed,
+.aq-bubble {
+  transform-box: fill-box;
+}
+@keyframes aq-swim {
+  0% {
+    transform: translate(-6px, 1px) scaleX(1);
+  }
+  44% {
+    transform: translate(6px, -2px) scaleX(1);
+  }
+  50% {
+    transform: translate(6px, -2px) scaleX(-1);
+  }
+  94% {
+    transform: translate(-6px, 1px) scaleX(-1);
+  }
   100% {
-    transform: rotate(0);
-  }
-  10%,
-  30% {
-    transform: rotate(16deg);
-  }
-  20%,
-  40% {
-    transform: rotate(-8deg);
+    transform: translate(-6px, 1px) scaleX(1);
   }
 }
-.animate-wave-hand {
-  animation: wave-hand 2.4s ease-in-out 0.9s 2;
+.aq-fish {
+  transform-origin: center;
+  animation: aq-swim 7s ease-in-out infinite;
+}
+@keyframes aq-sway {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+.aq-weed {
+  transform-origin: bottom;
+  animation: aq-sway 3s ease-in-out infinite;
+}
+@keyframes aq-rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-26px);
+    opacity: 0;
+  }
+}
+.aq-bubble {
+  animation: aq-rise 3.3s ease-in infinite;
+}
+@keyframes aq-ripple {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-14px);
+  }
+}
+.aq-ripple {
+  animation: aq-ripple 5s ease-in-out infinite;
 }
 
 @keyframes wave-sway {
@@ -681,7 +731,10 @@ input[type="number"] {
   .animate-aurora,
   .animate-aurora-slow,
   .animate-shine,
-  .animate-wave-hand,
+  .aq-fish,
+  .aq-weed,
+  .aq-bubble,
+  .aq-ripple,
   .animate-wave {
     animation: none !important;
   }
