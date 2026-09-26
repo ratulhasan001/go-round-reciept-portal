@@ -12,8 +12,8 @@ import { Mark, SECTIONS, SectionIcon, SyncDot, syncLabel } from "@/components/na
 import { cx, useClientValue } from "@/components/ui";
 import { FlipClock } from "@/components/FlipClock";
 import { Aquarium } from "@/components/Aquarium";
-import { Pond } from "@/components/Pond";
-import { CALENDAR_H, CalendarTile } from "@/components/CalendarTile";
+import { AquariumTank } from "@/components/AquariumTank";
+import { CalendarTile } from "@/components/CalendarTile";
 
 const greeting = () => {
   const hour = new Date().getHours();
@@ -110,19 +110,21 @@ export default function Home() {
             )}
           </div>
 
-          {/* greeting */}
-          <div className="mt-6 flex flex-wrap items-stretch justify-between gap-6 sm:mt-8">
-            <div className="flex min-w-[min(100%,24rem)] flex-1 flex-col gap-2">
+          {/* greeting, with the calendar and clock beside it once there is room (xl) */}
+          <div className="mt-6 flex flex-col gap-6 sm:mt-8 xl:flex-row xl:items-center xl:justify-between xl:gap-8">
+            <div className="min-w-0 flex-1">
               <h1 className="animate-home-in flex items-center gap-3 font-display text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl [animation-delay:80ms]">
                 {greet}
                 <Aquarium className="size-[1.15em] shrink-0" />
               </h1>
-              <Pond className="animate-home-in mt-auto w-full [animation-delay:200ms]" />
             </div>
-            <div className="animate-home-in flex flex-wrap items-end gap-x-5 gap-y-4 [animation-delay:140ms]">
+            {/*
+              --cal-h is the calendar page height; the clock cards are 2.3em tall, so size = --cal-h / 2.3 keeps them level.
+              Phone: one row of calendar (0.91 x h) + hh:mm (2.3 x h) + 12px gap must fit 100vw - 2rem, and seconds are dropped.
+            */}
+            <div className="animate-home-in flex items-end justify-center gap-3 [--cal-h:min(6.5rem,calc((100vw_-_2rem_-_12px)_/_3.21))] sm:gap-5 sm:[--cal-h:7rem] md:[--cal-h:8.5rem] xl:justify-end [animation-delay:140ms]">
               <CalendarTile />
-              {/* clock cards are 2.3em tall and the three together 8.01em wide: match the calendar, but never overflow a phone */}
-              <FlipClock size={`min(calc(${CALENDAR_H} / 2.3), calc((100vw - 2rem) / 8.1))`} />
+              <FlipClock size="calc(var(--cal-h) / 2.3)" secondsClassName="max-sm:hidden" />
             </div>
           </div>
 
@@ -142,6 +144,13 @@ export default function Home() {
           {SECTIONS.map((s, i) => (
             <Tile key={s.key} i={i} section={s} meta={meta[s.key]!} featured={s.key === "new"} />
           ))}
+        </div>
+        <div className="mx-auto mt-12 max-w-[1300px] sm:mt-16">
+          <div className="mb-5 text-center">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-aqua-deep">Our aquarium</p>
+            <h2 className="mt-1 font-display text-2xl font-extrabold text-ink sm:text-3xl">Witness the Underwater World Through Us</h2>
+          </div>
+          <AquariumTank />
         </div>
         <p className="animate-home-in mt-6 hidden text-center text-[12.5px] text-muted [animation-delay:700ms] sm:block">
           Tip: press <Kbd>1</Kbd>–<Kbd>6</Kbd> to jump straight to a section.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowUpDown, Plus, Search, SearchX, Sparkles, Trash2 } from "lucide-react";
+import { ArrowUpDown, Plus, Search, SearchX, Sparkles, Trash2, X } from "lucide-react";
 import { Button, Card, Input, Select, cx, useToast } from "./ui";
 import { SectionIcon } from "./nav";
 
@@ -98,6 +98,7 @@ export function ListEditor<T extends { id: string }>({
   const [leaving, setLeaving] = useState<string[]>([]);
   const [fresh, setFresh] = useState<string | null>(null);
   const [tab, setTab] = useState(0);
+  const searchRef = useRef<HTMLInputElement>(null);
   const freshTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef(rows);
   useEffect(() => {
@@ -154,6 +155,21 @@ export function ListEditor<T extends { id: string }>({
       (!tabs[tab] || tabs[tab].test(r)) &&
       (!needle || columns.some((c) => c.type !== "toggle" && String(r[c.key] ?? "").toLowerCase().includes(needle))),
   );
+
+  // what the search looks through, for the placeholder
+  const searchable = columns.filter((c) => c.type !== "toggle" && c.type !== "custom").slice(0, 3).map((c) => c.label.toLowerCase());
+
+  // "/" jumps to the search box from anywhere on the page
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = e.target instanceof Element && e.target.closest("input, textarea, select, [contenteditable]");
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || typing) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const patch = (id: string, changes: Partial<T>) =>
     onChange(
@@ -217,12 +233,62 @@ export function ListEditor<T extends { id: string }>({
       </div>
 
       <Card className="overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="relative min-w-0 flex-1 sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${title.toLowerCase()}`} className="bg-canvas pl-9" />
+        {/* search: its own row; the border lights up and flows while it has focus */}
+        <div className="border-b border-line p-4 pb-3">
+          <div className="search-shell group/search rounded-2xl p-[1.5px] transition-shadow duration-500 focus-within:shadow-[0_10px_30px_-12px_rgb(26_134_174/0.45)]">
+            <div className="relative flex h-12 items-center rounded-[calc(1rem-1.5px)] bg-canvas transition-colors duration-300 focus-within:bg-white sm:h-[3.25rem]">
+              <Search className="pointer-events-none absolute left-4 size-[18px] text-faint transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-focus-within/search:-rotate-12 group-focus-within/search:scale-115 group-focus-within/search:text-aqua-deep" />
+              <input
+                ref={searchRef}
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && q) {
+                    e.preventDefault();
+                    setQ("");
+                  }
+                }}
+                aria-label={`Search ${title.toLowerCase()}`}
+                placeholder={`Search ${title.toLowerCase()} by ${searchable.join(", ")}…`}
+                className="h-full w-full min-w-0 bg-transparent pl-12 pr-32 text-[15px] font-medium text-ink outline-none placeholder:font-normal placeholder:text-faint [&::-webkit-search-cancel-button]:hidden"
+              />
+              <div className="absolute right-2.5 flex items-center gap-2">
+                {q ? (
+                  <>
+                    <span
+                      key={visible.length}
+                      className={cx(
+                        "animate-count-bump rounded-full px-2.5 py-1 text-[12px] font-bold tabular-nums",
+                        visible.length ? "bg-aqua-soft text-aqua-deep" : "bg-red-50 text-red-600",
+                      )}
+                    >
+                      {visible.length ? `${visible.length} found` : "No match"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQ("");
+                        searchRef.current?.focus();
+                      }}
+                      className="animate-search-pop grid size-8 place-items-center rounded-full bg-line/70 text-muted transition hover:rotate-90 hover:bg-deep hover:text-lime active:scale-90"
+                      aria-label="Clear search"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </>
+                ) : (
+                  <kbd className="hidden h-7 min-w-7 place-items-center rounded-lg border border-line bg-white px-2 font-sans text-[12px] font-bold text-muted shadow-[0_1px_0_var(--color-line)] transition-opacity duration-300 group-focus-within/search:opacity-0 sm:inline-grid">
+                    /
+                  </kbd>
+                )}
+              </div>
             </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 border-b border-line p-4 pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             {tabs.length > 0 && (
               <div className="-mx-4 shrink-0 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
               <div

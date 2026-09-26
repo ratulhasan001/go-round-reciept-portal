@@ -736,25 +736,13 @@ input[type="number"] {
   .aq-bubble,
   .aq-ripple,
   .pond-shimmer,
-  .pond-swim,
   .pond-bob,
   .animate-wave {
     animation: none !important;
   }
 }
 
-/* greeting pond (delays and speeds come from --delay / --dur so each fish can differ) */
-@keyframes pond-swim {
-  from {
-    transform: translateX(-10%);
-  }
-  to {
-    transform: translateX(100%);
-  }
-}
-.pond-swim {
-  animation: pond-swim var(--dur, 16s) linear var(--delay, 0s) infinite var(--dir, normal);
-}
+/* shared water helpers: a gentle bob, and light glinting on the surface */
 @keyframes pond-bob {
   0%,
   100% {
@@ -781,106 +769,320 @@ input[type="number"] {
 .pond-shimmer {
   animation: pond-shimmer 4s ease-in-out var(--delay, 0s) infinite;
 }
-/* one leap every 6.4s: out of the water, over the top, back in */
-@keyframes pond-jump {
-  0% {
-    opacity: 0;
-    transform: translate(0, 14px) rotate(-60deg);
+
+/* big home aquarium (timing per element via --dur / --delay / --dir / --sway) */
+.tank-sway,
+.tank-tuft,
+.tank-bell,
+.tank-tentacles,
+.tank-tail {
+  transform-box: fill-box;
+}
+@keyframes tank-swim {
+  from {
+    transform: translateX(-30%);
   }
-  3% {
-    opacity: 1;
-    transform: translate(3px, 2px) rotate(-58deg);
-  }
-  8% {
-    transform: translate(14px, -34px) rotate(-38deg);
-  }
-  13% {
-    transform: translate(29px, -50px) rotate(0deg);
-  }
-  18% {
-    transform: translate(44px, -34px) rotate(38deg);
-  }
-  23% {
-    opacity: 1;
-    transform: translate(55px, 2px) rotate(58deg);
-  }
-  26%,
-  100% {
-    opacity: 0;
-    transform: translate(58px, 14px) rotate(62deg);
+  to {
+    transform: translateX(105%);
   }
 }
-@keyframes pond-ripple {
-  0% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  2% {
-    opacity: 0.9;
-  }
-  13%,
-  100% {
-    opacity: 0;
-    transform: scale(1.7);
-  }
+.tank-swim {
+  animation: tank-swim var(--dur, 20s) linear var(--delay, 0s) infinite var(--dir, normal);
 }
-@keyframes pond-ripple-land {
+@keyframes tank-sway {
   0%,
-  22% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  24% {
-    opacity: 0.9;
-  }
-  36%,
   100% {
-    opacity: 0;
-    transform: scale(1.7);
+    transform: rotate(calc(var(--sway, 4deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--sway, 4deg));
   }
 }
-@keyframes pond-drop {
+.tank-sway {
+  transform-origin: bottom;
+  animation: tank-sway 5s ease-in-out var(--delay, 0s) infinite;
+}
+@keyframes tank-tuft {
   0%,
-  22% {
-    opacity: 0;
-    transform: translate(0, 0);
+  100% {
+    transform: rotate(-7deg);
   }
-  23% {
+  50% {
+    transform: rotate(7deg);
+  }
+}
+.tank-tuft {
+  transform-origin: bottom;
+  animation: tank-tuft 3.2s ease-in-out var(--delay, 0s) infinite;
+}
+@keyframes tank-ray {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
     opacity: 1;
   }
-  28% {
-    transform: translate(var(--dx), -14px);
-  }
-  34%,
-  100% {
+}
+.tank-ray {
+  animation: tank-ray 6s ease-in-out var(--delay, 0s) infinite;
+}
+@keyframes tank-bubble {
+  0% {
+    transform: translateY(0);
     opacity: 0;
-    transform: translate(calc(var(--dx) * 1.5), 3px);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100%);
+    opacity: 0;
   }
 }
-.pond-jump,
-.pond-ripple,
-.pond-drop {
-  opacity: 0; /* hidden unless animating (reduced motion keeps them hidden) */
-  animation: 6.4s linear var(--delay, 0s) infinite;
+.tank-bubble {
+  animation: tank-bubble var(--dur, 4s) ease-in var(--delay, 0s) infinite;
 }
-.pond-jump {
-  transform-origin: center;
-  animation-name: pond-jump;
+@keyframes tank-wobble {
+  0%,
+  100% {
+    translate: -2px 0;
+  }
+  50% {
+    translate: 2px 0;
+  }
 }
-.pond-ripple {
-  animation-name: pond-ripple;
+.tank-wobble {
+  animation: tank-wobble 0.9s ease-in-out infinite;
 }
-.pond-ripple-land {
-  animation-name: pond-ripple-land;
+@keyframes tank-jelly {
+  0%,
+  100% {
+    transform: translate(0, 10px);
+  }
+  50% {
+    transform: translate(-14px, -18px);
+  }
 }
-.pond-drop {
-  animation-name: pond-drop;
+.tank-jelly {
+  animation: tank-jelly 9s ease-in-out infinite;
+}
+@keyframes tank-bell {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  40% {
+    transform: scale(1.08, 0.82);
+  }
+}
+.tank-bell {
+  transform-origin: bottom;
+  animation: tank-bell 1.8s ease-in-out infinite;
+}
+@keyframes tank-tentacles {
+  0%,
+  100% {
+    transform: skewX(0deg) scaleY(1);
+  }
+  40% {
+    transform: skewX(6deg) scaleY(0.92);
+  }
+}
+.tank-tentacles {
+  transform-origin: top;
+  animation: tank-tentacles 1.8s ease-in-out infinite;
+}
+@keyframes tank-tail {
+  0%,
+  100% {
+    transform: skewY(-6deg);
+  }
+  50% {
+    transform: skewY(6deg);
+  }
+}
+.tank-tail {
+  transform-origin: right;
+  animation: tank-tail 0.8s ease-in-out infinite;
+}
+@keyframes tank-crab {
+  0%,
+  10% {
+    transform: translateX(8%);
+  }
+  45%,
+  55% {
+    transform: translateX(34%);
+  }
+  90%,
+  100% {
+    transform: translateX(8%);
+  }
+}
+.tank-crab {
+  animation: tank-crab 18s ease-in-out infinite;
+}
+@keyframes tank-crab-step {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg) translateY(-1px);
+  }
+}
+.tank-crab-step {
+  animation: tank-crab-step 0.5s ease-in-out infinite;
+}
+@keyframes tank-flipper {
+  0%,
+  100% {
+    transform: rotate(-18deg);
+  }
+  50% {
+    transform: rotate(18deg);
+  }
+}
+.tank-flipper {
+  transform-box: fill-box;
+  transform-origin: top left;
+  animation: tank-flipper 2.4s ease-in-out var(--delay, 0s) infinite;
+}
+@keyframes tank-caustics {
+  from {
+    background-position:
+      0 0,
+      45px 30px;
+  }
+  to {
+    background-position:
+      90px 60px,
+      -45px 90px;
+  }
+}
+.tank-caustics {
+  background:
+    radial-gradient(ellipse 38px 16px at 50% 50%, rgb(255 255 255 / 0.55), transparent 70%) 0 0 / 90px 60px,
+    radial-gradient(ellipse 28px 12px at 50% 50%, rgb(255 255 255 / 0.45), transparent 70%) 45px 30px / 90px 60px;
+  animation: tank-caustics 12s linear infinite;
+}
+@keyframes tank-jet {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-70px, 14px) scale(1);
+    opacity: 0;
+  }
+}
+.tank-jet {
+  animation: tank-jet 1.4s ease-out var(--delay, 0s) infinite;
+}
+@keyframes tank-pilot {
+  0%,
+  60%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 5px #ef4444;
+  }
+  80% {
+    opacity: 0.3;
+    box-shadow: none;
+  }
+}
+.tank-pilot {
+  animation: tank-pilot 2.5s ease-in-out infinite;
+}
+/* shark jaw (SharkChase toggles data-open) and tail */
+.shark .shark-jaw {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.shark[data-open="1"] .shark-jaw {
+  opacity: 1;
+}
+.shark[data-open="1"] .shark-shut {
+  opacity: 0;
+}
+@keyframes shark-tail {
+  0%,
+  100% {
+    transform: skewY(-8deg);
+  }
+  50% {
+    transform: skewY(8deg);
+  }
+}
+.shark-tail {
+  transform-box: fill-box;
+  transform-origin: right;
+  animation: shark-tail 0.9s ease-in-out infinite;
+}
+/* food flakes and the bite burst are created by SharkChase */
+.tank-food {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 3px;
+  border-radius: 1px;
+  background: #d97706;
+  box-shadow: 0 0 0 1px rgb(120 53 15 / 0.4);
+}
+.tank-chomp {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.tank-chomp i {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.9);
+  animation: tank-chomp 0.8s ease-out forwards;
+}
+@keyframes tank-chomp {
+  from {
+    transform: rotate(var(--a)) translateX(0) scale(0.5);
+    opacity: 1;
+  }
+  to {
+    transform: rotate(var(--a)) translateX(22px) scale(1.2);
+    opacity: 0;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pond-jump,
-  .pond-ripple,
-  .pond-drop {
+  .tank-swim,
+  .tank-sway,
+  .tank-tuft,
+  .tank-ray,
+  .tank-wobble,
+  .tank-jelly,
+  .tank-bell,
+  .tank-tentacles,
+  .tank-tail,
+  .tank-crab,
+  .tank-crab-step,
+  .tank-flipper,
+  .tank-caustics,
+  .tank-jet,
+  .tank-pilot,
+  .shark-tail {
     animation: none !important;
+  }
+  .tank-bubble {
+    display: none;
   }
 }
 
@@ -935,6 +1137,43 @@ input[type="number"] {
 @media (prefers-reduced-motion: reduce) {
   .animate-flap-top,
   .animate-flap-bottom {
+    animation: none;
+  }
+}
+
+/* list search box: a hairline border that turns into a flowing lime-aqua glow on focus */
+@keyframes search-flow {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
+}
+.search-shell {
+  background: var(--color-line);
+  background-size: 200% 100%;
+}
+.search-shell:focus-within {
+  background-image: linear-gradient(90deg, var(--color-lime), var(--color-aqua), var(--color-aqua-deep), var(--color-lime));
+  animation: search-flow 3s linear infinite;
+}
+@keyframes search-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-90deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-search-pop {
+  animation: search-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-shell:focus-within,
+  .animate-search-pop {
     animation: none;
   }
 }
