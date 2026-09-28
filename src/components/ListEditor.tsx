@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowUpDown, Plus, Search, SearchX, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowUpDown, Check, Pencil, Plus, Search, SearchX, Sparkles, Trash2, X } from "lucide-react";
 import { Button, Card, Input, Select, cx, useToast } from "./ui";
 import { SectionIcon } from "./nav";
 
@@ -50,7 +50,7 @@ const LAYOUT = {
   },
 } as const;
 
-/** Inline-editable list used for Products, Customers and Coupons. Changes save instantly. */
+/** List used for Products, Customers and Coupons. A row becomes editable via its Edit button; changes save instantly. */
 export function ListEditor<T extends { id: string }>({
   title,
   subtitle,
@@ -98,13 +98,15 @@ export function ListEditor<T extends { id: string }>({
   const [leaving, setLeaving] = useState<string[]>([]);
   const [fresh, setFresh] = useState<string | null>(null);
   const [tab, setTab] = useState(0);
+  // rows currently unlocked for editing
+  const [editing, setEditing] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const freshTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef(rows);
   useEffect(() => {
     latest.current = rows;
   });
-  const grid = `${lead ? "40px " : ""}${columns.map((c) => c.width).join(" ")} 40px`;
+  const grid = `${lead ? "40px " : ""}${columns.map((c) => c.width).join(" ")} 84px`;
 
   // Sorting is live, except while the cursor is inside a row: then the order is held still so the row
   // being edited never jumps away. As soon as focus leaves the rows, everything glides into place.
@@ -188,10 +190,17 @@ export function ListEditor<T extends { id: string }>({
     setQ("");
     setTab(0);
     setFresh(row.id);
+    setEditing((e) => [...e, row.id]);
     clearTimeout(freshTimer.current);
     freshTimer.current = setTimeout(() => setFresh(null), 1400);
     setTimeout(() => document.getElementById(`row-${row.id}`)?.querySelector("input")?.focus(), 30);
   };
+
+  const startEdit = (id: string) => {
+    setEditing((e) => (e.includes(id) ? e : [...e, id]));
+    setTimeout(() => document.getElementById(`row-${id}`)?.querySelector<HTMLElement>("fieldset input, fieldset select, fieldset button")?.focus(), 30);
+  };
+  const stopEdit = (id: string) => setEditing((e) => e.filter((x) => x !== id));
 
   const remove = (r: T) => {
     if (confirm !== r.id) {
@@ -388,6 +397,7 @@ export function ListEditor<T extends { id: string }>({
           )}
           {visible.map((r, i) => {
             const isLeaving = leaving.includes(r.id);
+            const isEditing = editing.includes(r.id);
             return (
               <div
                 id={`row-${r.id}`}
@@ -395,17 +405,33 @@ export function ListEditor<T extends { id: string }>({
                 data-row={r.id}
                 onFocus={onRowFocus}
                 onBlur={onRowBlur}
+                onKeyDown={(e) => {
+                  // Enter or Esc finishes editing the row
+                  if (!isEditing || (e.key !== "Enter" && e.key !== "Escape") || (e.target as Element).closest("select, button")) return;
+                  e.preventDefault();
+                  stopEdit(r.id);
+                  document.getElementById(`edit-${r.id}`)?.focus();
+                }}
                 className={cx(
                   "grid gap-2 rounded-xl border border-line p-3 transition-colors",
                   L.row,
                   isLeaving ? "animate-row-out pointer-events-none" : "animate-row-in",
                   fresh === r.id && "animate-row-fresh",
+                  isEditing && "ring-2 ring-brand/25",
                 )}
                 style={{ "--g": grid, animationDelay: isLeaving || fresh === r.id ? undefined : `${Math.min(i, 12) * 35}ms` } as React.CSSProperties}
               >
                 {lead && <div className={cx("hidden place-items-center", L.lead)}>{lead(r)}</div>}
                 {columns.map((c) => (
-                  <div key={c.key}>
+                  <fieldset
+                    key={c.key}
+                    disabled={!isEditing}
+                    className={cx(
+                      "min-w-0",
+                      // locked: show values as plain text instead of fields
+                      !isEditing && "[&_button]:cursor-default [&_input]:cursor-default [&_input]:border-transparent [&_input]:bg-transparent [&_select]:cursor-default",
+                    )}
+                  >
                     <span className={cx("mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted", L.label)}>{c.label}</span>
                     {c.type === "custom" ? (
                       c.render?.(r, (changes) => patch(r.id, changes))
@@ -422,18 +448,34 @@ export function ListEditor<T extends { id: string }>({
                         onChange={(e) => set(r.id, c.key, e.target.value, c.type)}
                       />
                     )}
-                  </div>
+                  </fieldset>
                 ))}
-                <button
-                  onClick={() => remove(r)}
-                  className={cx(
-                    "grid h-10 place-items-center self-end rounded-lg text-faint transition hover:bg-red-50 hover:text-red-600",
-                    confirm === r.id && "animate-confirm-shake bg-red-600 text-[11px] font-bold text-white hover:bg-red-700 hover:text-white",
-                  )}
-                  aria-label={`Remove ${noun}`}
-                >
-                  {confirm === r.id ? "Sure?" : <Trash2 className="size-4" />}
-                </button>
+                <div className="flex gap-1 self-end">
+                  <button
+                    id={`edit-${r.id}`}
+                    type="button"
+                    onClick={() => (isEditing ? stopEdit(r.id) : startEdit(r.id))}
+                    className={cx(
+                      "grid h-10 flex-1 place-items-center rounded-lg transition",
+                      isEditing ? "bg-brand text-white hover:bg-brand/90" : "text-faint hover:bg-soft hover:text-brand",
+                    )}
+                    aria-label={isEditing ? `Done editing ${noun}` : `Edit ${noun}`}
+                    title={isEditing ? "Done" : "Edit"}
+                  >
+                    {isEditing ? <Check className="size-4" /> : <Pencil className="size-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => remove(r)}
+                    className={cx(
+                      "grid h-10 flex-1 place-items-center rounded-lg text-faint transition hover:bg-red-50 hover:text-red-600",
+                      confirm === r.id && "animate-confirm-shake bg-red-600 text-[11px] font-bold text-white hover:bg-red-700 hover:text-white",
+                    )}
+                    aria-label={`Remove ${noun}`}
+                  >
+                    {confirm === r.id ? "Sure?" : <Trash2 className="size-4" />}
+                  </button>
+                </div>
               </div>
             );
           })}
