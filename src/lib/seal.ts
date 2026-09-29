@@ -30,10 +30,15 @@ const cssFont = (v: string, fallback: string) =>
 
 const cache = new Map<string, string>();
 
+/** Seal image size in px; it is a landscape rectangle (width : height = SEAL_W : SEAL_H). */
+export const SEAL_W = 720;
+export const SEAL_H = 400;
+
 /**
- * Draws a plain, professional rubber-stamp seal: two thin rings, the shop name
- * around the top, the receipt number around the bottom, and PAID / DUE in the
- * centre with the date or amount beneath. Returns a transparent PNG data URL.
+ * Draws a plain, professional rectangular rubber-stamp seal: a thick and a thin
+ * border, the shop name across the top, PAID / DUE in the centre between two
+ * rules, and the receipt number with the date or amount beneath.
+ * Returns a transparent PNG data URL.
  */
 export async function drawSeal(spec: SealSpec): Promise<string> {
   const key = JSON.stringify(spec);
@@ -48,77 +53,192 @@ export async function drawSeal(spec: SealSpec): Promise<string> {
     /* fall back to whatever is available */
   }
 
-  const S = 640;
+  const W = SEAL_W;
+  const H = SEAL_H;
   const c = document.createElement("canvas");
-  c.width = c.height = S;
+  c.width = W;
+  c.height = H;
   const g = c.getContext("2d")!;
   const ink = COLORS[spec.kind];
-  g.translate(S / 2, S / 2);
   g.globalAlpha = 0.88;
   g.strokeStyle = ink;
   g.fillStyle = ink;
+  g.textBaseline = "middle";
+
+  const frame = (inset: number, w: number, r: number) => {
+    g.beginPath();
+    g.roundRect(inset, inset, W - inset * 2, H - inset * 2, r);
+    g.lineWidth = w;
+    g.stroke();
+  };
+  frame(8, 10, 22);
+  frame(28, 3, 10);
+
+  // evenly tracked, centred single line of text, shrunk to fit maxW
+  const tracked = (text: string, y: number, size: number, maxW: number, track: number, family: string) => {
+    const chars = [...text];
+    const width = () => chars.reduce((a, ch) => a + g.measureText(ch).width + track, 0) - track;
+    g.font = `700 ${size}px ${family}`;
+    while (width() > maxW && size > 12) g.font = `700 ${(size -= 1)}px ${family}`;
+    let x = (W - width()) / 2;
+    g.textAlign = "left";
+    for (const ch of chars) {
+      g.fillText(ch, x, y);
+      x += g.measureText(ch).width + track;
+    }
+  };
+
+  const inner = W - 140;
+  tracked(spec.shop.toUpperCase(), 78, 30, inner, 7, body);
+
+  g.lineWidth = 2.5;
+  for (const y of [112, 290]) {
+    g.beginPath();
+    g.moveTo(70, y);
+    g.lineTo(W - 70, y);
+    g.stroke();
+  }
+
+  // centre word
+  const word = spec.kind;
+  let size = 150;
+  g.font = `700 ${size}px ${display}`;
+  while (g.measureText(word).width > inner && size > 60) g.font = `700 ${(size -= 4)}px ${display}`;
+  g.textAlign = "center";
+  g.fillText(word, W / 2, 204);
+
+  tracked(`RECEIPT ${spec.number}  ·  ${spec.detail}`, 328, 28, inner, 3, body);
+
+  const url = c.toDataURL("image/png");
+  cache.set(key, url);
+  return url;
+}
+
+/** The authorised signatory printed on every receipt. */
+export const SIGNATORY = { name: "Md. Fahim Ahmed", title: "Chief Executive Officer", image: "/sign.png" };
+
+/** Signature block size in px (round company seal, signature across it, name and title beneath). */
+export const SIGN_W = 720;
+export const SIGN_H = 460;
+
+const SEAL_INK = "#2A3F94"; // stamp-pad blue
+const PEN_INK = "#101C4E"; // blue-black pen
+
+/**
+ * Draws the official signature block: the round company seal in stamp-pad blue, the CEO's
+ * signature running across it in pen ink, then a signature line with name and title.
+ * Returns a transparent PNG data URL.
+ */
+export async function drawSignature(shopName: string): Promise<string> {
+  const key = `sign:${shopName}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const display = cssFont("--font-bricolage", "'Bricolage Grotesque', sans-serif");
+  const body = cssFont("--font-manrope", "'Manrope', sans-serif");
+  const img = new Image();
+  img.src = SIGNATORY.image;
+  const [loaded] = await Promise.allSettled([
+    img.decode(),
+    document.fonts.load(`700 34px ${display}`),
+    document.fonts.load(`700 30px ${body}`),
+  ]);
+
+  const c = document.createElement("canvas");
+  c.width = SIGN_W;
+  c.height = SIGN_H;
+  const g = c.getContext("2d")!;
   g.textAlign = "center";
   g.textBaseline = "middle";
 
+  // ---- round company seal, tilted a little like a hand-pressed stamp ----
+  g.save();
+  g.translate(240, 182);
+  g.rotate((-10 * Math.PI) / 180);
+  g.scale(0.9, 0.9);
+  g.globalAlpha = 0.8;
+  g.strokeStyle = SEAL_INK;
+  g.fillStyle = SEAL_INK;
   const ring = (r: number, w: number) => {
     g.beginPath();
     g.arc(0, 0, r, 0, Math.PI * 2);
     g.lineWidth = w;
     g.stroke();
   };
-  ring(300, 9);
-  ring(284, 2.5);
-  ring(196, 2.5);
+  ring(175, 8);
+  ring(162, 2.5);
+  ring(110, 2.5);
 
-  // evenly tracked lettering along an arc; top reads clockwise, bottom reads left-to-right
-  const arcText = (text: string, radius: number, center: number, bottom: boolean) => {
-    g.font = `700 30px ${body}`;
-    const track = 7;
+  // evenly tracked lettering along an arc, shrunk to fit; top reads clockwise, bottom left-to-right
+  const arcText = (text: string, radius: number, bottom: boolean) => {
+    let size = 30;
+    const track = 6;
     const chars = [...text];
-    const widths = chars.map((ch) => g.measureText(ch).width + track);
-    const total = widths.reduce((a, b) => a + b, 0) - track;
-    let a = center + ((bottom ? 1 : -1) * total) / 2 / radius;
-    chars.forEach((ch, i) => {
-      const w = widths[i];
-      const step = (w - (i === chars.length - 1 ? track : 0)) / radius;
-      const mid = a + ((bottom ? -1 : 1) * (w - track)) / 2 / radius;
+    const total = () => chars.reduce((a, ch) => a + g.measureText(ch).width + track, 0) - track;
+    g.font = `700 ${size}px ${body}`;
+    while (total() > radius * 2.3 && size > 14) g.font = `700 ${(size -= 1)}px ${body}`;
+    let a = ((bottom ? 1 : -1) * total()) / 2 / radius;
+    for (const ch of chars) {
+      const w = g.measureText(ch).width;
+      const mid = a + ((bottom ? -1 : 1) * w) / 2 / radius;
       g.save();
       g.rotate(mid);
       g.translate(0, bottom ? radius : -radius);
       g.fillText(ch, 0, 0);
       g.restore();
-      a += (bottom ? -1 : 1) * (step + (i === chars.length - 1 ? 0 : 0));
-    });
+      a += ((bottom ? -1 : 1) * (w + track)) / radius;
+    }
   };
-  arcText(spec.shop.toUpperCase(), 240, 0, false);
-  arcText(`RECEIPT  ${spec.number}`, 240, 0, true);
-
-  // small dividers at 9 and 3 o'clock
-  for (const x of [-240, 240]) {
+  arcText(shopName.toUpperCase(), 136, false);
+  arcText("OFFICIAL SEAL", 136, true);
+  for (const x of [-136, 136]) {
     g.beginPath();
-    g.arc(x, 0, 6, 0, Math.PI * 2);
+    g.arc(x, 0, 5, 0, Math.PI * 2);
     g.fill();
   }
 
-  // centre: rule, word, rule, detail
-  const word = spec.kind;
-  let size = 128;
-  g.font = `700 ${size}px ${display}`;
-  while (g.measureText(word).width > 300 && size > 60) g.font = `700 ${(size -= 4)}px ${display}`;
-  g.fillText(word, 0, -8);
+  // centre: a star over two lines
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 ? 7 : 17;
+    const t = (i * Math.PI) / 5 - Math.PI / 2;
+    g.lineTo(Math.cos(t) * r, -48 + Math.sin(t) * r);
+  }
+  g.closePath();
+  g.fill();
+  g.font = `800 22px ${body}`;
+  g.fillText("AUTHORISED", 0, 2);
+  g.fillText("SIGNATORY", 0, 34);
+  g.restore();
 
-  g.lineWidth = 2.5;
-  for (const y of [-86, 62]) {
-    g.beginPath();
-    g.moveTo(-120, y);
-    g.lineTo(120, y);
-    g.stroke();
+  // ---- signature across the seal, recoloured to pen ink ----
+  if (loaded.status === "fulfilled") {
+    const sw = 520;
+    const sh = Math.round((sw * img.naturalHeight) / img.naturalWidth);
+    const ink = document.createElement("canvas");
+    ink.width = sw;
+    ink.height = sh;
+    const ig = ink.getContext("2d")!;
+    ig.drawImage(img, 0, 0, sw, sh);
+    ig.globalCompositeOperation = "source-in";
+    ig.fillStyle = PEN_INK;
+    ig.fillRect(0, 0, sw, sh);
+    g.drawImage(ink, 190, 350 - sh);
   }
 
-  let ds = 26;
-  g.font = `700 ${ds}px ${body}`;
-  while (g.measureText(spec.detail).width > 250 && ds > 14) g.font = `700 ${(ds -= 1)}px ${body}`;
-  g.fillText(spec.detail, 0, 100);
+  // ---- signature line, name and title ----
+  g.strokeStyle = "#334155";
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(110, 368);
+  g.lineTo(610, 368);
+  g.stroke();
+  g.fillStyle = "#0F172A";
+  g.font = `700 34px ${display}`;
+  g.fillText(SIGNATORY.name, 360, 402);
+  g.fillStyle = "#475569";
+  g.font = `600 22px ${body}`;
+  g.fillText(`${SIGNATORY.title} · ${shopName}`, 360, 440);
 
   const url = c.toDataURL("image/png");
   cache.set(key, url);

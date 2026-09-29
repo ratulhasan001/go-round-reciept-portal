@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Invoice, Shop } from "@/lib/types";
 import { amountInWords, bdt, computeTotals, courierName, filledItems, fmtDate, lineAmount, money } from "@/lib/calc";
 import { STATUS_LABEL, T, WAVE_BACK, WAVE_FRONT, initials } from "@/lib/theme";
-import { drawSeal, sealFor } from "@/lib/seal";
+import { SIGNATORY, drawSeal, drawSignature, sealFor } from "@/lib/seal";
 import { WATERMARK_OPACITY, makeWatermark } from "@/lib/watermark";
 
 // Mirrors src/lib/pdf.tsx 1:1 - the page is laid out in PDF points (A4 = 595 x 842) and scaled to fit.
@@ -45,6 +45,16 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
     };
   }, [specKey]);
   const sealUrl = seal && seal.key === specKey ? seal.url : null;
+
+  const [sign, setSign] = useState<{ key: string; url: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    drawSignature(shop.name).then((url) => live && setSign({ key: shop.name, url }));
+    return () => {
+      live = false;
+    };
+  }, [shop.name]);
+  const signUrl = sign && sign.key === shop.name ? sign.url : null;
 
   const wmKey = shop.watermark ? shop.logo : "";
   const [wm, setWm] = useState<{ key: string; url: string | null } | null>(null);
@@ -183,7 +193,7 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
               </div>
             )}
             {spec && (
-              <div style={{ width: 108, height: 108, margin: "12px 0 0 6px" }}>
+              <div style={{ width: 150, height: 83, margin: "12px 0 0 6px" }}>
                 {sealUrl && (
                   // eslint-disable-next-line @next/next/no-img-element -- generated data URL
                   <img src={sealUrl} alt={`${spec.kind} seal`} style={{ width: "100%", height: "100%" }} />
@@ -208,6 +218,12 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
               <span style={{ fontSize: 9, fontWeight: 700 }}>{t.due < 0 ? "Credit / change" : "Balance due"}</span>
               <span style={{ fontSize: 10, fontWeight: 800 }}>{bdt(Math.abs(t.due))}</span>
             </div>
+            <div style={{ width: 180, height: 115, margin: "12px auto 0" }}>
+              {signUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- generated data URL
+                <img src={signUrl} alt={`Signed by ${SIGNATORY.name}, ${SIGNATORY.title}, with the ${shop.name} seal`} style={{ width: "100%", height: "100%" }} />
+              )}
+            </div>
           </div>
         </div>
 
@@ -226,7 +242,7 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
                 </svg>
                 Electronically issued receipt
               </div>
-              <div style={{ fontSize: 7, color: T.muted, marginTop: 2 }}>System-generated and valid without a signature.</div>
+              <div style={{ fontSize: 7, color: T.muted, marginTop: 2 }}>Signed and sealed by the authorised signatory.</div>
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, fontSize: 6.8, color: T.faint }}>

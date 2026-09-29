@@ -4,7 +4,7 @@ import { Circle, Document, Font, Image, Page, Path, StyleSheet, Svg, Text, View,
 import type { Invoice, Shop } from "./types";
 import { amountInWords, bdt, computeTotals, courierName, filledItems, fmtDate, lineAmount, money } from "./calc";
 import { STATUS_LABEL, T, WAVE_BACK, WAVE_FRONT, initials, logoUrl } from "./theme";
-import { drawSeal, sealFor } from "./seal";
+import { drawSeal, drawSignature, sealFor } from "./seal";
 import { WATERMARK_OPACITY, makeWatermark } from "./watermark";
 
 let fontsReady = false;
@@ -73,7 +73,8 @@ const s = StyleSheet.create({
   balRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, paddingHorizontal: 8, marginTop: 2, borderTopWidth: 0.8, borderTopColor: T.line },
   balK: { fontSize: 9, fontWeight: 700, color: T.ink },
   balV: { fontSize: 10, fontWeight: 800, color: T.ink },
-  seal: { width: 108, height: 108, alignSelf: "flex-start", marginTop: 12, marginLeft: 6 },
+  seal: { width: 150, height: 83, alignSelf: "flex-start", marginTop: 12, marginLeft: 6 },
+  sign: { width: 180, height: 115, alignSelf: "center", marginTop: 12 },
   watermark: { position: "absolute", width: 380, height: 380, left: 107.6, top: 250, objectFit: "contain", opacity: WATERMARK_OPACITY },
   footer: { position: "absolute", left: 40, right: 40, bottom: 44 },
   footTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
@@ -88,7 +89,7 @@ const s = StyleSheet.create({
   botWave: { position: "absolute", bottom: 0, left: 0 },
 });
 
-export function ReceiptDocument({ inv, shop, seal, watermark }: { inv: Invoice; shop: Shop; seal?: string; watermark?: string | null }) {
+export function ReceiptDocument({ inv, shop, seal, sign, watermark }: { inv: Invoice; shop: Shop; seal?: string; sign?: string; watermark?: string | null }) {
   const t = computeTotals(inv);
   const items = filledItems(inv);
   const payments = inv.payments.filter((p) => p.amount);
@@ -235,6 +236,10 @@ export function ReceiptDocument({ inv, shop, seal, watermark }: { inv: Invoice; 
               <Text style={s.balK}>{t.due < 0 ? "Credit / change" : "Balance due"}</Text>
               <Text style={s.balV}>{bdt(Math.abs(t.due))}</Text>
             </View>
+            {sign ? (
+              // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt
+              <Image src={sign} style={s.sign} />
+            ) : null}
 
           </View>
         </View>
@@ -254,7 +259,7 @@ export function ReceiptDocument({ inv, shop, seal, watermark }: { inv: Invoice; 
                 </Svg>
                 <Text style={s.verifyK}>Electronically issued receipt</Text>
               </View>
-              <Text style={s.verifySub}>System-generated and valid without a signature.</Text>
+              <Text style={s.verifySub}>Signed and sealed by the authorised signatory.</Text>
             </View>
           </View>
           <View style={s.footBottom}>
@@ -294,6 +299,10 @@ function Row({ k, v }: { k: string; v: string }) {
 export async function renderPdfBlob(inv: Invoice, shop: Shop) {
   registerFonts();
   const spec = sealFor(inv, shop);
-  const [seal, watermark] = await Promise.all([spec ? drawSeal(spec) : undefined, shop.watermark ? makeWatermark(shop.logo) : null]);
-  return pdf(<ReceiptDocument inv={inv} shop={shop} seal={seal} watermark={watermark} />).toBlob();
+  const [seal, sign, watermark] = await Promise.all([
+    spec ? drawSeal(spec) : undefined,
+    drawSignature(shop.name),
+    shop.watermark ? makeWatermark(shop.logo) : null,
+  ]);
+  return pdf(<ReceiptDocument inv={inv} shop={shop} seal={seal} sign={sign} watermark={watermark} />).toBlob();
 }

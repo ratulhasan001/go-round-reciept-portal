@@ -120,11 +120,11 @@ export default function Home() {
             </div>
             {/*
               --cal-h is the calendar page height; the clock cards are 2.3em tall, so size = --cal-h / 2.3 keeps them level.
-              Phone: one row of calendar (0.91 x h) + hh:mm (2.3 x h) + 12px gap must fit 100vw - 2rem, and seconds are dropped.
+              Phone: one row of calendar (0.91 x h) + hh:mm:ss (3.48 x h) + 12px gap must fit 100vw - 2rem.
             */}
-            <div className="animate-home-in flex items-end justify-center gap-3 [--cal-h:min(6.5rem,calc((100vw_-_2rem_-_12px)_/_3.21))] sm:gap-5 sm:[--cal-h:7rem] md:[--cal-h:8.5rem] xl:justify-end [animation-delay:140ms]">
+            <div className="animate-home-in flex items-end justify-center gap-3 [--cal-h:min(6.5rem,calc((100vw_-_2rem_-_12px)_/_4.4))] sm:gap-5 sm:[--cal-h:7rem] md:[--cal-h:8.5rem] xl:justify-end [animation-delay:140ms]">
               <CalendarTile />
-              <FlipClock size="calc(var(--cal-h) / 2.3)" secondsClassName="max-sm:hidden" />
+              <FlipClock size="calc(var(--cal-h) / 2.3)" />
             </div>
           </div>
 

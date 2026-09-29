@@ -4,7 +4,7 @@ import type { Borders, Cell, Fill, Font, Workbook, Worksheet } from "exceljs";
 import type { Invoice, Shop } from "./types";
 import { amountInWords, computeTotals, filledItems, fmtDate, lineAmount } from "./calc";
 import { STATUS_LABEL, T, logoUrl } from "./theme";
-import { drawSeal, sealFor } from "./seal";
+import { drawSeal, drawSignature, sealFor } from "./seal";
 
 // Excel cannot embed fonts, so the workbook uses Arial to print identically on every computer.
 const FONT = "Arial";
@@ -294,14 +294,16 @@ export async function renderExcelBlob(inv: Invoice, shop: Shop) {
 
   // ---------- footer ----------
   r = payLast + 2;
-  // space for the PAID / DUE seal (certificate style)
+  // space for the PAID / DUE stamp (left) and the signed company seal (right)
   const spec = sealFor(inv, shop);
-  const sealRows = spec ? 4 : 2;
-  for (let k = 0; k < sealRows; k++) height(r + k, spec ? 25 : 16);
+  const sealRows = 5;
+  for (let k = 0; k < sealRows; k++) height(r + k, 25);
   if (spec) {
     const sealId = wb.addImage({ base64: await drawSeal(spec), extension: "png" });
-    ws.addImage(sealId, { tl: { col: 3.55, row: r - 1 + 0.15 }, ext: { width: 118, height: 118 }, editAs: "oneCell" });
+    ws.addImage(sealId, { tl: { col: 0.3, row: r - 1 + 0.6 }, ext: { width: 170, height: 94 }, editAs: "oneCell" });
   }
+  const signId = wb.addImage({ base64: await drawSignature(shop.name), extension: "png" });
+  ws.addImage(signId, { tl: { col: 2.35, row: r - 1 + 0.15 }, ext: { width: 200, height: 128 }, editAs: "oneCell" });
   const f1 = r + sealRows;
   height(f1, 22);
   set(`A${f1}`, shop.thankYou, font({ size: 12.5, bold: true, hex: T.leafDeep }), { merge: `A${f1}:C${f1}` });
@@ -310,7 +312,7 @@ export async function renderExcelBlob(inv: Invoice, shop: Shop) {
     align: { horizontal: "right", vertical: "bottom" },
   });
   height(f1 + 1, 26);
-  set(`D${f1 + 1}`, "System-generated and valid without a signature.", font({ size: 7.5, hex: T.muted }), {
+  set(`D${f1 + 1}`, "Signed and sealed by the authorised signatory.", font({ size: 7.5, hex: T.muted }), {
     merge: `D${f1 + 1}:E${f1 + 1}`,
     align: { horizontal: "right", vertical: "top", wrapText: true },
   });
