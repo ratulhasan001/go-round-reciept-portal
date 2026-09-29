@@ -46,15 +46,17 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
   }, [specKey]);
   const sealUrl = seal && seal.key === specKey ? seal.url : null;
 
+  const signKey = `${shop.name}\n${shop.logo}`;
   const [sign, setSign] = useState<{ key: string; url: string } | null>(null);
   useEffect(() => {
     let live = true;
-    drawSignature(shop.name).then((url) => live && setSign({ key: shop.name, url }));
+    const [name, logo] = signKey.split("\n");
+    drawSignature({ name, logo }).then((url) => live && setSign({ key: signKey, url }));
     return () => {
       live = false;
     };
-  }, [shop.name]);
-  const signUrl = sign && sign.key === shop.name ? sign.url : null;
+  }, [signKey]);
+  const signUrl = sign && sign.key === signKey ? sign.url : null;
 
   const wmKey = shop.watermark ? shop.logo : "";
   const [wm, setWm] = useState<{ key: string; url: string | null } | null>(null);

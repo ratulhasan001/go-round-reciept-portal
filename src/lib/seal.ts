@@ -115,7 +115,10 @@ export async function drawSeal(spec: SealSpec): Promise<string> {
 }
 
 /** The authorised signatory printed on every receipt. */
-export const SIGNATORY = { name: "Md. Fahim Ahmed", title: "Chief Executive Officer", image: "/sign.png" };
+export const SIGNATORY = { name: "Md. Fahim Ahmed", title: "CEO", image: "/sign.png" };
+
+/** Year the business was founded, shown on the company seal. */
+export const FOUNDED = 2023;
 
 /** Signature block size in px (round company seal, signature across it, name and title beneath). */
 export const SIGN_W = 720;
@@ -125,12 +128,39 @@ const SEAL_INK = "#2A3F94"; // stamp-pad blue
 const PEN_INK = "#101C4E"; // blue-black pen
 
 /**
- * Draws the official signature block: the round company seal in stamp-pad blue, the CEO's
- * signature running across it in pen ink, then a signature line with name and title.
- * Returns a transparent PNG data URL.
+ * Re-inks a logo in one stamp colour: dark lines and strong colours print solid, pale blue fills
+ * (like water) print as a light tint, white and transparent areas stay blank.
  */
-export async function drawSignature(shopName: string): Promise<string> {
-  const key = `sign:${shopName}`;
+function inkLogo(img: HTMLImageElement, size: number, ink: string) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d")!;
+  g.drawImage(img, 0, 0, size, size);
+  const data = g.getImageData(0, 0, size, size);
+  const px = data.data;
+  const [ir, ig, ib] = [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16));
+  for (let i = 0; i < px.length; i += 4) {
+    const [r, gr, b, a] = [px[i], px[i + 1], px[i + 2], px[i + 3]];
+    const lum = 0.299 * r + 0.587 * gr + 0.114 * b;
+    const sat = Math.max(r, gr, b) - Math.min(r, gr, b);
+    const strength = lum > 225 && sat < 30 ? 0 : lum < 90 ? 1 : b > r + 60 && b > gr ? 0.28 : 1;
+    px[i] = ir;
+    px[i + 1] = ig;
+    px[i + 2] = ib;
+    px[i + 3] = a * strength;
+  }
+  g.putImageData(data, 0, 0);
+  return c;
+}
+
+/**
+ * Draws the official signature block: the company seal (the shop logo re-inked in stamp-pad
+ * blue inside a lettered ring), the CEO's signature running across it in pen ink, then a
+ * signature line with name and title. Returns a transparent PNG data URL.
+ */
+export async function drawSignature(shop: { name: string; logo: string }): Promise<string> {
+  const shopName = shop.name;
+  const key = `sign:${shopName}:${shop.logo.length}:${shop.logo.slice(-64)}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
@@ -138,8 +168,11 @@ export async function drawSignature(shopName: string): Promise<string> {
   const body = cssFont("--font-manrope", "'Manrope', sans-serif");
   const img = new Image();
   img.src = SIGNATORY.image;
-  const [loaded] = await Promise.allSettled([
+  const logo = new Image();
+  logo.src = shop.logo || "/logo.png";
+  const [loaded, logoLoaded] = await Promise.allSettled([
     img.decode(),
+    logo.decode(),
     document.fonts.load(`700 34px ${display}`),
     document.fonts.load(`700 30px ${body}`),
   ]);
@@ -167,7 +200,6 @@ export async function drawSignature(shopName: string): Promise<string> {
   };
   ring(175, 8);
   ring(162, 2.5);
-  ring(110, 2.5);
 
   // evenly tracked lettering along an arc, shrunk to fit; top reads clockwise, bottom left-to-right
   const arcText = (text: string, radius: number, bottom: boolean) => {
@@ -190,25 +222,27 @@ export async function drawSignature(shopName: string): Promise<string> {
     }
   };
   arcText(shopName.toUpperCase(), 136, false);
-  arcText("OFFICIAL SEAL", 136, true);
+  arcText(`EST. ${FOUNDED}`, 136, true);
   for (const x of [-136, 136]) {
     g.beginPath();
     g.arc(x, 0, 5, 0, Math.PI * 2);
     g.fill();
   }
 
-  // centre: a star over two lines
-  g.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 ? 7 : 17;
-    const t = (i * Math.PI) / 5 - Math.PI / 2;
-    g.lineTo(Math.cos(t) * r, -48 + Math.sin(t) * r);
+  // centre: the real logo in stamp ink (or the shop name if the logo cannot be loaded)
+  let inked: HTMLCanvasElement | null = null;
+  try {
+    if (logoLoaded.status === "fulfilled") inked = inkLogo(logo, 228, SEAL_INK);
+  } catch {
+    /* e.g. a logo from another site that the canvas may not read */
   }
-  g.closePath();
-  g.fill();
-  g.font = `800 22px ${body}`;
-  g.fillText("AUTHORISED", 0, 2);
-  g.fillText("SIGNATORY", 0, 34);
+  if (inked) {
+    g.drawImage(inked, -inked.width / 2, -inked.height / 2);
+  } else {
+    ring(110, 2.5);
+    g.font = `800 26px ${display}`;
+    g.fillText(shopName.toUpperCase(), 0, 0);
+  }
   g.restore();
 
   // ---- signature across the seal, recoloured to pen ink ----

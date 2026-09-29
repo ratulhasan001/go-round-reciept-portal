@@ -301,7 +301,7 @@ export async function renderPdfBlob(inv: Invoice, shop: Shop) {
   const spec = sealFor(inv, shop);
   const [seal, sign, watermark] = await Promise.all([
     spec ? drawSeal(spec) : undefined,
-    drawSignature(shop.name),
+    drawSignature(shop),
     shop.watermark ? makeWatermark(shop.logo) : null,
   ]);
   return pdf(<ReceiptDocument inv={inv} shop={shop} seal={seal} sign={sign} watermark={watermark} />).toBlob();

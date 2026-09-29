@@ -302,7 +302,7 @@ export async function renderExcelBlob(inv: Invoice, shop: Shop) {
     const sealId = wb.addImage({ base64: await drawSeal(spec), extension: "png" });
     ws.addImage(sealId, { tl: { col: 0.3, row: r - 1 + 0.6 }, ext: { width: 170, height: 94 }, editAs: "oneCell" });
   }
-  const signId = wb.addImage({ base64: await drawSignature(shop.name), extension: "png" });
+  const signId = wb.addImage({ base64: await drawSignature(shop), extension: "png" });
   ws.addImage(signId, { tl: { col: 2.35, row: r - 1 + 0.15 }, ext: { width: 200, height: 128 }, editAs: "oneCell" });
   const f1 = r + sealRows;
   height(f1, 22);
