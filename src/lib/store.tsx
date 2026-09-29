@@ -71,13 +71,13 @@ function linkCoupon(coupons: CouponCode[], inv: Invoice, deleted = false): Coupo
   });
 }
 
-// taglines that were once the default; saved shops still carrying one get the current default
-const OLD_TAGLINES = ["Aquarium & Aquascaping Supplies"];
+// the old "... Aquascaping ... Supplies" taglines (default or hand-typed) give way to the current default
+const isOldTagline = (t: string) => /aquascaping/i.test(t);
 
 const withDefaults = (shop?: Partial<Shop> | null): Shop => ({
   ...DEFAULT_SHOP,
   ...shop,
-  tagline: shop?.tagline === undefined || OLD_TAGLINES.includes(shop.tagline) ? DEFAULT_SHOP.tagline : shop.tagline,
+  tagline: shop?.tagline === undefined || isOldTagline(shop.tagline) ? DEFAULT_SHOP.tagline : shop.tagline,
   rates: {
     pay: { ...DEFAULT_SHOP.rates.pay, ...shop?.rates?.pay },
     courier: { ...DEFAULT_SHOP.rates.courier, ...shop?.rates?.courier },
