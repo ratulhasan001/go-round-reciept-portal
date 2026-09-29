@@ -220,8 +220,9 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            {/* desktop table */}
-            <table className="hidden w-full text-sm md:table">
+            {/* desktop table (wide screens only - phones in "desktop site" mode get the cards) */}
+            <div className="hidden overflow-x-auto lg:block">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11.5px] font-semibold uppercase tracking-wide text-muted">
                   <th className="px-5 py-3">Receipt</th>
@@ -236,14 +237,14 @@ export default function Dashboard() {
               <tbody>
                 {visible.map(({ inv, t }) => (
                   <tr key={inv.id} className="group border-t border-line transition hover:bg-canvas/70">
-                    <td className="px-5 py-3.5">
+                    <td className="whitespace-nowrap px-5 py-3.5">
                       <Link href={`/new?id=${inv.id} transitionTypes={["nav-right"]}`} className="font-display font-bold text-ink hover:text-brand">{inv.number}</Link>
                     </td>
                     <td className="px-3 py-3.5">
                       <div className="font-semibold">{inv.customer.name || "—"}</div>
                       <div className="text-[12px] text-muted">{inv.customer.phone}</div>
                     </td>
-                    <td className="px-3 py-3.5 text-body">{fmtDate(inv.date)}</td>
+                    <td className="whitespace-nowrap px-3 py-3.5 text-body">{fmtDate(inv.date)}</td>
                     <td className="px-3 py-3.5 text-right font-semibold">{money(t.grandTotal)}</td>
                     <td className={cx("px-3 py-3.5 text-right font-bold", t.due > 0 ? "text-red-700" : "text-brand")}>{money(Math.max(t.due, 0))}</td>
                     <td className="px-3 py-3.5"><StatusBadge status={t.status} /></td>
@@ -254,9 +255,10 @@ export default function Dashboard() {
                 ))}
               </tbody>
             </table>
+            </div>
 
             {/* mobile cards */}
-            <ul className="divide-y divide-line md:hidden">
+            <ul className="divide-y divide-line lg:hidden">
               {visible.map(({ inv, t }) => (
                 <li key={inv.id} className="p-4">
                   <Link href={`/new?id=${inv.id} transitionTypes={["nav-right"]}`} className="flex items-start justify-between gap-3">
