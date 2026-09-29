@@ -2,7 +2,7 @@ import type { Customer, Invoice, Product, Shop } from "./types";
 
 export const DEFAULT_SHOP: Shop = {
   name: "Go Round",
-  tagline: "Aquarium & Aquascaping Supplies",
+  tagline: "Witness the Underwater World Through Us",
   address: "Khulna / Dhaka, Bangladesh",
   phone: "+880 1309-372143",
   email: "",
