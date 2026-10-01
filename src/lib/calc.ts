@@ -11,26 +11,36 @@ export const pct = (n: number) => `${Number(n.toFixed(2))}%`;
 export const courierName = (x: NonNullable<Invoice["extras"]>) => (x.courier === "Other" ? x.courierName?.trim() || "Courier" : x.courier);
 
 // " (10%)", " (10% + 50.00)", " (free delivery)"… or "" for a plain fixed amount
-const adjustLabel = (p: number, fixed: number, freeDelivery = false) => {
+const adjustLabel = (p: number, fixed: number, freeDelivery = false, ofWhat = "") => {
   if (!p && !freeDelivery) return "";
-  const parts = [p ? pct(p) : "", fixed ? money(fixed) : "", freeDelivery ? "free delivery" : ""].filter(Boolean);
+  const parts = [p ? pct(p) + ofWhat : "", fixed ? money(fixed) : "", freeDelivery ? "free delivery" : ""].filter(Boolean);
   return ` (${parts.join(" + ")})`;
 };
 
-/** Additional charge lines (payment channel %, courier %, manual). Percentages apply to the product total only. */
+/** Advance payments, which the courier doesn't collect. */
+export const advancePaid = (inv: Invoice) => round2(inv.payments.reduce((s, p) => s + (p.advance ? Number(p.amount) || 0 : 0), 0));
+
+/**
+ * Additional charge lines (payment channel %, courier %, manual). Percentages apply to the product total only.
+ * The courier % is on the product amount the courier still has to collect, so advance payments come off first.
+ */
 export function chargeLines(inv: Invoice, productTotal: number): ChargeLine[] {
   const base = productTotal;
   const x = inv.extras;
   if (!x?.enabled) return [];
+  const advance = Math.min(advancePaid(inv), base);
+  const cod = round2(base - advance);
+  const on = advance > 0 ? cod : undefined;
+  const of = (rate: number) => (on !== undefined && rate ? ` of ${money(cod)}` : "");
   const lines: ChargeLine[] = [];
   if (x.payRate > 0) lines.push({ label: `${x.payVia} charge (${pct(x.payRate)})`, amount: round2((base * x.payRate) / 100), rate: x.payRate });
   if (x.courier === "Other") {
     const rate = Number(x.courierRate) || 0;
     const fixed = Number(x.courierFixed) || 0;
     if (rate || fixed)
-      lines.push({ label: `${courierName(x)} charge${adjustLabel(rate, fixed)}`, amount: round2((base * rate) / 100 + fixed), rate, fixed });
+      lines.push({ label: `${courierName(x)} charge${adjustLabel(rate, fixed, false, of(rate))}`, amount: round2((cod * rate) / 100 + fixed), rate, fixed, on });
   } else if (x.courier !== "None" && x.courierRate > 0)
-    lines.push({ label: `${x.courier} charge (${pct(x.courierRate)})`, amount: round2((base * x.courierRate) / 100), rate: x.courierRate });
+    lines.push({ label: `${x.courier} charge (${pct(x.courierRate)}${of(x.courierRate)})`, amount: round2((cod * x.courierRate) / 100), rate: x.courierRate, on });
   for (const m of x.manual) if (Number(m.amount)) lines.push({ label: m.label.trim() || "Additional charge", amount: round2(Number(m.amount)) });
   return lines;
 }

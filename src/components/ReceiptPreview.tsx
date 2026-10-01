@@ -182,7 +182,7 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
                   <div key={p.id} style={{ display: "flex", padding: "4.5px 0", borderBottom: `0.5px solid ${T.line}`, fontSize: 8.2 }}>
                     <span style={{ width: "28%" }}>{fmtDate(p.date)}</span>
                     <span style={{ width: "22%", fontWeight: 800, color: T.ink }}>{p.method}</span>
-                    <span style={{ width: "28%", color: T.muted }}>{p.note}</span>
+                    <span style={{ width: "28%", color: T.muted }}>{[p.advance && "Advance", p.note].filter(Boolean).join(" · ")}</span>
                     <span style={{ width: "22%", textAlign: "right", fontWeight: 800, color: T.ink }}>{money(p.amount)}</span>
                   </div>
                 ))}

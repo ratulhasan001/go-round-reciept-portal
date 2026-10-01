@@ -202,7 +202,7 @@ export function ReceiptDocument({ inv, shop, seal, sign, watermark }: { inv: Inv
                   <View key={p.id} style={s.payRow}>
                     <Text style={{ width: "28%", fontSize: 8.2 }}>{fmtDate(p.date)}</Text>
                     <Text style={{ width: "22%", fontSize: 8.2, fontWeight: 800, color: T.ink }}>{p.method}</Text>
-                    <Text style={{ width: "28%", fontSize: 8.2, color: T.muted }}>{p.note}</Text>
+                    <Text style={{ width: "28%", fontSize: 8.2, color: T.muted }}>{[p.advance && "Advance", p.note].filter(Boolean).join(" · ")}</Text>
                     <Text style={{ width: "22%", fontSize: 8.2, textAlign: "right", fontWeight: 800, color: T.ink }}>{money(p.amount)}</Text>
                   </View>
                 ))}

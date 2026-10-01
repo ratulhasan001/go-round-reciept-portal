@@ -610,7 +610,10 @@ function EditorForm({
                       <span>Additional charges</span>
                       <span className="text-brand">+ {money(t.chargesTotal)}</span>
                     </div>
-                    <div className="mt-1 text-[11.5px] text-muted">Percentages apply to the product total {money(t.subtotal)} only (not delivery, discount or coupon).</div>
+                    <div className="mt-1 text-[11.5px] text-muted">
+                      Percentages apply to the product total {money(t.subtotal)} only (not delivery, discount or coupon). Payments marked <b>Advance</b> come off before the courier % is
+                      worked out.
+                    </div>
                   </div>
                 </div>
               )}
@@ -636,7 +639,7 @@ function EditorForm({
                 </div>
               )}
               {inv.payments.map((p, idx) => (
-                <div key={p.id} className="grid grid-cols-2 items-center gap-2 rounded-xl bg-canvas p-2.5 @2xl:grid-cols-[150px_140px_130px_minmax(0,1fr)_36px]">
+                <div key={p.id} className="grid grid-cols-2 items-center gap-2 rounded-xl bg-canvas p-2.5 @2xl:grid-cols-[150px_140px_130px_minmax(0,1fr)_auto_36px]">
                   <Input type="date" aria-label="Payment date" value={p.date} onChange={(e) => setPay(idx, { date: e.target.value })} />
                   <Select aria-label="Payment method" value={p.method} onChange={(e) => setPay(idx, { method: e.target.value as Payment["method"] })}>
                     {(PAYMENT_METHODS.includes(p.method) ? PAYMENT_METHODS : [...PAYMENT_METHODS, p.method]).map((m) => (
@@ -645,9 +648,19 @@ function EditorForm({
                   </Select>
                   <Input type="number" inputMode="decimal" aria-label="Amount" className="text-right font-semibold" placeholder="Amount" value={p.amount || ""} onChange={(e) => setPay(idx, { amount: numOrZero(e.target.value) })} />
                   <Input aria-label="Note" placeholder="Note (optional)" value={p.note} onChange={(e) => setPay(idx, { note: e.target.value })} />
+                  <label
+                    title="Paid before delivery - the courier charge is only taken on the product amount still to collect"
+                    className={cx(
+                      "flex h-10 cursor-pointer select-none items-center gap-2 rounded-xl px-2.5 text-[13px] font-semibold transition",
+                      p.advance ? "bg-soft text-brand" : "text-muted hover:bg-white",
+                    )}
+                  >
+                    <Switch label="Advance payment" checked={!!p.advance} onChange={(v) => setPay(idx, { advance: v })} />
+                    Advance
+                  </label>
                   <button
                     onClick={() => update({ payments: inv.payments.filter((_, i) => i !== idx) })}
-                    className="col-span-2 flex h-9 items-center justify-center gap-1.5 rounded-lg text-[13px] font-semibold text-faint hover:bg-red-50 hover:text-red-600 @2xl:col-span-1 @2xl:size-9"
+                    className="flex h-9 items-center justify-center gap-1.5 rounded-lg text-[13px] font-semibold text-faint hover:bg-red-50 hover:text-red-600 @2xl:size-9"
                     aria-label="Remove payment"
                   >
                     <Trash2 className="size-4" />

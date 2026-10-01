@@ -224,7 +224,7 @@ export async function renderExcelBlob(inv: Invoice, shop: Shop) {
   const firstCharge = tot.disc + 1 + hc;
   t.charges.forEach((c, i) => {
     const row = firstCharge + i;
-    totRow(row, c.label, c.rate !== undefined ? { formula: `ROUND(E${tot.sub}*${c.rate}/100,2)${c.fixed ? `+${c.fixed}` : ""}`, result: c.amount } : c.amount);
+    totRow(row, c.label, c.rate !== undefined ? { formula: `ROUND(${c.on ?? `E${tot.sub}`}*${c.rate}/100,2)${c.fixed ? `+${c.fixed}` : ""}`, result: c.amount } : c.amount);
   });
   const chargeSum = nc ? `+SUM(E${firstCharge}:E${firstCharge + nc - 1})` : "";
   totRow(tot.grand, "Grand Total", { formula: `${baseRef}${chargeSum}`, result: t.grandTotal }, font({ size: 12, bold: true }), font({ size: 11, bold: true }));
@@ -286,7 +286,7 @@ export async function renderExcelBlob(inv: Invoice, shop: Shop) {
     height(row, 19);
     const b = { bottom: line(T.line) };
     set(`A${row}`, i + 1, font({ size: 9, hex: T.faint }), { align: { horizontal: "center" }, border: b });
-    set(`B${row}`, p.note, font({ size: 9, hex: T.body }), { align: { indent: 1 }, border: b });
+    set(`B${row}`, [p.advance && "Advance", p.note].filter(Boolean).join(" · "), font({ size: 9, hex: T.body }), { align: { indent: 1 }, border: b });
     set(`C${row}`, p.date ? excelDate(p.date) : null, font({ size: 9 }), { fmt: DATE, align: { horizontal: "center" }, border: b });
     set(`D${row}`, p.method, font({ size: 9, bold: true }), { align: { horizontal: "center" }, border: b });
     set(`E${row}`, Number(p.amount) || 0, font({ size: 9, bold: true }), { fmt: MONEY, align: { horizontal: "right" }, border: b });

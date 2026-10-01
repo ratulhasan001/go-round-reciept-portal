@@ -41,6 +41,7 @@ export interface ChargeLine {
   amount: number;
   rate?: number; // percent, when the charge is a percentage
   fixed?: number; // fixed BDT added on top of the percentage
+  on?: number; // the amount the percentage is taken on, when it isn't the full product total (after an advance)
 }
 
 export interface Shop {
@@ -104,6 +105,7 @@ export interface Payment {
   method: PaymentMethod;
   amount: number;
   note: string;
+  advance?: boolean; // paid before delivery: the courier % is charged only on the product amount still to collect
 }
 
 export interface Invoice {
