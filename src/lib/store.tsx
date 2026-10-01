@@ -375,7 +375,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       deleteInvoice: (id) =>
         setData((d) => {
           const inv = d.invoices.find((i) => i.id === id);
-          return { ...d, invoices: d.invoices.filter((i) => i.id !== id), coupons: inv ? linkCoupon(d.coupons, inv, true) : d.coupons };
+          // deleting the newest receipt frees its number, so the next new receipt reuses it
+          let shop = d.shop;
+          const m = inv?.number.startsWith(shop.invoicePrefix) ? Number(inv.number.slice(shop.invoicePrefix.length)) : NaN;
+          if (m >= 1 && m === shop.nextNumber - 1) shop = { ...shop, nextNumber: m };
+          return { ...d, shop, invoices: d.invoices.filter((i) => i.id !== id), coupons: inv ? linkCoupon(d.coupons, inv, true) : d.coupons };
         }),
       nextInvoiceNumber,
       exportBackup: () => JSON.stringify({ app: "go-round-receipts", version: 1, ...data }, null, 2),
