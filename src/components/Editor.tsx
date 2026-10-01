@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AlertTriangle, ArrowLeft, BadgeCheck, BadgePercent, Banknote, CheckCheck, CircleHelp, Download, Eye, FileSpreadsheet, FileText, MessageCircle, Minus, NotebookPen, Plus,
+  AlertTriangle, ArrowLeft, BadgeCheck, BadgePercent, Banknote, CheckCheck, CircleHelp, Download, Eye, FileSpreadsheet, FileText, Minus, NotebookPen, Plus,
   Printer, PlusCircle, Receipt, Save, Share2, ShoppingBag, TicketPercent, Trash2, Truck, UserRound, Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -13,7 +13,7 @@ import type { Coupon, Extras, Invoice, LineItem, ManualCharge, Payment } from "@
 import { COURIERS, PAYMENT_METHODS } from "@/lib/types";
 import { bdt, computeTotals, fmtDate, lineAmount, money, pct, todayISO, uid } from "@/lib/calc";
 import { canShareFiles, downloadExcel, downloadPdf, printPdf, sharePdf, whatsappUrl } from "@/lib/download";
-import { Button, Card, Chip, Field, Input, Label, SectionTitle, Select, StatusBadge, Switch, Textarea, cx, useClientValue, useToast } from "./ui";
+import { Button, Card, Chip, Field, Input, Label, SectionTitle, Select, StatusBadge, Switch, Textarea, cx, useToast } from "./ui";
 import { Combobox } from "./Combobox";
 import { SectionIcon } from "./nav";
 import { couponProblem, normCode, offerLabel } from "@/lib/coupons";
@@ -92,7 +92,6 @@ function EditorForm({
   const toast = useToast();
   const [busy, setBusy] = useState<Job>("");
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
-  const shareable = useClientValue(canShareFiles, false);
   const lastDescRef = useRef<HTMLDivElement>(null);
   const actions = useRef<{ save: () => void; run: (j: Job) => void }>(null);
   const isSaved = invoices.some((i) => i.id === inv.id);
@@ -213,8 +212,10 @@ function EditorForm({
     }
   };
 
-  const openWhatsApp = () => {
-    if (!inv.customer.phone.trim()) return toast("Add the customer's phone number first", "err");
+  // the device's share menu with the PDF (WhatsApp, Messenger, Gmail…); a WhatsApp message where files can't be shared
+  const share = () => {
+    if (canShareFiles()) return run("share");
+    if (!inv.customer.phone.trim()) return toast("This browser can't share files - add the customer's phone to send on WhatsApp", "err");
     save(true);
     window.open(whatsappUrl(inv, shop), "_blank", "noopener");
   };
@@ -250,8 +251,8 @@ function EditorForm({
             <Button onClick={() => run("print")} loading={busy === "print"} title="Print (Ctrl/⌘ + P)">
               {busy !== "print" && <Printer className="size-4" />} Print
             </Button>
-            <Button onClick={openWhatsApp} title="Send a WhatsApp message to the customer">
-              <MessageCircle className="size-4 text-[#25D366]" /> WhatsApp
+            <Button onClick={share} loading={busy === "share"} title="Share the PDF to WhatsApp, Messenger, email or any app">
+              {busy !== "share" && <Share2 className="size-4 text-brand" />} Share
             </Button>
             <Button onClick={() => run("xlsx")} loading={busy === "xlsx"}>
               {busy !== "xlsx" && <FileSpreadsheet className="size-4 text-brand" />} Excel
@@ -714,14 +715,9 @@ function EditorForm({
 
       {/* mobile action bar (above the bottom navigation) */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-3 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden">
-        <div className={cx("grid gap-2", shareable ? "grid-cols-[auto_auto_1fr_1fr]" : "grid-cols-[auto_1fr_1fr]")}>
-          {shareable && (
-            <Button onClick={() => run("share")} loading={busy === "share"} aria-label="Share PDF to WhatsApp or other apps">
-              {busy !== "share" && <Share2 className="size-4" />}
-            </Button>
-          )}
-          <Button onClick={openWhatsApp} aria-label="Send WhatsApp message">
-            <MessageCircle className="size-4 text-[#25D366]" />
+        <div className="grid grid-cols-[auto_1fr_1fr] gap-2">
+          <Button onClick={share} loading={busy === "share"} aria-label="Share PDF to WhatsApp, Messenger, email or any app">
+            {busy !== "share" && <Share2 className="size-4 text-brand" />}
           </Button>
           <Button onClick={() => run("xlsx")} loading={busy === "xlsx"}>
             {busy !== "xlsx" && <FileSpreadsheet className="size-4 text-brand" />} Excel
