@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Copy, Download, FilePlus2, FileSpreadsheet, Pencil, Search, Trash2, Wallet, TrendingUp, Clock3, ReceiptText, MessageCircle, Sheet, BellRing } from "lucide-react";
+import { Copy, Download, FilePlus2, FileSpreadsheet, Pencil, Search, Trash2, Wallet, TrendingUp, Clock3, ReceiptText, MessageCircle, Sheet, BellRing, Share2 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { computeTotals, fmtDate, money } from "@/lib/calc";
 import type { Invoice, Status } from "@/lib/types";
-import { downloadExcel, downloadLedger, downloadPdf, waNumber } from "@/lib/download";
+import { canShareFiles, downloadExcel, downloadLedger, downloadPdf, sharePdf, waNumber, whatsappUrl } from "@/lib/download";
 import { WAVE_BACK, WAVE_FRONT } from "@/lib/theme";
 import { SectionIcon } from "@/components/nav";
 import { Button, Card, StatusBadge, buttonClass, cx, useClientValue, useToast } from "@/components/ui";
@@ -56,6 +56,23 @@ export default function Dashboard() {
       toast(`${kind === "pdf" ? "PDF" : "Excel"} downloaded · ${inv.number}`);
     } catch {
       toast("Could not generate the file", "err");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  // phones share the PDF itself (WhatsApp, Messenger…); elsewhere fall back to a WhatsApp message
+  const share = async (inv: Invoice) => {
+    if (!canShareFiles()) {
+      if (!inv.customer.phone.trim()) return toast("This device can't share files - add the customer's phone to send on WhatsApp", "err");
+      window.open(whatsappUrl(inv, shop), "_blank", "noopener");
+      return;
+    }
+    setBusy(inv.id + "share");
+    try {
+      await sharePdf(inv, shop);
+    } catch (e) {
+      if ((e as Error)?.name !== "AbortError") toast("Could not share the receipt", "err");
     } finally {
       setBusy("");
     }
@@ -249,7 +266,7 @@ export default function Dashboard() {
                     <td className={cx("px-3 py-3.5 text-right font-bold", t.due > 0 ? "text-red-700" : "text-brand")}>{money(Math.max(t.due, 0))}</td>
                     <td className="px-3 py-3.5"><StatusBadge status={t.status} /></td>
                     <td className="px-5 py-3.5">
-                      <RowActions inv={inv} busy={busy} confirm={confirmId === inv.id} onDl={dl} onDel={del} />
+                      <RowActions inv={inv} busy={busy} confirm={confirmId === inv.id} onDl={dl} onShare={share} onDel={del} />
                     </td>
                   </tr>
                 ))}
@@ -276,7 +293,7 @@ export default function Dashboard() {
                     </div>
                   </Link>
                   <div className="mt-3">
-                    <RowActions inv={inv} busy={busy} confirm={confirmId === inv.id} onDl={dl} onDel={del} mobile />
+                    <RowActions inv={inv} busy={busy} confirm={confirmId === inv.id} onDl={dl} onShare={share} onDel={del} mobile />
                   </div>
                 </li>
               ))}
@@ -301,24 +318,28 @@ function Stat({ icon, label, value, tone = "text-ink" }: { icon: React.ReactNode
 }
 
 function RowActions({
-  inv, busy, confirm, onDl, onDel, mobile,
+  inv, busy, confirm, onDl, onShare, onDel, mobile,
 }: {
   inv: Invoice;
   busy: string;
   confirm: boolean;
   onDl: (inv: Invoice, k: "pdf" | "xlsx") => void;
+  onShare: (inv: Invoice) => void;
   onDel: (inv: Invoice) => void;
   mobile?: boolean;
 }) {
   const icon = "grid size-8 place-items-center rounded-lg text-muted transition hover:bg-white hover:text-ink hover:shadow-sm";
   return (
-    <div className={cx("flex items-center gap-1", mobile ? "justify-between" : "justify-end")}>
+    <div className={cx("flex items-center gap-1", mobile ? "flex-wrap justify-between gap-y-2" : "justify-end")}>
       <div className="flex gap-1.5">
         <Button size="sm" variant="primary" loading={busy === inv.id + "pdf"} onClick={() => onDl(inv, "pdf")}>
           {busy !== inv.id + "pdf" && <Download className="size-3.5" />} PDF
         </Button>
         <Button size="sm" loading={busy === inv.id + "xlsx"} onClick={() => onDl(inv, "xlsx")}>
           {busy !== inv.id + "xlsx" && <FileSpreadsheet className="size-3.5 text-brand" />} Excel
+        </Button>
+        <Button size="sm" loading={busy === inv.id + "share"} onClick={() => onShare(inv)} aria-label="Share PDF" title="Share PDF to WhatsApp or other apps">
+          {busy !== inv.id + "share" && <Share2 className="size-3.5 text-brand" />} Share
         </Button>
       </div>
       <div className="flex gap-0.5">
