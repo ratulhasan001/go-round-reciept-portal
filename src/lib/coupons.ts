@@ -69,9 +69,12 @@ export function couponStatus(c: CouponCode, today = todayISO()): CouponStatus {
   return "available";
 }
 
+/** Whether the coupon's "used on" receipt is this one (by id; older coupons only kept the receipt number). */
+export const usedBy = (c: CouponCode, inv: { id: string; number: string }) => (c.usedInvoiceId ? c.usedInvoiceId === inv.id : c.usedInvoice === inv.number);
+
 /** Why a coupon can't be used on a receipt right now ("" when it can). */
-export function couponProblem(c: CouponCode, invoiceNumber: string, customer: { name: string; phone: string }, date = todayISO()) {
-  if (c.usedOn && c.usedInvoice !== invoiceNumber) return `Already used${c.usedInvoice ? ` on ${c.usedInvoice}` : ""}`;
+export function couponProblem(c: CouponCode, inv: { id: string; number: string }, customer: { name: string; phone: string }, date = todayISO()) {
+  if (c.usedOn && !usedBy(c, inv)) return `Already used${c.usedInvoice ? ` on ${c.usedInvoice}` : ""}`;
   if (c.validTo && c.validTo < date) return "Expired";
   if (c.validFrom && c.validFrom > date) return "Not valid yet";
   const phone = normPhone(customer.phone).replace(/\D/g, "");

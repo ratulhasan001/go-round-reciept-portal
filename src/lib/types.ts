@@ -88,7 +88,8 @@ export interface CouponCode {
   validFrom: string; // yyyy-mm-dd, "" = no start
   validTo: string; // yyyy-mm-dd, "" = never expires
   usedOn: string; // yyyy-mm-dd, "" = not used yet
-  usedInvoice?: string; // receipt number it was used on
+  usedInvoice?: string; // receipt number it was used on (for display)
+  usedInvoiceId?: string; // id of that receipt; missing on coupons marked used before ids were kept
   updatedAt?: number;
 }
 

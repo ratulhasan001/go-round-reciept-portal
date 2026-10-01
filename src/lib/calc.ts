@@ -4,7 +4,8 @@ const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export const lineAmount = (it: LineItem) => round2((Number(it.price) || 0) * (Number(it.qty) || 0));
 
-export const filledItems = (inv: Invoice) => inv.items.filter((i) => i.description.trim() !== "");
+// rows with a name or a price (a priced row without a name still counts towards the total)
+export const filledItems = (inv: Invoice) => inv.items.filter((i) => i.description.trim() !== "" || Number(i.price));
 
 export const pct = (n: number) => `${Number(n.toFixed(2))}%`;
 
@@ -57,7 +58,7 @@ export function computeTotals(inv: Invoice): Totals {
   const cPct = Number(c?.pct) || 0;
   const cFix = Number(c?.amount) || 0;
   const cFree = !!c?.freeDelivery && !dFree && delivery > 0; // delivery is only waived once
-  const couponTotal = round2(((subtotal - discountOnItems) * cPct) / 100 + cFix + (cFree ? delivery : 0));
+  const couponTotal = round2((Math.max(0, subtotal - discountOnItems) * cPct) / 100 + cFix + (cFree ? delivery : 0));
   const base = round2(subtotal + delivery - discountTotal - couponTotal);
   const charges = chargeLines(inv, subtotal);
   const chargesTotal = round2(charges.reduce((s, c) => s + c.amount, 0));
@@ -65,7 +66,8 @@ export function computeTotals(inv: Invoice): Totals {
   const paid = round2(inv.payments.reduce((s, p) => s + (Number(p.amount) || 0), 0));
   const due = round2(grandTotal - paid);
   const dates = inv.payments.filter((p) => p.date && p.amount).map((p) => p.date).sort();
-  const status = due <= 0 && grandTotal > 0 ? "PAID" : paid > 0 ? "PARTIAL" : "UNPAID";
+  // nothing to pay (e.g. a gift, or fully discounted) counts as paid once the receipt has items
+  const status = due <= 0 && (grandTotal > 0 || paid > 0 || filledItems(inv).length > 0) ? "PAID" : paid > 0 ? "PARTIAL" : "UNPAID";
   return {
     subtotal,
     discountTotal,

@@ -1,7 +1,7 @@
 "use client";
 
 import type { Invoice, Shop } from "./types";
-import { bdt, computeTotals, fileBase, fmtDate } from "./calc";
+import { bdt, computeTotals, fileBase, fmtDate, todayISO } from "./calc";
 
 export function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -26,7 +26,7 @@ export async function downloadExcel(inv: Invoice, shop: Shop) {
 
 export async function downloadLedger(invoices: Invoice[], shop: Shop) {
   const { renderLedgerBlob } = await import("./ledger");
-  saveBlob(await renderLedgerBlob(invoices, shop), `${shop.name.replace(/\W+/g, "_")}-receipts-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  saveBlob(await renderLedgerBlob(invoices, shop), `${shop.name.replace(/\W+/g, "_")}-receipts-${todayISO()}.xlsx`);
 }
 
 /** Opens the A4 PDF in a new tab so the browser's print dialog prints it exactly. */
@@ -74,6 +74,7 @@ export function waNumber(phone: string) {
   let d = phone.replace(/\D/g, "");
   if (d.startsWith("00")) d = d.slice(2);
   if (d.startsWith("0") && d.length === 11) d = "88" + d;
+  else if (d.startsWith("1") && d.length === 10) d = "880" + d;
   return d;
 }
 

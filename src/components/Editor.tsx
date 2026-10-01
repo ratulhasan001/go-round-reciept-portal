@@ -51,6 +51,7 @@ export default function Editor() {
         number: store.nextInvoiceNumber(),
         date: todayISO(),
         payments: [],
+        coupon: undefined, // a coupon belongs to one receipt only
         items: source.items.map((i) => ({ ...i, id: uid() })),
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -93,13 +94,26 @@ function EditorForm({
   const [busy, setBusy] = useState<Job>("");
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
   const lastDescRef = useRef<HTMLDivElement>(null);
-  const actions = useRef<{ save: () => void; run: (j: Job) => void }>(null);
+  const actions = useRef<{ save: () => void; autosave: () => void; run: (j: Job) => void }>(null);
   const isSaved = invoices.some((i) => i.id === inv.id);
+  const dupNumber = invoices.some((i) => i.id !== inv.id && i.number.trim().toLowerCase() === inv.number.trim().toLowerCase());
+
+  // auto-saves skip remembering the customer / products; catch up once the editor closes
+  const unremembered = useRef(false);
+  const latest = useRef(inv);
+  useEffect(() => void (latest.current = inv));
+  const { saveInvoice } = store;
+  useEffect(
+    () => () => {
+      if (unremembered.current) saveInvoice(cleaned(latest.current));
+    },
+    [saveInvoice],
+  );
 
   // receipts that already exist save themselves while you type
   useEffect(() => {
     if (!dirty || !isSaved) return;
-    const h = setTimeout(() => actions.current?.save(), 700);
+    const h = setTimeout(() => actions.current?.autosave(), 700);
     return () => clearTimeout(h);
   }, [inv, dirty, isSaved]);
 
@@ -169,17 +183,17 @@ function EditorForm({
   const cp: Coupon = inv.coupon ?? { code: "", pct: 0, amount: 0 };
   // the typed code's entry in the coupon sheet, and why it can't be used (if so)
   const sheetCoupon = cp.code.trim() ? coupons.find((c) => normCode(c.code) === normCode(cp.code)) : undefined;
-  const sheetProblem = sheetCoupon ? couponProblem(sheetCoupon, inv.number, inv.customer, inv.date) : "";
+  const sheetProblem = sheetCoupon ? couponProblem(sheetCoupon, inv, inv.customer, inv.date) : "";
   const setManual = (id: string, patch: Partial<ManualCharge>) => setEx({ manual: ex.manual.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
   const rateHint = (r: number) => (r > 0 ? `+${pct(r)}` : "No charge");
 
   const addPayment = (amount = 0, note = "") =>
     update({ payments: [...inv.payments, { id: uid(), date: todayISO(), method: ex.enabled ? ex.payVia : "Cash", amount, note }] });
 
-  const save = (silent = false) => {
-    const clean: Invoice = { ...inv, items: inv.items.filter((i) => i.description.trim() || i.price) };
-    if (clean.items.length === 0) clean.items = [blankItem()];
-    const saved = store.saveInvoice(clean);
+  // remember: add the customer / products to the lists - not on auto-saves, so half-typed names aren't saved
+  const save = (silent = false, remember = true) => {
+    const saved = store.saveInvoice(cleaned(inv), { remember });
+    unremembered.current = !remember;
     setDirty(false);
     if (!isSaved) {
       setInv(saved);
@@ -221,7 +235,7 @@ function EditorForm({
   };
 
   // refresh the keyboard-shortcut handlers after every render
-  useEffect(() => void (actions.current = { save: () => save(isSaved), run }));
+  useEffect(() => void (actions.current = { save: () => save(isSaved), autosave: () => save(true, false), run }));
 
   const statusLine = dirty ? (isSaved ? "Saving…" : "Not saved yet") : isSaved ? "Saved automatically" : "Fill in the details - the preview updates live";
 
@@ -285,7 +299,13 @@ function EditorForm({
             <SectionTitle icon={<Receipt className="size-4" />} title="Receipt" hint="Number is generated automatically" />
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <Field label="Invoice no.">
-                <Input value={inv.number} onChange={(e) => update({ number: e.target.value })} />
+                <Input
+                  value={inv.number}
+                  onChange={(e) => update({ number: e.target.value })}
+                  className={cx(dupNumber && "border-red-300 bg-red-50 text-red-700")}
+                  title={dupNumber ? "Another receipt already has this number" : undefined}
+                />
+                {dupNumber && <span className="mt-1 block text-[11.5px] font-semibold text-red-600">Another receipt already has this number</span>}
               </Field>
               <Field label="Invoice date">
                 <Input type="date" value={inv.date} onChange={(e) => update({ date: e.target.value })} />
@@ -476,8 +496,14 @@ function EditorForm({
                   onChange={(e) => {
                     const code = e.target.value;
                     const hit = code.trim() ? coupons.find((c) => normCode(c.code) === normCode(code)) : undefined;
-                    // a code from the coupon sheet brings its offer with it
-                    update({ coupon: hit ? { ...cp, code, pct: hit.pct, freeDelivery: hit.freeDelivery } : { ...cp, code } });
+                    // a code from the coupon sheet brings its offer with it, and takes it away again when the code changes
+                    update({
+                      coupon: hit
+                        ? { ...cp, code, pct: hit.pct, freeDelivery: hit.freeDelivery }
+                        : sheetCoupon
+                          ? { ...cp, code, pct: 0, freeDelivery: false }
+                          : { ...cp, code },
+                    });
                   }}
                 />
                 {cp.code.trim() && coupons.length > 0 && (
@@ -730,6 +756,12 @@ function EditorForm({
       <div className="h-16 md:hidden" />
     </div>
   );
+}
+
+/** The receipt as saved: blank item rows dropped (but always at least one row). */
+function cleaned(inv: Invoice): Invoice {
+  const items = inv.items.filter((i) => i.description.trim() || i.price);
+  return { ...inv, items: items.length ? items : [blankItem()] };
 }
 
 function SuffixInput({ suffix, label, value, onChange }: { suffix: string; label: string; value: number; onChange: (v: number) => void }) {

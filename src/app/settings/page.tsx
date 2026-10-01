@@ -5,6 +5,7 @@ import { DatabaseBackup, ImagePlus, Percent, RotateCcw, Store, Upload, FileCog, 
 import { useStore } from "@/lib/store";
 import { SectionIcon } from "@/components/nav";
 import { DEFAULT_LOGO } from "@/lib/theme";
+import { todayISO } from "@/lib/calc";
 import type { Shop } from "@/lib/types";
 import { COURIERS, PAYMENT_METHODS } from "@/lib/types";
 import { Button, Card, Field, Input, Label, SectionTitle, Textarea, useToast } from "@/components/ui";
@@ -46,7 +47,7 @@ export default function SettingsPage() {
     const blob = new Blob([store.exportBackup()], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `go-round-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `go-round-backup-${todayISO()}.json`;
     a.click();
     toast("Backup downloaded");
   };

@@ -186,7 +186,11 @@ export default function CouponsPage() {
               placeholder="Search customers"
               ariaLabel="Given to"
               options={customerOpts}
-              onChange={(name) => update({ name })}
+              onChange={(name) => {
+                // typing someone else's name drops the phone of the customer picked before
+                const owner = c.phone.trim() ? customers.find((x) => x.phone === c.phone) : undefined;
+                update(owner && owner.name.trim().toLowerCase() !== name.trim().toLowerCase() ? { name, phone: "" } : { name });
+              }}
               onPick={(o) => {
                 const picked = customers.find((x) => x.id === o.id)!;
                 update({ name: picked.name, phone: picked.phone || c.phone });
@@ -237,7 +241,7 @@ export default function CouponsPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => update({ usedOn: "", usedInvoice: undefined })}
+                    onClick={() => update({ usedOn: "", usedInvoice: undefined, usedInvoiceId: undefined })}
                     className="grid size-8 shrink-0 place-items-center rounded-lg text-faint transition hover:bg-white hover:text-red-600"
                     aria-label="Mark as not used"
                     title="Mark as not used"

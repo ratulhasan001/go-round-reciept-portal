@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { CouponCode, Customer, Invoice, Product, Shop } from "./types";
 import { DEFAULT_SHOP, SEED_CUSTOMERS, SEED_INVOICES, SEED_PRODUCTS } from "./seed";
 import { uid } from "./calc";
+import { couponProblem, usedBy } from "./coupons";
 
 const KEY = "go-round-receipts:v1"; // this device's copy of the data
 const OUTBOX = "go-round-receipts:outbox"; // changes not yet confirmed by the server
@@ -31,7 +32,8 @@ interface Store extends Data {
   setProducts: (p: Product[]) => void;
   setCustomers: (c: Customer[]) => void;
   setCoupons: (c: CouponCode[]) => void;
-  saveInvoice: (inv: Invoice) => Invoice;
+  /** remember: also add / update the customer and products it uses (off for auto-saves while typing). */
+  saveInvoice: (inv: Invoice, opts?: { remember?: boolean }) => Invoice;
   deleteInvoice: (id: string) => void;
   nextInvoiceNumber: () => string;
   exportBackup: () => string;
@@ -56,18 +58,21 @@ const norm = (s: string) => s.trim().toLowerCase();
 
 /**
  * Keeps the coupon sheet in step with a receipt: its coupon code gets marked as used by it, and a coupon it
- * no longer uses (code changed / receipt deleted) is released. A coupon used by another receipt is left alone.
+ * no longer uses (code changed / receipt deleted) is released. A coupon used by another receipt is left alone,
+ * and so is one the sheet says this receipt can't have (expired, given to someone else…).
  */
 function linkCoupon(coupons: CouponCode[], inv: Invoice, deleted = false): CouponCode[] {
   const code = deleted ? "" : norm(inv.coupon?.code ?? "");
   return coupons.map((c) => {
-    const mine = c.usedInvoice === inv.number;
-    if (code && norm(c.code) === code) {
-      if (!c.usedOn) return { ...c, usedOn: inv.date, usedInvoice: inv.number, updatedAt: Date.now() };
-      if (mine && c.usedOn !== inv.date) return { ...c, usedOn: inv.date, updatedAt: Date.now() };
+    const mine = !!c.usedOn && usedBy(c, inv);
+    const release = () => ({ ...c, usedOn: "", usedInvoice: undefined, usedInvoiceId: undefined, updatedAt: Date.now() });
+    if (code && norm(c.code) === code && (!c.usedOn || mine)) {
+      if (couponProblem(c, inv, inv.customer, inv.date)) return mine ? release() : c;
+      if (!mine || c.usedOn !== inv.date || c.usedInvoice !== inv.number || c.usedInvoiceId !== inv.id)
+        return { ...c, usedOn: inv.date, usedInvoice: inv.number, usedInvoiceId: inv.id, updatedAt: Date.now() };
       return c;
     }
-    return mine ? { ...c, usedOn: "", usedInvoice: undefined, updatedAt: Date.now() } : c;
+    return mine ? release() : c;
   });
 }
 
@@ -160,6 +165,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const outbox = useRef(new Map<string, Change>());
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flushing = useRef(false);
+  const edits = useRef(0); // bumps on every local change, so a slow reload can't put older data back
 
   const schedule = useRef<(ms: number) => void>(() => {});
 
@@ -214,6 +220,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const loadFromServer = useCallback(async (): Promise<"ok" | "nodb" | "failed"> => {
+    const startedAt = edits.current;
     const res = await fetch("/api/data", { cache: "no-store" }).catch(() => null);
     if (res?.status === 401) {
       window.location.href = "/login"; // eslint-disable-line @next/next/no-location-assign-relative-destination -- full reload clears the session state
@@ -221,6 +228,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     const body = res?.ok ? await res.json().catch(() => null) : null;
     if (!body) return "failed";
+    // something was changed on this device while loading: keep it (the next reload picks up the server copy)
+    if (edits.current !== startedAt) return "ok";
     setAuthEnabled(!!body.auth);
     if (!body.db) return "nodb";
 
@@ -239,12 +248,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const serverEmpty = !body.shop && !server.products.length && !server.customers.length && !server.invoices.length;
       if (local) {
         // first login on a device that already has receipts: move them into the database
+        // (but not the untouched demo receipt / customer this device started with)
         const localData: Data = { ...seed(), ...local, shop: withDefaults(local.shop) };
         const have = docs(server);
-        for (const [k, c] of docs(localData)) if (!have.has(k) || (k === "shop:shop" && !body.shop)) pending.push(c);
-      } else if (serverEmpty) {
-        // brand-new shop: start with the default settings and product list
-        pending.push(...docs({ shop: DEFAULT_SHOP, products: SEED_PRODUCTS, customers: [], coupons: [], invoices: [] }).values());
+        const demo = docs(seed());
+        const same = (k: string, c: Change) => k !== "shop:shop" && JSON.stringify(demo.get(k)?.data) === JSON.stringify(c.data);
+        for (const [k, c] of docs(localData)) if ((!have.has(k) || (k === "shop:shop" && !body.shop)) && !same(k, c)) pending.push(c);
+      }
+      if (serverEmpty && pending.every((c) => c.kind === "shop")) {
+        // brand-new shop: start with the default settings and product list (keeping this device's settings, if any)
+        const starter = docs({ shop: DEFAULT_SHOP, products: SEED_PRODUCTS, customers: [], coupons: [], invoices: [] });
+        pending.unshift(...[...starter.values()].filter((c) => !pending.some((p) => p.kind === c.kind)));
       }
       merged = applyChanges(server, pending);
       localStorage.setItem(MIGRATED, "1");
@@ -296,7 +310,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     writeJSON(KEY, data);
-    if (mode === "cloud" && lastSeen.current) queue(diff(lastSeen.current, data));
+    if (mode === "cloud" && lastSeen.current) {
+      const changes = diff(lastSeen.current, data);
+      if (changes.length) edits.current++;
+      queue(changes);
+    }
     lastSeen.current = data;
   }, [data, ready, mode, queue]);
 
@@ -318,7 +336,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return num;
   }, [data.invoices, data.shop]);
 
-  const saveInvoice = useCallback((inv: Invoice) => {
+  const saveInvoice = useCallback((inv: Invoice, { remember = true }: { remember?: boolean } = {}) => {
     const saved = { ...inv, updatedAt: Date.now() };
     setData((d) => {
       const exists = d.invoices.some((i) => i.id === inv.id);
@@ -332,7 +350,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // remember new / updated customers automatically
       let customers = d.customers;
       const c = inv.customer;
-      if (c.name.trim()) {
+      if (remember && c.name.trim()) {
         const hit = customers.find((x) => norm(x.name) === norm(c.name));
         if (!hit) customers = [...customers, { id: uid(), name: c.name.trim(), phone: c.phone, address: c.address, updatedAt: Date.now() }];
         else if (hit.phone !== c.phone || hit.address !== c.address)
@@ -343,7 +361,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       // remember new products automatically
       let products = d.products;
-      for (const it of inv.items) {
+      for (const it of remember ? inv.items : []) {
         if (!it.description.trim() || !it.price) continue;
         if (!products.some((p) => norm(p.name) === norm(it.description)))
           products = [...products, { id: uid(), name: it.description.trim(), price: Number(it.price), inStock: true, updatedAt: Date.now() }];
