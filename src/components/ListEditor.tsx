@@ -241,7 +241,7 @@ export function ListEditor<T extends { id: string }>({
         </div>
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-x-clip">
         {/* search: its own row; the border lights up and flows while it has focus */}
         <div className="border-b border-line p-4 pb-3">
           <div className="search-shell group/search rounded-2xl p-[1.5px] transition-shadow duration-500 focus-within:shadow-[0_10px_30px_-12px_rgb(26_134_174/0.45)]">

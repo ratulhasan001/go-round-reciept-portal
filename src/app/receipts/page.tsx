@@ -238,7 +238,7 @@ export default function Dashboard() {
                 {visible.map(({ inv, t }) => (
                   <tr key={inv.id} className="group border-t border-line transition hover:bg-canvas/70">
                     <td className="whitespace-nowrap px-5 py-3.5">
-                      <Link href={`/new?id=${inv.id} transitionTypes={["nav-right"]}`} className="font-display font-bold text-ink hover:text-brand">{inv.number}</Link>
+                      <Link href={`/new?id=${inv.id}`} transitionTypes={["nav-right"]} className="font-display font-bold text-ink hover:text-brand">{inv.number}</Link>
                     </td>
                     <td className="px-3 py-3.5">
                       <div className="font-semibold">{inv.customer.name || "—"}</div>
@@ -261,7 +261,7 @@ export default function Dashboard() {
             <ul className="divide-y divide-line lg:hidden">
               {visible.map(({ inv, t }) => (
                 <li key={inv.id} className="p-4">
-                  <Link href={`/new?id=${inv.id} transitionTypes={["nav-right"]}`} className="flex items-start justify-between gap-3">
+                  <Link href={`/new?id=${inv.id}`} transitionTypes={["nav-right"]} className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-display font-bold">{inv.number}</span>
@@ -322,10 +322,10 @@ function RowActions({
         </Button>
       </div>
       <div className="flex gap-0.5">
-        <Link href={`/new?id=${inv.id} transitionTypes={["nav-right"]}`} className={icon} title="Edit" aria-label="Edit">
+        <Link href={`/new?id=${inv.id}`} transitionTypes={["nav-right"]} className={icon} title="Edit" aria-label="Edit">
           <Pencil className="size-4" />
         </Link>
-        <Link href={`/new?copy=${inv.id} transitionTypes={["nav-right"]}`} className={icon} title="Duplicate as new receipt" aria-label="Duplicate">
+        <Link href={`/new?copy=${inv.id}`} transitionTypes={["nav-right"]} className={icon} title="Duplicate as new receipt" aria-label="Duplicate">
           <Copy className="size-4" />
         </Link>
         <button onClick={() => onDel(inv)} className={cx(icon, confirm && "w-auto bg-red-600 px-2 text-[12px] font-bold text-white hover:bg-red-700 hover:text-white")} title="Delete" aria-label="Delete">

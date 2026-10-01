@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ArrowRight, Check, CopyX, FileQuestion, RefreshCw, TicketPercent, TicketPlus, TicketX, Truck, X } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { fmtDate, todayISO, uid } from "@/lib/calc";
@@ -8,6 +8,7 @@ import type { CouponCode } from "@/lib/types";
 import { COUPON_SAMPLE_CSV, couponStatus, normCode, offerFromCode, offerLabel, planCouponImport, readCouponFile, type CouponStatus } from "@/lib/coupons";
 import { ListEditor } from "@/components/ListEditor";
 import { ImportDialog } from "@/components/ImportDialog";
+import { Combobox } from "@/components/Combobox";
 import { Input, cx } from "@/components/ui";
 
 const STATUS: Record<CouponStatus, { label: string; chip: string; lead: string }> = {
@@ -32,7 +33,8 @@ const openPicker = (e: React.MouseEvent<HTMLInputElement>) => {
 };
 
 export default function CouponsPage() {
-  const { coupons, setCoupons } = useStore();
+  const { coupons, setCoupons, customers } = useStore();
+  const customerOpts = useMemo(() => customers.map((c) => ({ id: c.id, label: c.name, meta: c.phone })), [customers]);
   const latest = useRef(coupons);
   useEffect(() => {
     latest.current = coupons;
@@ -173,7 +175,25 @@ export default function CouponsPage() {
             );
           },
         },
-        { key: "name", label: "Given to", placeholder: "Customer name", width: "minmax(130px,1fr)" },
+        {
+          key: "name",
+          label: "Given to",
+          type: "custom",
+          width: "minmax(130px,1fr)",
+          render: (c, update) => (
+            <Combobox
+              value={c.name}
+              placeholder="Search customers"
+              ariaLabel="Given to"
+              options={customerOpts}
+              onChange={(name) => update({ name })}
+              onPick={(o) => {
+                const picked = customers.find((x) => x.id === o.id)!;
+                update({ name: picked.name, phone: picked.phone || c.phone });
+              }}
+            />
+          ),
+        },
         { key: "phone", label: "Phone", type: "tel", placeholder: "01XXXXXXXXX", width: "135px" },
         {
           key: "validTo",
