@@ -98,6 +98,41 @@ export const todayISO = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+/** yyyy-mm-dd plus whole months, kept inside the target month (31 Jan + 1 month = 28/29 Feb). */
+export function addMonths(iso: string, months: number) {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  const first = new Date(y, m - 1 + months, 1);
+  const last = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  return `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+}
+
+/** How long a coupon printed on a receipt stays valid when the coupon sheet doesn't say. */
+export const COUPON_MONTHS = 2;
+
+/**
+ * The "Special Reward" message printed on a receipt that carries a coupon code (null when there is none).
+ * Valid until the coupon's own end date, or two months after the receipt date.
+ */
+export function rewardNote(inv: Invoice): { title: string; text: string } | null {
+  const c = inv.coupon;
+  const code = c?.code.trim().toUpperCase();
+  if (!c || !code) return null;
+  const whole = (n: number) => (Number.isInteger(n) ? n.toLocaleString("en-US") : money(n));
+  const offer = [
+    Number(c.pct) ? `${Number(Number(c.pct).toFixed(2))}% off` : "",
+    Number(c.amount) ? `BDT ${whole(Number(c.amount))} off` : "",
+    c.freeDelivery ? "free delivery" : "",
+  ].filter(Boolean);
+  const until = c.validTo || addMonths(inv.date, COUPON_MONTHS);
+  return {
+    title: "Special Reward for You!",
+    text:
+      `Enjoy ${offer.length ? offer.join(" + ") : "a special discount"} on your next shopping trip with code ${code}. ` +
+      `${until ? `Valid until ${fmtDate(until)}. ` : ""}Don't miss out - grab your favourite gear today!`,
+  };
+}
+
 // ---------- amount in words (Bangladeshi lakh / crore system) ----------
 
 const ONES = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",

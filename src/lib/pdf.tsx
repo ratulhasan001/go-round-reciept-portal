@@ -2,7 +2,7 @@
 
 import { Circle, Document, Font, Image, Page, Path, StyleSheet, Svg, Text, View, pdf } from "@react-pdf/renderer";
 import type { Invoice, Shop } from "./types";
-import { amountInWords, bdt, computeTotals, courierName, filledItems, fmtDate, lineAmount, money } from "./calc";
+import { amountInWords, bdt, computeTotals, courierName, filledItems, fmtDate, lineAmount, money, rewardNote } from "./calc";
 import { STATUS_LABEL, T, WAVE_BACK, WAVE_FRONT, initials, logoUrl } from "./theme";
 import { drawSeal, drawSignature, sealFor } from "./seal";
 import { WATERMARK_OPACITY, makeWatermark } from "./watermark";
@@ -68,6 +68,9 @@ const s = StyleSheet.create({
   lower: { flexDirection: "row", gap: 26, marginTop: 20 },
   words: { backgroundColor: T.aquaSoft, borderRadius: 6, padding: 10, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: T.aqua },
   wordsTxt: { fontSize: 8.5, color: T.ink, fontWeight: 700, lineHeight: 1.4 },
+  reward: { backgroundColor: T.leafSoft, borderRadius: 6, padding: 9, marginTop: 10, borderLeftWidth: 3, borderLeftColor: T.leaf },
+  rewardTitle: { fontFamily: "Bricolage", fontWeight: 800, fontSize: 10, color: T.leafDeep, marginBottom: 2 },
+  rewardTxt: { fontSize: 8.2, color: T.ink, lineHeight: 1.45 },
   payRow: { flexDirection: "row", paddingVertical: 4.5, borderBottomWidth: 0.5, borderBottomColor: T.line },
   totRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5, paddingHorizontal: 8 },
   totK: { fontSize: 9, color: T.muted },
@@ -117,6 +120,7 @@ const FIT = [
     tr: { paddingVertical: 4 },
     lower: { marginTop: 10 },
     words: { marginBottom: 8, padding: 8 },
+    reward: { marginTop: 8, padding: 8 },
     seal: { width: 110, height: 61, marginTop: 6 },
     sign: { width: 125, height: 80, marginTop: 4 },
   },
@@ -132,6 +136,7 @@ const FIT = [
     td: { fontSize: 8.2 },
     lower: { marginTop: 8 },
     words: { marginBottom: 6, padding: 7 },
+    reward: { marginTop: 6, padding: 7 },
     payRow: { paddingVertical: 3 },
     totRow: { paddingVertical: 3 },
     grand: { paddingVertical: 5, marginVertical: 2 },
@@ -151,6 +156,7 @@ const FIT = [
     td: { fontSize: 7.6 },
     lower: { marginTop: 6 },
     words: { marginBottom: 4, padding: 6 },
+    reward: { marginTop: 4, padding: 6 },
     payRow: { paddingVertical: 2 },
     totRow: { paddingVertical: 2 },
     grand: { paddingVertical: 4, marginVertical: 2 },
@@ -174,6 +180,7 @@ export function ReceiptDocument({
 }) {
   const f: Partial<Record<keyof typeof s, Style>> = FIT[Math.min(fit, FIT.length - 1)];
   const t = computeTotals(inv);
+  const reward = rewardNote(inv);
   const items = filledItems(inv);
   const payments = inv.payments.filter((p) => p.amount);
   const st = T.status[t.status];
@@ -295,6 +302,12 @@ export function ReceiptDocument({
               <View>
                 <Text style={s.label}>NOTES</Text>
                 <Text style={s.small}>{inv.notes}</Text>
+              </View>
+            ) : null}
+            {reward ? (
+              <View style={[s.reward, f.reward ?? {}]} wrap={false}>
+                <Text style={s.rewardTitle}>{reward.title}</Text>
+                <Text style={s.rewardTxt}>{reward.text}</Text>
               </View>
             ) : null}
             {seal ? (

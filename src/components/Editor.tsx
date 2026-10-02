@@ -4,19 +4,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AlertTriangle, ArrowLeft, BadgeCheck, BadgePercent, Banknote, CheckCheck, CircleHelp, Download, Eye, FileSpreadsheet, FileText, Minus, NotebookPen, Plus,
-  Printer, PlusCircle, Receipt, Save, Share2, ShoppingBag, TicketPercent, Trash2, Truck, UserRound, Zap,
+  AlertTriangle, ArrowLeft, BadgeCheck, BadgePercent, Banknote, CheckCheck, CircleHelp, Download, Eye, FileSpreadsheet, FileText, Gift, Minus, NotebookPen, Plus,
+  Printer, PlusCircle, Receipt, Save, Share2, ShoppingBag, TicketPercent, TicketPlus, Trash2, Truck, UserRound, Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
-import type { Coupon, Extras, Invoice, LineItem, ManualCharge, Payment } from "@/lib/types";
+import type { Coupon, CouponCode, Extras, Invoice, LineItem, ManualCharge, Payment } from "@/lib/types";
 import { COURIERS, PAYMENT_METHODS } from "@/lib/types";
-import { bdt, computeTotals, fmtDate, lineAmount, money, pct, todayISO, uid } from "@/lib/calc";
+import { COUPON_MONTHS, addMonths, bdt, computeTotals, fmtDate, lineAmount, money, pct, rewardNote, todayISO, uid } from "@/lib/calc";
 import { canShareFiles, downloadExcel, downloadPdf, printPdf, sharePdf, whatsappUrl } from "@/lib/download";
 import { Button, Card, Chip, Field, Input, Label, SectionTitle, Select, StatusBadge, Switch, Textarea, cx, useToast } from "./ui";
 import { Combobox } from "./Combobox";
 import { SectionIcon } from "./nav";
-import { couponProblem, normCode, offerLabel } from "@/lib/coupons";
+import { couponProblem, normCode, offerFromCode, offerLabel } from "@/lib/coupons";
 import ReceiptPreview from "./ReceiptPreview";
 
 const blankItem = (): LineItem => ({ id: uid(), description: "", price: 0, qty: 1 });
@@ -184,6 +184,49 @@ function EditorForm({
   // the typed code's entry in the coupon sheet, and why it can't be used (if so)
   const sheetCoupon = cp.code.trim() ? coupons.find((c) => normCode(c.code) === normCode(cp.code)) : undefined;
   const sheetProblem = sheetCoupon ? couponProblem(sheetCoupon, inv, inv.customer, inv.date) : "";
+  const reward = rewardNote(inv);
+  // coupons this receipt can use, for the search: this customer's own first
+  const couponOpts = useMemo(() => {
+    const phone = inv.customer.phone.replace(/\D/g, "");
+    const mine = (c: CouponCode) => !!phone && c.phone.replace(/\D/g, "").endsWith(phone.slice(-10));
+    return coupons
+      .filter((c) => c.code.trim() && !couponProblem(c, inv, inv.customer, inv.date))
+      .sort((a, b) => Number(mine(b)) - Number(mine(a)))
+      .map((c) => ({ id: c.id, label: c.code.trim(), meta: [offerLabel(c), c.name.trim() || c.phone || "Not given yet"].join(" · ") }));
+  }, [coupons, inv]);
+  // a code from the coupon sheet brings its offer with it, and takes it away again when the code changes
+  const setCouponCode = (code: string, list = coupons) => {
+    const hit = code.trim() ? list.find((c) => normCode(c.code) === normCode(code)) : undefined;
+    update({
+      coupon: hit
+        ? { ...cp, code, pct: hit.pct, freeDelivery: hit.freeDelivery, validTo: hit.validTo || undefined }
+        : sheetCoupon
+          ? { ...cp, code, pct: 0, freeDelivery: false, validTo: undefined }
+          : { ...cp, code },
+    });
+  };
+  // a code that isn't in the coupon sheet yet: add it there, valid for two months from the receipt date
+  const createCoupon = () => {
+    const code = cp.code.trim();
+    if (!code || sheetCoupon) return;
+    const offer = offerFromCode(code);
+    const c: CouponCode = {
+      id: uid(),
+      code,
+      pct: offer ? offer.pct : Number(cp.pct) || 0,
+      freeDelivery: offer ? offer.freeDelivery : !!cp.freeDelivery,
+      name: "",
+      phone: "",
+      validFrom: inv.date,
+      validTo: addMonths(inv.date, COUPON_MONTHS),
+      usedOn: "",
+      updatedAt: Date.now(),
+    };
+    const next = [c, ...coupons];
+    store.setCoupons(next);
+    setCouponCode(code, next);
+    toast(`Coupon ${code.toUpperCase()} added to the coupon sheet`);
+  };
   const setManual = (id: string, patch: Partial<ManualCharge>) => setEx({ manual: ex.manual.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
   const rateHint = (r: number) => (r > 0 ? `+${pct(r)}` : "No charge");
 
@@ -488,25 +531,18 @@ function EditorForm({
                   </div>
                   <span className={cx("text-[13.5px] font-bold", t.couponTotal ? "text-aqua-deep" : "text-faint")}>– {money(t.couponTotal)}</span>
                 </div>
-                <Input
-                  placeholder="Coupon code (optional)"
-                  aria-label="Coupon code"
-                  className="mb-2 uppercase placeholder:normal-case"
+                <Combobox
+                  placeholder={coupons.length ? "Search or type a coupon code" : "Coupon code (optional)"}
+                  ariaLabel="Coupon code"
+                  className="mb-2"
+                  inputClassName="uppercase placeholder:normal-case"
                   value={cp.code}
-                  onChange={(e) => {
-                    const code = e.target.value;
-                    const hit = code.trim() ? coupons.find((c) => normCode(c.code) === normCode(code)) : undefined;
-                    // a code from the coupon sheet brings its offer with it, and takes it away again when the code changes
-                    update({
-                      coupon: hit
-                        ? { ...cp, code, pct: hit.pct, freeDelivery: hit.freeDelivery }
-                        : sheetCoupon
-                          ? { ...cp, code, pct: 0, freeDelivery: false }
-                          : { ...cp, code },
-                    });
-                  }}
+                  options={couponOpts}
+                  onChange={(v) => setCouponCode(v)}
+                  onPick={(o) => setCouponCode(o.label)}
+                  onEnter={createCoupon}
                 />
-                {cp.code.trim() && coupons.length > 0 && (
+                {cp.code.trim() && (
                   <div
                     key={sheetCoupon ? sheetCoupon.id + sheetProblem : "none"}
                     className={cx(
@@ -518,6 +554,14 @@ function EditorForm({
                     {!sheetCoupon ? (
                       <>
                         <CircleHelp className="size-3.5 shrink-0" /> Not in the coupon sheet
+                        <button
+                          type="button"
+                          onClick={createCoupon}
+                          className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-lg bg-aqua-soft px-2 py-1 text-[12px] font-bold text-aqua-deep transition hover:bg-aqua/25 active:scale-95"
+                          title={`Add ${cp.code.trim().toUpperCase()} to the coupon sheet, valid for ${COUPON_MONTHS} months`}
+                        >
+                          <TicketPlus className="size-3.5" /> Create coupon
+                        </button>
                       </>
                     ) : sheetProblem ? (
                       <>
@@ -542,6 +586,15 @@ function EditorForm({
                   note={cp.freeDelivery && inv.discountFreeDelivery ? "Already free via discount" : undefined}
                   onChange={(v) => update({ coupon: { ...cp, freeDelivery: v } })}
                 />
+                {reward && (
+                  <div className="animate-label-swap mt-3 rounded-xl border-l-[3px] border-lime bg-soft/60 p-3" key={reward.text}>
+                    <div className="mb-0.5 flex items-center gap-1.5 text-[12.5px] font-bold text-brand">
+                      <Gift className="size-3.5" /> {reward.title}
+                    </div>
+                    <p className="text-[12px] leading-snug text-body">{reward.text}</p>
+                    <p className="mt-1 text-[11px] text-muted">Printed on the receipt.</p>
+                  </div>
+                )}
               </div>
             </div>
             <p className="mt-2 text-[11.5px] text-muted">Discount % is on the subtotal; coupon % is on the subtotal after discount. Use %, BDT, free delivery, or any combination.</p>

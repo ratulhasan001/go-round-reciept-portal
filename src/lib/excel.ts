@@ -2,7 +2,7 @@
 
 import type { Borders, Cell, Fill, Font, Workbook, Worksheet } from "exceljs";
 import type { Invoice, Shop } from "./types";
-import { amountInWords, computeTotals, filledItems, fmtDate, lineAmount } from "./calc";
+import { amountInWords, computeTotals, filledItems, fmtDate, lineAmount, rewardNote } from "./calc";
 import { STATUS_LABEL, T, logoUrl } from "./theme";
 import { drawSeal, drawSignature, sealFor } from "./seal";
 
@@ -292,8 +292,23 @@ export async function renderExcelBlob(inv: Invoice, shop: Shop) {
     set(`E${row}`, Number(p.amount) || 0, font({ size: 9, bold: true }), { fmt: MONEY, align: { horizontal: "right" }, border: b });
   });
 
-  // ---------- footer ----------
+  // ---------- special reward (receipts with a coupon code) ----------
   r = payLast + 2;
+  const reward = rewardNote(inv);
+  if (reward) {
+    height(r - 1, 12);
+    height(r, 44);
+    const rich = { richText: [{ text: reward.title + "\n", font: font({ size: 10.5, bold: true, hex: T.leafDeep }) }, { text: reward.text, font: font({ size: 9 }) }] };
+    set(`A${r}`, rich, font({ size: 9 }), {
+      merge: `A${r}:E${r}`,
+      fill: T.leafSoft,
+      align: { indent: 1, wrapText: true },
+      border: { left: line(T.leaf, "medium") },
+    });
+    r += 2;
+  }
+
+  // ---------- footer ----------
   // space for the PAID / DUE stamp (left) and the signed company seal (right)
   const spec = sealFor(inv, shop);
   const sealRows = 5;

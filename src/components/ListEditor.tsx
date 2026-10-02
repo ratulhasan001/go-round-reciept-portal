@@ -65,6 +65,7 @@ export function ListEditor<T extends { id: string }>({
   sorts,
   touch,
   actions,
+  rowActions,
   tableFrom = "md",
   section,
 }: {
@@ -86,6 +87,8 @@ export function ListEditor<T extends { id: string }>({
   touch?: (row: T) => T;
   /** Extra buttons shown next to "Add", e.g. Import. */
   actions?: React.ReactNode;
+  /** Extra buttons shown in each row before Edit, e.g. Share. */
+  rowActions?: (row: T) => React.ReactNode;
   /** When rows switch from cards to a table; use "2xl" for lists with many columns. */
   tableFrom?: keyof typeof LAYOUT;
   /** Section key (see nav.tsx): the header icon then morphs from the home tile. */
@@ -106,7 +109,7 @@ export function ListEditor<T extends { id: string }>({
   useEffect(() => {
     latest.current = rows;
   });
-  const grid = `${lead ? "40px " : ""}${columns.map((c) => c.width).join(" ")} 84px`;
+  const grid = `${lead ? "40px " : ""}${columns.map((c) => c.width).join(" ")} ${rowActions ? 126 : 84}px`;
 
   // Sorting is live, except while the cursor is inside a row: then the order is held still so the row
   // being edited never jumps away. As soon as focus leaves the rows, everything glides into place.
@@ -451,6 +454,7 @@ export function ListEditor<T extends { id: string }>({
                   </fieldset>
                 ))}
                 <div className="flex gap-1 self-end">
+                  {rowActions?.(r)}
                   <button
                     id={`edit-${r.id}`}
                     type="button"

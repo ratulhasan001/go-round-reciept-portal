@@ -34,6 +34,7 @@ export interface Coupon {
   pct: number; // % of (subtotal - discount)
   amount: number; // fixed BDT
   freeDelivery?: boolean;
+  validTo?: string; // yyyy-mm-dd, from the coupon sheet; printed in the reward note
 }
 
 export interface ChargeLine {

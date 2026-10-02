@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Invoice, Shop } from "@/lib/types";
-import { amountInWords, bdt, computeTotals, courierName, filledItems, fmtDate, lineAmount, money } from "@/lib/calc";
+import { amountInWords, bdt, computeTotals, courierName, filledItems, fmtDate, lineAmount, money, rewardNote } from "@/lib/calc";
 import { STATUS_LABEL, T, WAVE_BACK, WAVE_FRONT, initials } from "@/lib/theme";
 import { SIGNATORY, drawSeal, drawSignature, sealFor } from "@/lib/seal";
 import { WATERMARK_OPACITY, makeWatermark } from "@/lib/watermark";
@@ -71,6 +71,7 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
   const wmUrl = wmKey && wm?.key === wmKey ? wm.url : null;
 
   const t = computeTotals(inv);
+  const reward = rewardNote(inv);
   const items = filledItems(inv);
   const payments = inv.payments.filter((p) => p.amount);
   const st = T.status[t.status];
@@ -192,6 +193,12 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
               <div>
                 <div style={label}>NOTES</div>
                 <div style={{ fontSize: 8.5, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{inv.notes}</div>
+              </div>
+            )}
+            {reward && (
+              <div style={{ background: T.leafSoft, borderRadius: 6, padding: 9, marginTop: 10, borderLeft: `3px solid ${T.leaf}` }}>
+                <div style={{ ...display, fontWeight: 800, fontSize: 10, color: T.leafDeep, marginBottom: 2 }}>{reward.title}</div>
+                <div style={{ fontSize: 8.2, color: T.ink, lineHeight: 1.45 }}>{reward.text}</div>
               </div>
             )}
             {spec && (

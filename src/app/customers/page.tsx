@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { CopyX, RefreshCw, UserPlus, UserX, Users } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, CopyX, RefreshCw, Share2, UserPlus, UserX, Users } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { computeTotals, uid } from "@/lib/calc";
 import { initials } from "@/lib/theme";
 import type { Customer } from "@/lib/types";
 import { ListEditor } from "@/components/ListEditor";
 import { ImportDialog } from "@/components/ImportDialog";
+import { cx, useToast } from "@/components/ui";
 import { CustomerFormDialog } from "@/components/CustomerFormDialog";
 import { SAMPLE_CSV, planImport, readCustomerFile } from "@/lib/customerImport";
 
@@ -25,6 +26,50 @@ const avatarTone = (name: string) => AVATARS[[...name].reduce((h, ch) => (h * 31
 const key = (name: string) => name.trim().toLowerCase();
 const byName = (a: Customer, b: Customer) => a.name.trim().localeCompare(b.name.trim(), undefined, { numeric: true, sensitivity: "base" });
 const updated = (c: Customer) => c.updatedAt ?? 0;
+
+/** The customer's details as a block of text, ready to paste into a chat or a courier booking. */
+const detailsText = (c: Customer) =>
+  [c.name.trim() && `Name: ${c.name.trim()}`, c.phone.trim() && `Phone: ${c.phone.trim()}`, c.address.trim() && `Address: ${c.address.trim()}`]
+    .filter(Boolean)
+    .join("\n");
+
+/** Copies the customer's details; where the clipboard is blocked, opens the device's share menu instead. */
+function ShareDetails({ customer }: { customer: Customer }) {
+  const toast = useToast();
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const share = async () => {
+    const text = detailsText(customer);
+    if (!text) return toast("Nothing to share yet - add the customer's details first", "err");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 1600);
+      toast("Customer details copied");
+    } catch {
+      if (navigator.share) await navigator.share({ title: customer.name.trim() || "Customer", text }).catch(() => null);
+      else toast("Could not copy - your browser blocked the clipboard", "err");
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={share}
+      className={cx(
+        "grid h-10 flex-1 place-items-center rounded-lg transition",
+        copied ? "bg-soft text-brand" : "text-faint hover:bg-aqua-soft hover:text-aqua-deep",
+      )}
+      aria-label={copied ? "Customer details copied" : "Copy customer details"}
+      title="Copy name, phone and address"
+    >
+      {copied ? <Check key="c" className="animate-search-pop size-4" /> : <Share2 className="size-4" />}
+    </button>
+  );
+}
 
 export default function CustomersPage() {
   const { customers, setCustomers, invoices } = useStore();
@@ -101,6 +146,7 @@ export default function CustomersPage() {
         { label: "Top spending", compare: (a, b) => stat(b).spent - stat(a).spent || byName(a, b) },
         { label: "Most due", compare: (a, b) => stat(b).due - stat(a).due || byName(a, b) },
       ]}
+      rowActions={(c) => <ShareDetails customer={c} />}
       lead={(c) => {
         const ini = c.name.trim() ? initials(c.name) : "?";
         const s = stat(c);
