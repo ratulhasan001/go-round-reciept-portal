@@ -54,7 +54,7 @@ export function computeTotals(inv: Invoice): Totals {
   const dFree = !!inv.discountFreeDelivery && delivery > 0;
   const discountOnItems = round2((subtotal * dPct) / 100 + dFix);
   const discountTotal = round2(discountOnItems + (dFree ? delivery : 0));
-  const c = inv.coupon;
+  const c = inv.coupon?.gift ? undefined : inv.coupon; // a gift is for the next visit: nothing comes off now
   const cPct = Number(c?.pct) || 0;
   const cFix = Number(c?.amount) || 0;
   const cFree = !!c?.freeDelivery && !dFree && delivery > 0; // delivery is only waived once
@@ -111,13 +111,14 @@ export function addMonths(iso: string, months: number) {
 export const COUPON_MONTHS = 2;
 
 /**
- * The "Special Reward" message printed on a receipt that carries a coupon code (null when there is none).
- * Valid until the coupon's own end date, or two months after the receipt date.
+ * The "Special Reward" message printed on a receipt that gives a coupon code as a gift (null when it doesn't -
+ * a coupon used on the receipt itself is already spent). Valid until the coupon's own end date, or two months
+ * after the receipt date.
  */
 export function rewardNote(inv: Invoice): { title: string; text: string } | null {
   const c = inv.coupon;
   const code = c?.code.trim().toUpperCase();
-  if (!c || !code) return null;
+  if (!c?.gift || !code) return null;
   const whole = (n: number) => (Number.isInteger(n) ? n.toLocaleString("en-US") : money(n));
   const offer = [
     Number(c.pct) ? `${Number(Number(c.pct).toFixed(2))}% off` : "",

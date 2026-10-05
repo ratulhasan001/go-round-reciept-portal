@@ -35,6 +35,7 @@ export interface Coupon {
   amount: number; // fixed BDT
   freeDelivery?: boolean;
   validTo?: string; // yyyy-mm-dd, from the coupon sheet; printed in the reward note
+  gift?: boolean; // given for the customer's next visit: nothing comes off this receipt (missing = used on it)
 }
 
 export interface ChargeLine {
@@ -91,6 +92,8 @@ export interface CouponCode {
   usedOn: string; // yyyy-mm-dd, "" = not used yet
   usedInvoice?: string; // receipt number it was used on (for display)
   usedInvoiceId?: string; // id of that receipt; missing on coupons marked used before ids were kept
+  givenInvoice?: string; // receipt number it was given away on as a gift (for display)
+  givenInvoiceId?: string; // id of that receipt
   updatedAt?: number;
 }
 

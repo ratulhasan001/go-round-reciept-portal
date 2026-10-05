@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle, ArrowLeft, BadgeCheck, BadgePercent, Banknote, CheckCheck, CircleHelp, Download, Eye, FileSpreadsheet, FileText, Gift, Minus, NotebookPen, Plus,
-  Printer, PlusCircle, Receipt, Save, Share2, ShoppingBag, TicketPercent, TicketPlus, Trash2, Truck, UserRound, Zap,
+  Printer, PlusCircle, Receipt, Save, Share2, ShoppingBag, TicketCheck, TicketPercent, TicketPlus, Trash2, Truck, UserRound, Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useStore } from "@/lib/store";
@@ -16,7 +16,7 @@ import { canShareFiles, downloadExcel, downloadPdf, printPdf, sharePdf, whatsapp
 import { Button, Card, Chip, Field, Input, Label, SectionTitle, Select, StatusBadge, Switch, Textarea, cx, useToast } from "./ui";
 import { Combobox } from "./Combobox";
 import { SectionIcon } from "./nav";
-import { couponProblem, normCode, offerFromCode, offerLabel } from "@/lib/coupons";
+import { couponProblem, givenBy, normCode, offerFromCode, offerLabel } from "@/lib/coupons";
 import ReceiptPreview from "./ReceiptPreview";
 
 const blankItem = (): LineItem => ({ id: uid(), description: "", price: 0, qty: 1 });
@@ -180,20 +180,23 @@ function EditorForm({
     manual: [],
   };
   const setEx = (patch: Partial<Extras>) => update({ extras: { ...ex, ...patch } });
-  const cp: Coupon = inv.coupon ?? { code: "", pct: 0, amount: 0 };
-  // the typed code's entry in the coupon sheet, and why it can't be used (if so)
+  // a new coupon starts as a gift for the next visit, so nothing comes off until "Use now" is picked
+  const cp: Coupon = inv.coupon ?? { code: "", pct: 0, amount: 0, gift: true };
+  const gift = !!cp.gift;
+  // the typed code's entry in the coupon sheet, and why it can't be used / given (if so)
   const sheetCoupon = cp.code.trim() ? coupons.find((c) => normCode(c.code) === normCode(cp.code)) : undefined;
-  const sheetProblem = sheetCoupon ? couponProblem(sheetCoupon, inv, inv.customer, inv.date) : "";
+  const sheetProblem = sheetCoupon ? couponProblem(sheetCoupon, inv, inv.customer, inv.date, gift) : "";
   const reward = rewardNote(inv);
-  // coupons this receipt can use, for the search: this customer's own first
+  // coupons this receipt can use, for the search: this customer's own first. As a gift: the ones nobody has yet
   const couponOpts = useMemo(() => {
     const phone = inv.customer.phone.replace(/\D/g, "");
     const mine = (c: CouponCode) => !!phone && c.phone.replace(/\D/g, "").endsWith(phone.slice(-10));
+    const free = (c: CouponCode) => (!c.name.trim() && !c.phone.trim()) || givenBy(c, inv);
     return coupons
-      .filter((c) => c.code.trim() && !couponProblem(c, inv, inv.customer, inv.date))
+      .filter((c) => c.code.trim() && !couponProblem(c, inv, inv.customer, inv.date, gift) && (!gift || free(c)))
       .sort((a, b) => Number(mine(b)) - Number(mine(a)))
       .map((c) => ({ id: c.id, label: c.code.trim(), meta: [offerLabel(c), c.name.trim() || c.phone || "Not given yet"].join(" · ") }));
-  }, [coupons, inv]);
+  }, [coupons, inv, gift]);
   // a code from the coupon sheet brings its offer with it, and takes it away again when the code changes
   const setCouponCode = (code: string, list = coupons) => {
     const hit = code.trim() ? list.find((c) => normCode(c.code) === normCode(code)) : undefined;
@@ -529,7 +532,32 @@ function EditorForm({
                   <div className="flex items-center gap-2 font-display text-[15px] font-bold">
                     <TicketPercent className="size-[18px] text-aqua-deep" /> Coupon
                   </div>
-                  <span className={cx("text-[13.5px] font-bold", t.couponTotal ? "text-aqua-deep" : "text-faint")}>– {money(t.couponTotal)}</span>
+                  {gift ? (
+                    <span className={cx("flex items-center gap-1 text-[12.5px] font-bold", cp.code.trim() ? "text-brand" : "text-faint")} title="Nothing comes off this receipt">
+                      <Gift className="size-3.5" /> Next visit
+                    </span>
+                  ) : (
+                    <span className={cx("text-[13.5px] font-bold", t.couponTotal ? "text-aqua-deep" : "text-faint")}>– {money(t.couponTotal)}</span>
+                  )}
+                </div>
+                {/* take the offer off this receipt, or give the code for the next visit */}
+                <div className="mb-2 grid grid-cols-2 rounded-xl bg-black/5 p-1">
+                  {[false, true].map((g) => (
+                    <button
+                      key={String(g)}
+                      type="button"
+                      aria-pressed={gift === g}
+                      onClick={() => gift !== g && update({ coupon: { ...cp, gift: g } })}
+                      title={g ? "Printed on the receipt for their next visit - nothing comes off now" : "Takes the offer off this receipt"}
+                      className={cx(
+                        "flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-[13px] font-semibold transition",
+                        gift === g ? cx("bg-white shadow-sm", g ? "text-brand" : "text-aqua-deep") : "text-muted hover:text-ink",
+                      )}
+                    >
+                      {g ? <Gift className="size-4" /> : <TicketCheck className="size-4" />}
+                      {g ? "Give as gift" : "Use now"}
+                    </button>
+                  ))}
                 </div>
                 <Combobox
                   placeholder={coupons.length ? "Search or type a coupon code" : "Coupon code (optional)"}
@@ -583,7 +611,7 @@ function EditorForm({
                 <FreeDelivery
                   checked={!!cp.freeDelivery}
                   delivery={inv.delivery}
-                  note={cp.freeDelivery && inv.discountFreeDelivery ? "Already free via discount" : undefined}
+                  note={gift ? "On their next order" : cp.freeDelivery && inv.discountFreeDelivery ? "Already free via discount" : undefined}
                   onChange={(v) => update({ coupon: { ...cp, freeDelivery: v } })}
                 />
                 {reward && (
@@ -597,7 +625,7 @@ function EditorForm({
                 )}
               </div>
             </div>
-            <p className="mt-2 text-[11.5px] text-muted">Discount % is on the subtotal; coupon % is on the subtotal after discount. Use %, BDT, free delivery, or any combination.</p>
+            <p className="mt-2 text-[11.5px] text-muted">Discount % is on the subtotal; coupon % is on the subtotal after discount. Use %, BDT, free delivery, or any combination. A coupon given as a gift takes nothing off now - it is printed on the receipt for next time.</p>
 
             {/* additional charges */}
             <div className={cx("mt-5 rounded-2xl border transition", ex.enabled ? "border-brand/30 bg-soft/40" : "border-line")}>

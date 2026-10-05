@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import type { CouponCode, Customer, Invoice, Product, Shop } from "./types";
 import { DEFAULT_SHOP, SEED_CUSTOMERS, SEED_INVOICES, SEED_PRODUCTS } from "./seed";
 import { uid } from "./calc";
-import { couponProblem, usedBy } from "./coupons";
+import { couponProblem, givenBy, usedBy } from "./coupons";
+import { normPhone } from "./phone";
 
 const KEY = "go-round-receipts:v1"; // this device's copy of the data
 const OUTBOX = "go-round-receipts:outbox"; // changes not yet confirmed by the server
@@ -57,23 +58,46 @@ const Ctx = createContext<Store | null>(null);
 const norm = (s: string) => s.trim().toLowerCase();
 
 /**
- * Keeps the coupon sheet in step with a receipt: its coupon code gets marked as used by it, and a coupon it
- * no longer uses (code changed / receipt deleted) is released. A coupon used by another receipt is left alone,
- * and so is one the sheet says this receipt can't have (expired, given to someone else…).
+ * Keeps the coupon sheet in step with a receipt: a coupon code it uses gets marked as used by it, and one it
+ * gives away as a gift gets marked as given to its customer. A coupon it no longer uses or gives (code changed,
+ * switched between use and gift, receipt deleted) is released. A coupon used or given by another receipt is
+ * left alone, and so is one the sheet says this receipt can't have (expired, given to someone else…).
  */
 function linkCoupon(coupons: CouponCode[], inv: Invoice, deleted = false): CouponCode[] {
   const code = deleted ? "" : norm(inv.coupon?.code ?? "");
+  const gift = !!inv.coupon?.gift;
   return coupons.map((c) => {
-    const mine = !!c.usedOn && usedBy(c, inv);
-    const release = () => ({ ...c, usedOn: "", usedInvoice: undefined, usedInvoiceId: undefined, updatedAt: Date.now() });
-    if (code && norm(c.code) === code && (!c.usedOn || mine)) {
-      if (couponProblem(c, inv, inv.customer, inv.date)) return mine ? release() : c;
-      if (!mine || c.usedOn !== inv.date || c.usedInvoice !== inv.number || c.usedInvoiceId !== inv.id)
-        return { ...c, usedOn: inv.date, usedInvoice: inv.number, usedInvoiceId: inv.id, updatedAt: Date.now() };
-      return c;
-    }
-    return mine ? release() : c;
+    const ours = !!code && norm(c.code) === code;
+    return linkGift(linkUse(c, inv, ours && !gift), inv, ours && gift);
   });
+}
+
+function linkUse(c: CouponCode, inv: Invoice, uses: boolean): CouponCode {
+  const mine = !!c.usedOn && usedBy(c, inv);
+  const release = () => ({ ...c, usedOn: "", usedInvoice: undefined, usedInvoiceId: undefined, updatedAt: Date.now() });
+  if (uses && (!c.usedOn || mine)) {
+    if (couponProblem(c, inv, inv.customer, inv.date)) return mine ? release() : c;
+    if (!mine || c.usedOn !== inv.date || c.usedInvoice !== inv.number || c.usedInvoiceId !== inv.id)
+      return { ...c, usedOn: inv.date, usedInvoice: inv.number, usedInvoiceId: inv.id, updatedAt: Date.now() };
+    return c;
+  }
+  return mine ? release() : c;
+}
+
+/** A gift is only recorded once the receipt has a name or phone, and only on a coupon nobody has yet. */
+function linkGift(c: CouponCode, inv: Invoice, gives: boolean): CouponCode {
+  const mine = givenBy(c, inv);
+  const name = inv.customer.name.trim();
+  const phone = inv.customer.phone.trim() ? normPhone(inv.customer.phone) : "";
+  if (gives && (name || phone)) {
+    if (mine && c.name === name && c.phone === phone && c.givenInvoice === inv.number) return c;
+    if (!mine && (c.name.trim() || c.phone.trim() || couponProblem(c, inv, inv.customer, inv.date, true))) return c;
+    return { ...c, name, phone, givenInvoice: inv.number, givenInvoiceId: inv.id, updatedAt: Date.now() };
+  }
+  if (!mine) return c;
+  // taken back: nobody's again - unless it's been used since, which keeps who had it
+  const usedSince = !!c.usedOn && !usedBy(c, inv);
+  return { ...c, ...(usedSince ? {} : { name: "", phone: "" }), givenInvoice: undefined, givenInvoiceId: undefined, updatedAt: Date.now() };
 }
 
 // the old "... Aquascaping ... Supplies" taglines (default or hand-typed) give way to the current default

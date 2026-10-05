@@ -256,7 +256,7 @@ export default function CouponsPage() {
               <div key={s} className="animate-label-swap flex h-10 items-center gap-1.5">
                 <span
                   className={cx("flex h-8 min-w-0 flex-1 items-center justify-center truncate rounded-lg px-2 text-[12.5px] font-bold", soon ? "bg-amber-50 text-amber-700" : STATUS[s].chip)}
-                  title={c.validTo ? `Valid until ${fmtDate(c.validTo)}` : undefined}
+                  title={[c.givenInvoice && `Given on receipt ${c.givenInvoice}`, c.validTo && `Valid until ${fmtDate(c.validTo)}`].filter(Boolean).join(" · ") || undefined}
                 >
                   {soon ? (left === 0 ? "Ends today" : `${left}d left`) : STATUS[s].label}
                 </span>
