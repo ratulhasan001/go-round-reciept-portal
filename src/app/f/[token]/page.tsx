@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { db, dbEnabled, ensureSchema } from "@/lib/server/db";
 import { type FormStatus, formStatus, validToken } from "@/lib/server/forms";
+import { logoSrc } from "@/lib/server/logo";
 import { DEFAULT_LOGO } from "@/lib/theme";
 import { CustomerFormView } from "@/components/CustomerFormView";
 
@@ -18,7 +19,7 @@ export default async function CustomerFormPage(props: PageProps<"/f/[token]">) {
       await ensureSchema();
       status = await formStatus(token);
       const [row] = await db()<{ data: { name?: string; tagline?: string; logo?: string } }[]>`select data from gr_docs where kind = 'shop' and id = 'shop'`;
-      if (row) shop = { name: row.data.name || shop.name, tagline: row.data.tagline ?? "", logo: row.data.logo ?? DEFAULT_LOGO };
+      if (row) shop = { name: row.data.name || shop.name, tagline: row.data.tagline ?? "", logo: logoSrc(row.data.logo ?? DEFAULT_LOGO) };
     } catch (e) {
       console.error("customer form page failed", e);
     }

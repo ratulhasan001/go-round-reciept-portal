@@ -3,11 +3,11 @@ import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, isAuthed } from "@/lib/server/auth";
 
 // Every page and API call needs the shop password, except the login page and the public customer form
-// (/f/<token> and its submit endpoint), which is protected by its own one-time, 30-minute token.
+// (/f/<token>, its submit endpoint and the shop logo it shows), which is protected by its own one-time, 30-minute token.
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   if (pathname === "/login" || pathname === "/api/login") return NextResponse.next();
-  if (pathname.startsWith("/f/") || pathname.startsWith("/api/f/")) return NextResponse.next();
+  if (pathname.startsWith("/f/") || pathname.startsWith("/api/f/") || pathname === "/api/shop-logo") return NextResponse.next();
   if (isAuthed(request.cookies.get(SESSION_COOKIE)?.value)) return NextResponse.next();
 
   if (pathname.startsWith("/api/")) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
