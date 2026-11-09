@@ -91,6 +91,7 @@ const s = StyleSheet.create({
   totV: { fontSize: 9, color: T.ink, fontWeight: 700 },
   grand: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, paddingHorizontal: 8, marginVertical: 4, backgroundColor: AQ.sage, borderRadius: 6 },
   grandTxt: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 13, color: AQ.ink },
+  grandAmt: { fontFamily: "Manrope", fontWeight: 800, fontSize: 12.5, color: AQ.ink },
   balRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, paddingHorizontal: 8, marginTop: 2, borderTopWidth: 0.8, borderTopColor: AQ.line },
   balK: { fontSize: 9, fontWeight: 700, color: T.ink },
   balV: { fontSize: 10, fontWeight: 800, color: T.ink },
@@ -336,7 +337,7 @@ export function ReceiptDocument({
             ))}
             <View style={[s.grand, f.grand ?? {}]}>
               <Text style={s.grandTxt}>Grand Total</Text>
-              <Text style={s.grandTxt}>{money(t.grandTotal)}</Text>
+              <Text style={s.grandAmt}>{money(t.grandTotal)}</Text>
             </View>
             <Row style={f.totRow} k="Paid" v={`– ${money(t.paid)}`} />
             <View style={[s.balRow, f.balRow ?? {}]}>

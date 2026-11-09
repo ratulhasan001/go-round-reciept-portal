@@ -219,7 +219,7 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
             ))}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 8px", margin: "4px 0", background: AQ.sage, borderRadius: 6, ...display, fontSize: 13, color: AQ.ink }}>
               <span>Grand Total</span>
-              <span>{money(t.grandTotal)}</span>
+              <span style={{ fontFamily: "var(--font-manrope), sans-serif", fontWeight: 800, fontSize: 12.5, fontVariantNumeric: "tabular-nums" }}>{money(t.grandTotal)}</span>
             </div>
             <Row k="Paid" v={`– ${money(t.paid)}`} />
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", marginTop: 2, borderTop: `0.8px solid ${AQ.line}`, color: T.ink }}>
