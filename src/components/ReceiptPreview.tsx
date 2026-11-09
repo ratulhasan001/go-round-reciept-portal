@@ -127,7 +127,7 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
         <div style={{ display: "flex", gap: 16 }}>
           <div style={{ flex: 1.3, minWidth: 0 }}>
             <div style={label}>BILLED TO</div>
-            <div style={{ ...display, fontSize: 14, color: AQ.ink, marginBottom: 3 }}>{inv.customer.name || "—"}</div>
+            <div style={{ fontFamily: "var(--font-manrope), sans-serif", fontWeight: 700, fontSize: 13, color: AQ.ink, marginBottom: 3 }}>{inv.customer.name || "—"}</div>
             {inv.customer.phone && <div style={{ fontSize: 8.5, lineHeight: 1.45 }}>{inv.customer.phone}</div>}
             {inv.customer.address && <div style={{ fontSize: 8.5, lineHeight: 1.45 }}>{inv.customer.address}</div>}
           </div>
@@ -141,7 +141,7 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
           </div>
           <div style={{ flex: 1.15, border: `0.8px solid ${AQ.line}`, borderRadius: 8, padding: 12, background: AQ.panel }}>
             <div style={label}>INVOICE TOTAL</div>
-            <div style={{ ...display, fontSize: 17, color: AQ.ink, letterSpacing: -0.3, marginBottom: 8, lineHeight: 1.1 }}>{bdt(t.grandTotal)}</div>
+            <div style={{ fontFamily: "var(--font-manrope), sans-serif", fontWeight: 800, fontSize: 16, color: AQ.ink, letterSpacing: -0.2, marginBottom: 8, lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>{bdt(t.grandTotal)}</div>
             <SumRow k="Paid" v={money(t.paid)} />
             <SumRow k={t.due < 0 ? "Credit" : "Balance due"} v={money(Math.abs(t.due))} />
           </div>
