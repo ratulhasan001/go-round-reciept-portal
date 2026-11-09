@@ -38,6 +38,17 @@ export default function RichEditor({
   const saved = useRef<Range | null>(null);
   const [active, setActive] = useState<Record<string, boolean>>({});
   const [inTable, setInTable] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  // the "Delete table" handle on the table under the mouse, or the one the caret is in
+  const [handle, setHandle] = useState<{ table: HTMLTableElement; top: number; right: number; armed: boolean } | null>(null);
+  const hovering = useRef<HTMLTableElement | null>(null);
+  const placeHandle = (table: HTMLTableElement | null) => {
+    const w = wrap.current;
+    if (!table || !w || !table.isConnected) return setHandle(null);
+    const a = w.getBoundingClientRect();
+    const b = table.getBoundingClientRect();
+    setHandle((h) => ({ table, top: b.top - a.top - 13, right: a.right - b.right - 4, armed: h?.table === table ? h.armed : false }));
+  };
   const [size, setSize] = useState("");
   const [face, setFace] = useState("");
   const [grid, setGrid] = useState<{ open: boolean; r: number; c: number }>({ open: false, r: 0, c: 0 });
@@ -55,6 +66,7 @@ export default function RichEditor({
     const el = box.current;
     if (!el) return;
     recalcTables(el); // product tables: amounts and total follow the prices and quantities
+    placeHandle(hovering.current ?? (currentCell()?.closest("table") as HTMLTableElement | null) ?? null);
     setEmpty(!el.textContent?.trim() && !el.querySelector("table, hr, li"));
     onChange(el.innerHTML);
   };
@@ -76,7 +88,9 @@ export default function RichEditor({
       }
       setActive(next);
       const node = sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode?.parentElement;
-      setInTable(!!node?.closest("td, th"));
+      const caretTable = node?.closest("td, th")?.closest("table") as HTMLTableElement | null | undefined;
+      setInTable(!!caretTable);
+      if (!hovering.current) placeHandle(caretTable ?? null);
       const blk = node?.closest(LEAF);
       if (blk && blk !== el && el.contains(blk)) {
         const st = (blk as HTMLElement).style;
@@ -212,6 +226,28 @@ export default function RichEditor({
     } else table.remove();
     setInTable(!!currentCell()?.isConnected);
     emit();
+  };
+
+  /** Removes a whole table (any kind, including a product table) - the handle on its corner asks for a second click first. */
+  const deleteTable = (table: HTMLTableElement) => {
+    const next = table.nextElementSibling;
+    // the empty line inserted after the table goes with it
+    if (next?.tagName === "DIV" && !next.textContent?.trim() && !next.querySelector("table, hr, img")) next.remove();
+    table.remove();
+    hovering.current = null;
+    setHandle(null);
+    setInTable(false);
+    emit();
+  };
+
+  const onHover = (e: React.MouseEvent) => {
+    const t = e.target as Element;
+    if (t.closest("[data-table-handle]")) return;
+    const table = t.closest("table") as HTMLTableElement | null;
+    const mine = table && box.current?.contains(table) ? table : null;
+    if (mine === hovering.current) return;
+    hovering.current = mine;
+    placeHandle(mine ?? (currentCell()?.closest("table") as HTMLTableElement | null) ?? null);
   };
 
   const insertTable = (r: number, c: number) => {
@@ -392,7 +428,14 @@ export default function RichEditor({
             <button type="button" onMouseDown={keep} onClick={() => tableOp("delCol")} className="h-8 shrink-0 rounded-lg px-2 text-[12px] font-semibold text-body hover:bg-black/5">
               − Column
             </button>
-            <ToolBtn icon={Trash2} label="Delete table" pressed={false} onClick={() => tableOp("delTable")} />
+            <button
+              type="button"
+              onMouseDown={keep}
+              onClick={() => tableOp("delTable")}
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[12px] font-semibold text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="size-3.5" /> Delete table
+            </button>
           </>
         )}
         <ToolBtn icon={Minus} label="Horizontal line" pressed={false} onClick={() => exec("insertHorizontalRule")} />
@@ -400,7 +443,31 @@ export default function RichEditor({
       </div>
 
       {/* page */}
-      <div className="relative">
+      <div
+        ref={wrap}
+        className="relative"
+        onMouseMove={onHover}
+        onMouseLeave={() => {
+          hovering.current = null;
+          placeHandle((currentCell()?.closest("table") as HTMLTableElement | null) ?? null);
+        }}
+      >
+        {handle && (
+          <button
+            type="button"
+            data-table-handle
+            onMouseDown={keep}
+            onClick={() => (handle.armed ? deleteTable(handle.table) : setHandle({ ...handle, armed: true }))}
+            onMouseLeave={() => handle.armed && setHandle({ ...handle, armed: false })}
+            style={{ top: Math.max(handle.top, 0), right: Math.max(handle.right, 0) }}
+            className={cx(
+              "absolute z-10 flex h-6.5 items-center gap-1 rounded-full border px-2.5 text-[11.5px] font-semibold shadow-sm transition",
+              handle.armed ? "border-red-600 bg-red-600 text-white" : "border-red-200 bg-white text-red-600 hover:bg-red-50",
+            )}
+          >
+            <Trash2 className="size-3.5" /> {handle.armed ? "Click again to delete" : "Delete table"}
+          </button>
+        )}
         {empty && <div className="pointer-events-none absolute left-4 top-3 text-[10pt] text-faint">{placeholder}</div>}
         <div
           ref={box}

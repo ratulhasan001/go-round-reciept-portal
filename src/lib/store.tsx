@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import type { CouponCode, Customer, Invoice, Product, Shop } from "./types";
+import type { CouponCode, Customer, Invoice, Letter, Product, Shop } from "./types";
 import { DEFAULT_SHOP, SEED_CUSTOMERS, SEED_INVOICES, SEED_PRODUCTS } from "./seed";
 import { uid } from "./calc";
 import { couponProblem, givenBy, usedBy } from "./coupons";
@@ -18,6 +18,7 @@ interface Data {
   customers: Customer[];
   coupons: CouponCode[];
   invoices: Invoice[];
+  letters: Letter[];
 }
 
 /** "local" = no database configured (data lives in this browser); "cloud" = saved to the database. */
@@ -37,6 +38,8 @@ interface Store extends Data {
   saveInvoice: (inv: Invoice, opts?: { remember?: boolean }) => Invoice;
   deleteInvoice: (id: string) => void;
   nextInvoiceNumber: () => string;
+  saveLetter: (l: Letter) => Letter;
+  deleteLetter: (id: string) => void;
   exportBackup: () => string;
   importBackup: (json: string) => void;
   resetAll: () => void;
@@ -51,6 +54,7 @@ const seed = (): Data => ({
   customers: SEED_CUSTOMERS,
   coupons: [],
   invoices: SEED_INVOICES,
+  letters: [],
 });
 
 const Ctx = createContext<Store | null>(null);
@@ -115,7 +119,7 @@ const withDefaults = (shop?: Partial<Shop> | null): Shop => ({
 
 // ---------- document diffing (what changed since the last sync) ----------
 
-type Kind = "shop" | "product" | "customer" | "coupon" | "invoice";
+type Kind = "shop" | "product" | "customer" | "coupon" | "invoice" | "letter";
 interface Change {
   kind: Kind;
   id: string;
@@ -126,6 +130,7 @@ const LISTS: [Kind, keyof Omit<Data, "shop">][] = [
   ["customer", "customers"],
   ["coupon", "coupons"],
   ["invoice", "invoices"],
+  ["letter", "letters"],
 ];
 
 function docs(d: Data) {
@@ -145,7 +150,7 @@ function diff(prev: Data, next: Data): Change[] {
 }
 
 function applyChanges(d: Data, changes: Change[]): Data {
-  const next: Data = { ...d, products: [...d.products], customers: [...d.customers], coupons: [...d.coupons], invoices: [...d.invoices] };
+  const next: Data = { ...d, products: [...d.products], customers: [...d.customers], coupons: [...d.coupons], invoices: [...d.invoices], letters: [...d.letters] };
   for (const c of changes) {
     if (c.kind === "shop") {
       if (c.data) next.shop = withDefaults(c.data as Shop);
@@ -263,13 +268,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       customers: body.customers ?? [],
       coupons: body.coupons ?? [],
       invoices: body.invoices ?? [],
+      letters: body.letters ?? [],
     };
     const pending: Change[] = [];
     let merged = server;
     const local = readJSON<Partial<Data>>(KEY);
 
     if (!localStorage.getItem(MIGRATED)) {
-      const serverEmpty = !body.shop && !server.products.length && !server.customers.length && !server.invoices.length;
+      const serverEmpty = !body.shop && !server.products.length && !server.customers.length && !server.invoices.length && !server.letters.length;
       if (local) {
         // first login on a device that already has receipts: move them into the database
         // (but not the untouched demo receipt / customer this device started with)
@@ -281,7 +287,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       if (serverEmpty && pending.every((c) => c.kind === "shop")) {
         // brand-new shop: start with the default settings and product list (keeping this device's settings, if any)
-        const starter = docs({ shop: DEFAULT_SHOP, products: SEED_PRODUCTS, customers: [], coupons: [], invoices: [] });
+        const starter = docs({ shop: DEFAULT_SHOP, products: SEED_PRODUCTS, customers: [], coupons: [], invoices: [], letters: [] });
         pending.unshift(...[...starter.values()].filter((c) => !pending.some((p) => p.kind === c.kind)));
       }
       merged = applyChanges(server, pending);
@@ -424,6 +430,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           return { ...d, shop, invoices: d.invoices.filter((i) => i.id !== id), coupons: inv ? linkCoupon(d.coupons, inv, true) : d.coupons };
         }),
       nextInvoiceNumber,
+      saveLetter: (l) => {
+        const saved = { ...l, createdAt: l.createdAt ?? Date.now(), updatedAt: Date.now() };
+        setData((d) => ({
+          ...d,
+          letters: d.letters.some((x) => x.id === l.id) ? d.letters.map((x) => (x.id === l.id ? saved : x)) : [saved, ...d.letters],
+        }));
+        return saved;
+      },
+      deleteLetter: (id) => setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })),
       exportBackup: () => JSON.stringify({ app: "go-round-receipts", version: 1, ...data }, null, 2),
       importBackup: (json) => {
         const parsed = JSON.parse(json);
@@ -434,6 +449,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           customers: parsed.customers ?? [],
           coupons: parsed.coupons ?? [],
           invoices: parsed.invoices,
+          letters: parsed.letters ?? [],
         });
       },
       resetAll: () => setData(seed()),

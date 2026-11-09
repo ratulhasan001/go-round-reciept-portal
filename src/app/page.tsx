@@ -226,7 +226,7 @@ function Glance({ i, icon, label, value, money: isMoney, warn }: { i: number; ic
         <span className={cx("grid size-7 place-items-center rounded-lg", warn ? "bg-red-400/20 text-red-200" : "bg-lime/15 text-lime")}>{icon}</span>
         {label}
       </div>
-      <div className="mt-2 font-display text-xl font-extrabold tabular-nums sm:text-2xl">
+      <div className={cx("mt-2 text-xl tabular-nums sm:text-2xl", isMoney ? "font-amount" : "font-display font-extrabold")}>
         {isMoney && <span className="mr-1 text-[0.7em] font-bold text-mint/70">৳</span>}
         {isMoney ? money(n) : Math.round(n)}
       </div>

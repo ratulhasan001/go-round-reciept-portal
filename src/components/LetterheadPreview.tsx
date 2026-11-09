@@ -217,7 +217,12 @@ function ReceiptTable({ t }: { t: Table }) {
               {kind === "head" ? (
                 <span style={{ fontSize: RECEIPT_TABLE.head, fontWeight: 800, letterSpacing: 1.2, color: AQ.ink }}>{cellText(c)}</span>
               ) : kind === "total" ? (
-                <span style={{ fontFamily: "Fraunces, Georgia, serif", fontWeight: 600, fontSize: RECEIPT_TABLE.total, color: AQ.ink }}>{cellText(c)}</span>
+                k === 0 ? (
+                  <span style={{ fontFamily: "Fraunces, Georgia, serif", fontWeight: 600, fontSize: RECEIPT_TABLE.total, color: AQ.ink }}>{cellText(c)}</span>
+                ) : (
+                  // amounts in Manrope, like the receipt's Grand Total
+                  <span style={{ fontFamily: "var(--font-manrope), sans-serif", fontWeight: 800, fontSize: RECEIPT_TABLE.totalAmount, color: AQ.ink, fontVariantNumeric: "tabular-nums" }}>{cellText(c)}</span>
+                )
               ) : c.paras.length ? (
                 c.paras.map((p, j) => <HtmlPara key={j} p={{ ...p, runs: p.runs.map((x) => ({ ...x, size: x.size ?? RECEIPT_TABLE.item })) }} inCell />)
               ) : (

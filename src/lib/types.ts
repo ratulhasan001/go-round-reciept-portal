@@ -149,3 +149,16 @@ export interface Totals {
   status: Status;
   lastPayment: string | null;
 }
+
+/** A letter written on the shop letterhead. Every text field may be left empty. */
+export interface Letter {
+  id: string;
+  ref: string; // GR-0001, GR-0002… (filled in automatically)
+  date: string; // yyyy-mm-dd, "" = no date printed
+  to: string; // recipient, one line per row
+  subject: string;
+  body: string; // HTML from the formatting editor (read with parseRich)
+  signed: boolean; // CEO signature and company seal under the letter
+  createdAt?: number;
+  updatedAt?: number;
+}

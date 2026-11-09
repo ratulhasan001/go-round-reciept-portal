@@ -307,4 +307,4 @@ export const receiptRows = (t: Table) =>
   t.rows.map((cells, r) => ({ kind: r === 0 ? ("head" as const) : cells.every((c) => c.head) ? ("total" as const) : ("item" as const), cells }));
 
 /** Receipt items-table type sizes, in pt. */
-export const RECEIPT_TABLE = { head: 7, item: 9, total: 12 } as const;
+export const RECEIPT_TABLE = { head: 7, item: 9, total: 12, totalAmount: 11.5 } as const;

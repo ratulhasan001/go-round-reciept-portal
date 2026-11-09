@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* every money figure on screen: Manrope ExtraBold with even-width digits, as on the receipt */
+@utility font-amount {
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 @theme inline {
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-bricolage), var(--font-manrope), ui-sans-serif, sans-serif;
@@ -1797,5 +1804,5 @@ input[type="number"] {
 .rich-editor table[data-calc] tr:first-child th { background: #e6eadb; font-size: 7pt; font-weight: 800; letter-spacing: 0.12em; padding: 7px 8px; }
 .rich-editor table[data-calc] tr:first-child th:first-child, .rich-editor table[data-calc] tr[data-row="total"] th:first-child { border-radius: 6px 0 0 6px; }
 .rich-editor table[data-calc] tr:first-child th:last-child, .rich-editor table[data-calc] tr[data-row="total"] th:last-child { border-radius: 0 6px 6px 0; }
-.rich-editor table[data-calc] tr[data-row="total"] th { background: #e6eadb; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 12pt; border-top: 4px solid #fff; }
+.rich-editor table[data-calc] tr[data-row="total"] th { background: #e6eadb; font-family: var(--font-manrope), sans-serif; font-weight: 800; font-size: 11.5pt; font-variant-numeric: tabular-nums; border-top: 4px solid #fff; }
 .rich-editor table[data-calc] [contenteditable="false"] { cursor: default; }

@@ -1,32 +1,43 @@
 "use client";
 
-import type { Shop } from "./types";
-import { todayISO } from "./calc";
+import type { Letter, Shop } from "./types";
+import { todayISO, uid } from "./calc";
 import { saveBlob } from "./download";
 import { hasText } from "./richtext";
 
-/** A letter written on the shop letterhead. Every field may be left empty (a blank letterhead to write on by hand). */
-export interface Letter {
-  ref: string;
-  date: string; // yyyy-mm-dd, "" = no date printed
-  to: string; // recipient, one line per row
-  subject: string;
-  body: string; // HTML from the formatting editor (read with parseRich)
-  signed: boolean; // CEO signature and company seal under the letter
-}
+export type { Letter };
 
-export const blankLetter = (): Letter => ({ ref: "", date: todayISO(), to: "", subject: "", body: "", signed: true });
-export const emptyLetter: Letter = { ref: "", date: "", to: "", subject: "", body: "", signed: false };
+export const blankLetter = (ref = ""): Letter => ({ id: uid(), ref, date: todayISO(), to: "", subject: "", body: "", signed: true });
+/** The bare letterhead (header, fish and grass only), to print and write on by hand. */
+export const emptyLetter: Letter = { id: "", ref: "", date: "", to: "", subject: "", body: "", signed: false };
 
-export const isBlank = (l: Letter) => !l.ref.trim() && !l.to.trim() && !l.subject.trim() && !hasText(l.body);
+/** Nothing written yet (the automatic reference number alone doesn't count). */
+export const isBlank = (l: Letter) => !l.to.trim() && !l.subject.trim() && !hasText(l.body);
 
-/** Address / phone · email / website, as on the receipt. */
+// ---------- reference numbers: GR-0001, GR-0002… ----------
+
+export const LETTER_PREFIX = "GR-";
+const refNumber = (ref: string) => {
+  const m = new RegExp(`^${LETTER_PREFIX}(\\d+)$`, "i").exec(ref.trim());
+  return m ? Number(m[1]) : 0;
+};
+export const formatRef = (n: number) => `${LETTER_PREFIX}${String(n).padStart(4, "0")}`;
+/** One past the highest reference used so far, so deleting the newest letter frees its number again. */
+export const nextLetterRef = (letters: Letter[], skipId?: string) =>
+  formatRef(Math.max(0, ...letters.filter((l) => l.id !== skipId).map((l) => refNumber(l.ref))) + 1);
+
+/** The letterhead's contact block, under the shop name (and in the footer). */
+export const LETTERHEAD_ADDRESS = "Dhaka/Khulna, Bangladesh";
+export const LETTERHEAD_PHONE = "+8801309372143";
 export const contactLines = (shop: Shop) =>
-  [shop.address, [shop.phone, shop.email].filter(Boolean).join("  ·  "), shop.website].filter(Boolean);
+  [`Address: ${LETTERHEAD_ADDRESS}`, `Contact: ${LETTERHEAD_PHONE}`, [shop.email, shop.website].filter(Boolean).join("  ·  ")].filter(Boolean);
+
+/** A one-line summary for lists. */
+export const letterTitle = (l: Letter) => l.subject.trim() || l.to.trim().split("\n")[0] || "Untitled letter";
 
 const fileName = (l: Letter, ext: "pdf" | "docx") => `${baseName(l)}.${ext}`;
 const baseName = (l: Letter) => {
-  if (isBlank(l)) return "Letterhead";
+  if (isBlank(l) && !l.ref.trim()) return "Letterhead";
   const tag = (l.ref || l.subject || l.date).replace(/[^\w-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
   return `Letter${tag ? "-" + tag : ""}`;
 };
@@ -56,7 +67,10 @@ const DRAFT_KEY = "go-round:letter-draft";
 export function loadDraft(): Letter {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
-    if (raw) return { ...blankLetter(), ...(JSON.parse(raw) as Partial<Letter>) };
+    if (raw) {
+      const l = { ...blankLetter(), ...(JSON.parse(raw) as Partial<Letter>) };
+      return l.id ? l : { ...l, id: uid() }; // drafts from before letters were saved had no id
+    }
   } catch {
     /* storage blocked or bad JSON: start fresh */
   }

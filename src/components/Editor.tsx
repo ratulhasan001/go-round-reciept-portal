@@ -392,7 +392,7 @@ function EditorForm({
               action={
                 <div className="text-right">
                   <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Subtotal</div>
-                  <div className="font-display text-lg font-bold">{money(t.subtotal)}</div>
+                  <div className="font-amount text-lg">{money(t.subtotal)}</div>
                 </div>
               }
             />
@@ -466,7 +466,7 @@ function EditorForm({
                     </button>
                   </div>
                   <div className="col-span-2 flex items-center justify-between gap-2 @xl:contents">
-                  <div className="truncate font-display text-[15px] font-bold @xl:text-right">
+                  <div className="truncate font-amount text-[15px] @xl:text-right">
                     <span className="mr-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted @xl:hidden">Amount</span>
                     {money(lineAmount(it))}
                   </div>
@@ -793,7 +793,7 @@ function EditorForm({
                       <StatusBadge status={t.status} />
                     </div>
                   ) : (
-                    <div className={cx("font-display text-lg font-bold", c)}>{v}</div>
+                    <div className={cx("font-amount text-lg", c)}>{v}</div>
                   )}
                 </div>
               ))}

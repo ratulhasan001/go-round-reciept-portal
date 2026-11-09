@@ -248,7 +248,9 @@ function receiptTable(t: TableBlock) {
                       children: [
                         kind === "head"
                           ? text(cellText(c), { bold: true, size: RECEIPT_TABLE.head * 2, characterSpacing: 24 })
-                          : text(cellText(c), { bold: true, size: RECEIPT_TABLE.total * 2, font: "Fraunces" }),
+                          : k === 0
+                            ? text(cellText(c), { bold: true, size: RECEIPT_TABLE.total * 2, font: "Fraunces" })
+                            : text(cellText(c), { bold: true, size: RECEIPT_TABLE.totalAmount * 2 }),
                       ],
                     }),
                   ];

@@ -177,7 +177,7 @@ export default function Dashboard() {
                   <div className="text-[12px] text-muted">{o.numbers.join(", ")}</div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="font-display font-bold text-red-700">{money(o.due)}</span>
+                  <span className="font-amount text-red-700">{money(o.due)}</span>
                   {o.phone && (
                     <a href={remindUrl(o)} target="_blank" rel="noopener" className="grid size-8 place-items-center rounded-lg bg-white text-[#25D366] shadow-sm hover:scale-105" aria-label={`Remind ${o.name} on WhatsApp`} title="Send reminder on WhatsApp">
                       <MessageCircle className="size-4" />
@@ -288,7 +288,7 @@ export default function Dashboard() {
                       <div className="text-[12px] text-muted">{fmtDate(inv.date)}</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-display text-lg font-bold">{money(t.grandTotal)}</div>
+                      <div className="font-amount text-lg">{money(t.grandTotal)}</div>
                       {t.due > 0 && <div className="text-[12px] font-bold text-red-700">Due {money(t.due)}</div>}
                     </div>
                   </Link>
@@ -312,7 +312,7 @@ function Stat({ icon, label, value, tone = "text-ink" }: { icon: React.ReactNode
         <span className="grid size-7 place-items-center rounded-lg bg-soft text-brand">{icon}</span>
         {label}
       </div>
-      <div className={cx("mt-3 font-display text-xl font-extrabold sm:text-2xl", tone)}>{value}</div>
+      <div className={cx("mt-3 font-amount text-xl sm:text-2xl", tone)}>{value}</div>
     </Card>
   );
 }
