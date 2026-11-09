@@ -3,16 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import type { Invoice, Shop } from "@/lib/types";
 import { amountInWords, bdt, computeTotals, courierName, filledItems, fmtDate, lineAmount, money, rewardNote } from "@/lib/calc";
-import { STATUS_LABEL, T, WAVE_BACK, WAVE_FRONT, initials } from "@/lib/theme";
+import { STATUS_LABEL, T, initials } from "@/lib/theme";
+import { AQ } from "@/lib/aquascape";
+import { FishBand, GrassBand } from "./AquascapeArt";
 import { SIGNATORY, drawSeal, drawSignature, sealFor } from "@/lib/seal";
 import { WATERMARK_OPACITY, makeWatermark } from "@/lib/watermark";
 
 // Mirrors src/lib/pdf.tsx 1:1 - the page is laid out in PDF points (A4 = 595 x 842) and scaled to fit.
 const W = 595;
 const H = 842;
-const TOP_BACK = "M0 0 H595 V24 C 500 38, 410 10, 300 24 S 110 40, 0 22 Z";
-const TOP_FRONT = "M0 0 H595 V12 C 485 26, 380 0, 290 14 S 95 26, 0 10 Z";
-const display = { fontFamily: "var(--font-bricolage)" } as const;
+const display = { fontFamily: "Fraunces, Georgia, serif", fontWeight: 600 } as const;
+const italic = { fontFamily: "Fraunces, Georgia, serif", fontStyle: "italic", fontWeight: 400 } as const;
 const label: React.CSSProperties = { fontSize: 7, fontWeight: 800, letterSpacing: 1.6, color: T.muted, marginBottom: 6 };
 
 export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop }) {
@@ -81,17 +82,15 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
     <div ref={wrap} className="w-full min-w-0 overflow-hidden" style={{ height: pageH * scale }}>
       <div
         ref={page}
-        className="relative origin-top-left overflow-hidden rounded-[3px] bg-white shadow-[0_24px_60px_-16px_rgba(14,42,35,0.28)] ring-1 ring-black/5"
-        style={{ width: W, minHeight: H, transform: `scale(${scale})`, fontFamily: "var(--font-manrope)", fontSize: 9, color: T.body, padding: "52px 40px 130px", lineHeight: 1.25 }}
+        className="relative isolate origin-top-left overflow-hidden rounded-[3px] shadow-[0_24px_60px_-16px_rgba(14,42,35,0.28)] ring-1 ring-black/5"
+        style={{ width: W, minHeight: H, transform: `scale(${scale})`, background: AQ.paper, fontFamily: "var(--font-manrope)", fontSize: 9, color: T.body, padding: "54px 40px 130px", lineHeight: 1.25 }}
       >
         {wmUrl && (
           // eslint-disable-next-line @next/next/no-img-element -- generated data URL
           <img src={wmUrl} alt="" aria-hidden style={{ position: "absolute", width: 380, height: 380, left: 107.6, top: 250, objectFit: "contain", opacity: WATERMARK_OPACITY, zIndex: -1, pointerEvents: "none" }} />
         )}
-        <svg width={W} height={42} viewBox="0 0 595 42" style={{ position: "absolute", top: 0, left: 0 }} aria-hidden>
-          <path d={TOP_BACK} fill={T.aqua} fillOpacity={0.28} />
-          <path d={TOP_FRONT} fill={T.aqua} />
-        </svg>
+        <FishBand />
+        <GrassBand />
 
         {/* header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -105,30 +104,30 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
               </div>
             )}
             <div>
-              <div style={{ ...display, fontWeight: 800, fontSize: 23, color: T.ink, letterSpacing: -0.4, lineHeight: 1.1 }}>{shop.name}</div>
-              {shop.tagline && <div style={{ fontSize: 8.5, color: T.leafDeep, fontWeight: 700, marginTop: 1 }}>{shop.tagline}</div>}
+              <div style={{ ...display, fontSize: 25, color: AQ.ink, letterSpacing: -0.6, lineHeight: 1.1 }}>{shop.name}</div>
+              {shop.tagline && <div style={{ fontSize: 6.4, color: AQ.muted, fontWeight: 800, letterSpacing: 1.6, marginTop: 2, textTransform: "uppercase" }}>{shop.tagline}</div>}
               {contact.length > 0 && <div style={{ fontSize: 8, color: T.muted, marginTop: 5, lineHeight: 1.45, whiteSpace: "pre-line" }}>{contact.join("\n")}</div>}
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ ...display, fontWeight: 800, fontSize: 30, color: T.ink, letterSpacing: 1, lineHeight: 1.1 }}>INVOICE</div>
-            <div style={{ fontSize: 10, fontWeight: 800, color: T.aquaDeep, marginTop: 1 }}>No. {inv.number || "—"}</div>
+            <div style={{ ...display, fontSize: 26, color: AQ.ink, letterSpacing: 3, marginRight: -3, lineHeight: 1.15 }}>INVOICE</div>
+            <div style={{ fontSize: 9.5, fontWeight: 800, color: AQ.blue, letterSpacing: 0.6, marginTop: 1 }}>No. {inv.number || "—"}</div>
             <div style={{ display: "inline-block", marginTop: 7, padding: "3px 9px", borderRadius: 9, fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8, background: st.bg, color: st.fg }}>
               {STATUS_LABEL[t.status].toUpperCase()}
             </div>
           </div>
         </div>
 
-        <div style={{ display: "flex", margin: "20px 0", height: 2, gap: 3 }}>
-          <div style={{ flex: 3, background: T.leaf, borderRadius: 1 }} />
-          <div style={{ flex: 1, background: T.aqua, borderRadius: 1 }} />
+        <div style={{ display: "flex", alignItems: "center", margin: "20px 0", height: 2, gap: 4 }}>
+          <div style={{ width: 36, height: 1.6, background: AQ.green, borderRadius: 1 }} />
+          <div style={{ flex: 1, height: 0.6, background: AQ.line }} />
         </div>
 
         {/* meta */}
         <div style={{ display: "flex", gap: 16 }}>
           <div style={{ flex: 1.3, minWidth: 0 }}>
             <div style={label}>BILLED TO</div>
-            <div style={{ ...display, fontWeight: 700, fontSize: 13.5, color: T.ink, marginBottom: 3 }}>{inv.customer.name || "—"}</div>
+            <div style={{ ...display, fontSize: 14, color: AQ.ink, marginBottom: 3 }}>{inv.customer.name || "—"}</div>
             {inv.customer.phone && <div style={{ fontSize: 8.5, lineHeight: 1.45 }}>{inv.customer.phone}</div>}
             {inv.customer.address && <div style={{ fontSize: 8.5, lineHeight: 1.45 }}>{inv.customer.address}</div>}
           </div>
@@ -140,9 +139,9 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
             {inv.extras?.enabled && <KV k="Payment via" v={inv.extras.payVia} />}
             {inv.extras?.enabled && inv.extras.courier !== "None" && <KV k="Courier" v={courierName(inv.extras)} />}
           </div>
-          <div style={{ flex: 1.15, border: `0.8px solid ${T.line}`, borderRadius: 8, padding: 12, background: "#FAFCFA" }}>
+          <div style={{ flex: 1.15, border: `0.8px solid ${AQ.line}`, borderRadius: 8, padding: 12, background: AQ.panel }}>
             <div style={label}>INVOICE TOTAL</div>
-            <div style={{ ...display, fontWeight: 800, fontSize: 17, color: T.ink, letterSpacing: -0.3, marginBottom: 8, lineHeight: 1.1 }}>{bdt(t.grandTotal)}</div>
+            <div style={{ ...display, fontSize: 17, color: AQ.ink, letterSpacing: -0.3, marginBottom: 8, lineHeight: 1.1 }}>{bdt(t.grandTotal)}</div>
             <SumRow k="Paid" v={money(t.paid)} />
             <SumRow k={t.due < 0 ? "Credit" : "Balance due"} v={money(Math.abs(t.due))} />
           </div>
@@ -150,16 +149,16 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
 
         {/* items */}
         <div style={{ marginTop: 24 }}>
-          <div style={{ display: "flex", background: T.leafSoft, borderRadius: 6, padding: "7px 8px", fontSize: 7, fontWeight: 800, letterSpacing: 1.2, color: T.leafDeep }}>
+          <div style={{ display: "flex", background: AQ.sage, borderRadius: 6, padding: "7px 8px", fontSize: 7, fontWeight: 800, letterSpacing: 1.2, color: AQ.ink }}>
             <span style={{ width: "7%" }}>#</span>
             <span style={{ width: "47%" }}>DESCRIPTION</span>
             <span style={{ width: "16%", textAlign: "right" }}>UNIT PRICE</span>
             <span style={{ width: "10%", textAlign: "center" }}>QTY</span>
             <span style={{ width: "20%", textAlign: "right" }}>AMOUNT (BDT)</span>
           </div>
-          {items.length === 0 && <div style={{ padding: "14px 8px", color: T.faint, borderBottom: `0.6px solid ${T.line}` }}>Add items to see them here…</div>}
+          {items.length === 0 && <div style={{ padding: "14px 8px", color: T.faint, borderBottom: `0.6px solid ${AQ.line}` }}>Add items to see them here…</div>}
           {items.map((it, i) => (
-            <div key={it.id} style={{ display: "flex", alignItems: "center", padding: "8px 8px", borderBottom: `0.6px solid ${T.line}`, color: T.ink }}>
+            <div key={it.id} style={{ display: "flex", alignItems: "center", padding: "8px 8px", borderBottom: `0.6px solid ${AQ.line}`, color: T.ink }}>
               <span style={{ width: "7%", color: T.faint }}>{String(i + 1).padStart(2, "0")}</span>
               <span style={{ width: "47%", fontWeight: 700, paddingRight: 8 }}>{it.description}</span>
               <span style={{ width: "16%", textAlign: "right" }}>{money(it.price)}</span>
@@ -172,7 +171,7 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
         {/* lower */}
         <div style={{ display: "flex", gap: 26, marginTop: 20 }}>
           <div style={{ flex: 1.25, minWidth: 0 }}>
-            <div style={{ background: T.aquaSoft, borderRadius: 6, padding: 10, marginBottom: 14, borderLeft: `3px solid ${T.aqua}` }}>
+            <div style={{ background: AQ.blueSoft, borderRadius: 6, padding: 10, marginBottom: 14, borderLeft: `3px solid ${AQ.blue}` }}>
               <div style={{ ...label, color: T.aquaDeep }}>AMOUNT IN WORDS</div>
               <div style={{ fontSize: 8.5, color: T.ink, fontWeight: 700, lineHeight: 1.4 }}>{amountInWords(t.grandTotal)}</div>
             </div>
@@ -180,7 +179,7 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
               <div style={{ marginBottom: 12 }}>
                 <div style={label}>PAYMENT HISTORY</div>
                 {payments.map((p) => (
-                  <div key={p.id} style={{ display: "flex", padding: "4.5px 0", borderBottom: `0.5px solid ${T.line}`, fontSize: 8.2 }}>
+                  <div key={p.id} style={{ display: "flex", padding: "4.5px 0", borderBottom: `0.5px solid ${AQ.line}`, fontSize: 8.2 }}>
                     <span style={{ width: "28%" }}>{fmtDate(p.date)}</span>
                     <span style={{ width: "22%", fontWeight: 800, color: T.ink }}>{p.method}</span>
                     <span style={{ width: "28%", color: T.muted }}>{[p.advance && "Advance", p.note].filter(Boolean).join(" · ")}</span>
@@ -196,8 +195,8 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
               </div>
             )}
             {reward && (
-              <div style={{ background: T.leafSoft, borderRadius: 6, padding: 9, marginTop: 10, borderLeft: `3px solid ${T.leaf}` }}>
-                <div style={{ ...display, fontWeight: 800, fontSize: 10, color: T.leafDeep, marginBottom: 2 }}>{reward.title}</div>
+              <div style={{ background: AQ.sage, borderRadius: 6, padding: 9, marginTop: 10, borderLeft: `3px solid ${AQ.green}` }}>
+                <div style={{ ...display, fontSize: 10.5, color: AQ.ink, marginBottom: 2 }}>{reward.title}</div>
                 <div style={{ fontSize: 8.2, color: T.ink, lineHeight: 1.45 }}>{reward.text}</div>
               </div>
             )}
@@ -218,12 +217,12 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
             {t.charges.map((c, i) => (
               <Row key={i} k={c.label} v={money(c.amount)} />
             ))}
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 8px", margin: "4px 0", background: T.leafSoft, borderRadius: 6, ...display, fontWeight: 700, fontSize: 12.5, color: T.ink }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 8px", margin: "4px 0", background: AQ.sage, borderRadius: 6, ...display, fontSize: 13, color: AQ.ink }}>
               <span>Grand Total</span>
               <span>{money(t.grandTotal)}</span>
             </div>
             <Row k="Paid" v={`– ${money(t.paid)}`} />
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", marginTop: 2, borderTop: `0.8px solid ${T.line}`, color: T.ink }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", marginTop: 2, borderTop: `0.8px solid ${AQ.line}`, color: T.ink }}>
               <span style={{ fontSize: 9, fontWeight: 700 }}>{t.due < 0 ? "Credit / change" : "Balance due"}</span>
               <span style={{ fontSize: 10, fontWeight: 800 }}>{bdt(Math.abs(t.due))}</span>
             </div>
@@ -240,11 +239,11 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
         <div style={{ position: "absolute", left: 40, right: 40, bottom: 44 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div>
-              <div style={{ ...display, fontWeight: 700, fontSize: 13, color: T.leafDeep }}>{shop.thankYou}</div>
+              <div style={{ ...italic, fontSize: 14, color: AQ.blue }}>{shop.thankYou}</div>
               {shop.terms && <div style={{ fontSize: 7, color: T.muted, marginTop: 3, maxWidth: 300, lineHeight: 1.4 }}>{shop.terms}</div>}
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, fontSize: 8.5, fontWeight: 800, color: T.leafDeep }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, fontSize: 8.5, fontWeight: 800, color: AQ.ink }}>
                 <svg width={10} height={10} viewBox="0 0 20 20" aria-hidden>
                   <circle cx="10" cy="10" r="10" fill={T.leafDeep} />
                   <path d="M5.5 10.5 L8.6 13.4 L14.5 7" stroke={T.white} strokeWidth={2.2} fill="none" />
@@ -261,10 +260,6 @@ export default function ReceiptPreview({ inv, shop }: { inv: Invoice; shop: Shop
             <span>Page 1 of 1</span>
           </div>
         </div>
-        <svg width={W} height={40} viewBox="0 0 595 40" style={{ position: "absolute", bottom: 0, left: 0 }} aria-hidden>
-          <path d={WAVE_BACK} fill={T.leaf} fillOpacity={0.3} />
-          <path d={WAVE_FRONT} fill={T.leaf} />
-        </svg>
       </div>
     </div>
   );
@@ -290,7 +285,7 @@ function Row({ k, v }: { k: string; v: string }) {
 
 function SumRow({ k, v }: { k: string; v: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 4, marginTop: 3, borderTop: `0.5px solid ${T.line}`, fontSize: 8.5 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 4, marginTop: 3, borderTop: `0.5px solid ${AQ.line}`, fontSize: 8.5 }}>
       <span style={{ color: T.muted }}>{k}</span>
       <span style={{ color: T.ink, fontWeight: 700 }}>{v}</span>
     </div>

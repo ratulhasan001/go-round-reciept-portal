@@ -3,14 +3,16 @@
 import { Circle, Document, Font, Image, Page, Path, StyleSheet, Svg, Text, View, pdf } from "@react-pdf/renderer";
 import type { Invoice, Shop } from "./types";
 import { amountInWords, bdt, computeTotals, courierName, filledItems, fmtDate, lineAmount, money, rewardNote } from "./calc";
-import { STATUS_LABEL, T, WAVE_BACK, WAVE_FRONT, initials, logoUrl } from "./theme";
+import { STATUS_LABEL, T, initials, logoUrl } from "./theme";
+import { AQ, TOP_H } from "./aquascape";
+import { PdfFishBand, PdfGrassBand } from "./pdfArt";
 import { drawSeal, drawSignature, sealFor } from "./seal";
 import { WATERMARK_OPACITY, makeWatermark } from "./watermark";
 
 type Style = Parameters<typeof StyleSheet.create>[0][string];
 
 let fontsReady = false;
-function registerFonts() {
+export function registerFonts() {
   if (fontsReady) return;
   const base = `${window.location.origin}/fonts`;
   Font.register({
@@ -21,44 +23,56 @@ function registerFonts() {
     family: "Bricolage",
     fonts: [500, 700, 800].map((w) => ({ src: `${base}/Bricolage-${w}.ttf`, fontWeight: w })),
   });
+  Font.register({
+    family: "Fraunces",
+    fonts: [
+      { src: `${base}/Fraunces-400.ttf`, fontWeight: 400 },
+      { src: `${base}/Fraunces-600.ttf`, fontWeight: 600 },
+      { src: `${base}/Fraunces-Italic.ttf`, fontWeight: 400, fontStyle: "italic" },
+      { src: `${base}/Fraunces-Italic.ttf`, fontWeight: 600, fontStyle: "italic" },
+    ],
+  });
+  // Manrope has no italic, so italic sans text (letter bodies) uses Plus Jakarta Sans Italic - also in the web preview
+  Font.register({
+    family: "SansItalic",
+    fonts: [400, 700].flatMap((w) => [
+      { src: `${base}/SansItalic-${w}.woff`, fontWeight: w, fontStyle: "italic" as const },
+      { src: `${base}/SansItalic-${w}.woff`, fontWeight: w },
+    ]),
+  });
   Font.registerHyphenationCallback((w) => [w]);
   // the receipt fonts have no emoji, so draw them as images (e.g. a 🎉 in the notes); skipped quietly when offline
   Font.registerEmojiSource({ format: "png", url: "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/" });
   fontsReady = true;
 }
 
-// top edge: water hanging from the top of the page
-const TOP_BACK = "M0 0 H595 V24 C 500 38, 410 10, 300 24 S 110 40, 0 22 Z";
-const TOP_FRONT = "M0 0 H595 V12 C 485 26, 380 0, 290 14 S 95 26, 0 10 Z";
-
 const s = StyleSheet.create({
-  page: { fontFamily: "Manrope", fontSize: 9, color: T.body, paddingTop: 52, paddingBottom: 118, paddingHorizontal: 40 },
-  topWave: { position: "absolute", top: 0, left: 0 },
+  page: { fontFamily: "Manrope", fontSize: 9, color: T.body, backgroundColor: AQ.paper, paddingTop: 54, paddingBottom: 118, paddingHorizontal: 40 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   brand: { flexDirection: "row", alignItems: "center", gap: 14, maxWidth: 330 },
   logo: { width: 68, height: 68, objectFit: "contain" },
   mono: { width: 60, height: 60, borderRadius: 30, borderWidth: 4, borderColor: T.leaf, alignItems: "center", justifyContent: "center" },
   monoTxt: { fontFamily: "Bricolage", fontWeight: 800, fontSize: 20, color: T.ink },
-  shopName: { fontFamily: "Bricolage", fontWeight: 800, fontSize: 23, color: T.ink, letterSpacing: -0.4 },
-  tagline: { fontSize: 8.5, color: T.leafDeep, fontWeight: 700, marginTop: 1 },
+  shopName: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 25, color: AQ.ink, letterSpacing: -0.6 },
+  tagline: { fontSize: 6.4, color: AQ.muted, fontWeight: 800, letterSpacing: 1.6, marginTop: 2 },
   contact: { fontSize: 8, color: T.muted, marginTop: 5, lineHeight: 1.45 },
-  title: { fontFamily: "Bricolage", fontWeight: 800, fontSize: 30, color: T.ink, letterSpacing: 1, textAlign: "right" },
-  invNo: { fontSize: 10, fontWeight: 800, color: T.aquaDeep, textAlign: "right", marginTop: 1 },
+  title: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 26, color: AQ.ink, letterSpacing: 3, textAlign: "right" },
+  invNo: { fontSize: 9.5, fontWeight: 800, color: AQ.blue, letterSpacing: 0.6, textAlign: "right", marginTop: 1 },
   pill: { alignSelf: "flex-end", marginTop: 7, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 9, fontSize: 7.5, fontWeight: 800, letterSpacing: 0.8 },
-  rule: { flexDirection: "row", marginTop: 20, marginBottom: 20, height: 2 },
+  rule: { flexDirection: "row", alignItems: "center", marginTop: 20, marginBottom: 20, height: 2 },
   label: { fontSize: 7, fontWeight: 800, letterSpacing: 1.6, color: T.muted, marginBottom: 6 },
-  billName: { fontFamily: "Bricolage", fontWeight: 700, fontSize: 13.5, color: T.ink, marginBottom: 3 },
+  billName: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 14, color: AQ.ink, marginBottom: 3 },
   small: { fontSize: 8.5, color: T.body, lineHeight: 1.45 },
   kv: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4.5 },
   kvK: { fontSize: 8.5, color: T.muted },
   kvV: { fontSize: 8.5, color: T.ink, fontWeight: 700 },
-  sumCard: { flex: 1.15, borderWidth: 0.8, borderColor: T.line, borderRadius: 8, padding: 12, backgroundColor: "#FAFCFA" },
-  sumAmt: { fontFamily: "Bricolage", fontWeight: 800, fontSize: 17, color: T.ink, letterSpacing: -0.3, marginBottom: 8 },
-  sumRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: 4, borderTopWidth: 0.5, borderTopColor: T.line, marginTop: 3 },
+  sumCard: { flex: 1.15, borderWidth: 0.8, borderColor: AQ.line, borderRadius: 8, padding: 12, backgroundColor: AQ.panel },
+  sumAmt: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 17, color: AQ.ink, letterSpacing: -0.3, marginBottom: 8 },
+  sumRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: 4, borderTopWidth: 0.5, borderTopColor: AQ.line, marginTop: 3 },
   table: { marginTop: 24 },
-  th: { flexDirection: "row", backgroundColor: T.leafSoft, borderRadius: 6, paddingVertical: 7, paddingHorizontal: 8 },
-  thTxt: { fontSize: 7, fontWeight: 800, letterSpacing: 1.2, color: T.leafDeep },
-  tr: { flexDirection: "row", paddingVertical: 8, paddingHorizontal: 8, borderBottomWidth: 0.6, borderBottomColor: T.line, alignItems: "center" },
+  th: { flexDirection: "row", backgroundColor: AQ.sage, borderRadius: 6, paddingVertical: 7, paddingHorizontal: 8 },
+  thTxt: { fontSize: 7, fontWeight: 800, letterSpacing: 1.2, color: AQ.ink },
+  tr: { flexDirection: "row", paddingVertical: 8, paddingHorizontal: 8, borderBottomWidth: 0.6, borderBottomColor: AQ.line, alignItems: "center" },
   td: { fontSize: 9, color: T.ink },
   cSl: { width: "7%" },
   cDesc: { width: "47%", paddingRight: 8 },
@@ -66,18 +80,18 @@ const s = StyleSheet.create({
   cQty: { width: "10%", textAlign: "center" },
   cAmt: { width: "20%", textAlign: "right" },
   lower: { flexDirection: "row", gap: 26, marginTop: 20 },
-  words: { backgroundColor: T.aquaSoft, borderRadius: 6, padding: 10, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: T.aqua },
+  words: { backgroundColor: AQ.blueSoft, borderRadius: 6, padding: 10, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: AQ.blue },
   wordsTxt: { fontSize: 8.5, color: T.ink, fontWeight: 700, lineHeight: 1.4 },
-  reward: { backgroundColor: T.leafSoft, borderRadius: 6, padding: 9, marginTop: 10, borderLeftWidth: 3, borderLeftColor: T.leaf },
-  rewardTitle: { fontFamily: "Bricolage", fontWeight: 800, fontSize: 10, color: T.leafDeep, marginBottom: 2 },
+  reward: { backgroundColor: AQ.sage, borderRadius: 6, padding: 9, marginTop: 10, borderLeftWidth: 3, borderLeftColor: AQ.green },
+  rewardTitle: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 10.5, color: AQ.ink, marginBottom: 2 },
   rewardTxt: { fontSize: 8.2, color: T.ink, lineHeight: 1.45 },
-  payRow: { flexDirection: "row", paddingVertical: 4.5, borderBottomWidth: 0.5, borderBottomColor: T.line },
+  payRow: { flexDirection: "row", paddingVertical: 4.5, borderBottomWidth: 0.5, borderBottomColor: AQ.line },
   totRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5, paddingHorizontal: 8 },
   totK: { fontSize: 9, color: T.muted },
   totV: { fontSize: 9, color: T.ink, fontWeight: 700 },
-  grand: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, paddingHorizontal: 8, marginVertical: 4, backgroundColor: T.leafSoft, borderRadius: 6 },
-  grandTxt: { fontFamily: "Bricolage", fontWeight: 700, fontSize: 12.5, color: T.ink },
-  balRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, paddingHorizontal: 8, marginTop: 2, borderTopWidth: 0.8, borderTopColor: T.line },
+  grand: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, paddingHorizontal: 8, marginVertical: 4, backgroundColor: AQ.sage, borderRadius: 6 },
+  grandTxt: { fontFamily: "Fraunces", fontWeight: 600, fontSize: 13, color: AQ.ink },
+  balRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, paddingHorizontal: 8, marginTop: 2, borderTopWidth: 0.8, borderTopColor: AQ.line },
   balK: { fontSize: 9, fontWeight: 700, color: T.ink },
   balV: { fontSize: 10, fontWeight: 800, color: T.ink },
   seal: { width: 150, height: 83, alignSelf: "flex-start", marginTop: 12, marginLeft: 6 },
@@ -85,15 +99,14 @@ const s = StyleSheet.create({
   watermark: { position: "absolute", width: 380, height: 380, left: 107.6, top: 250, objectFit: "contain", opacity: WATERMARK_OPACITY },
   footer: { position: "absolute", left: 40, right: 40, bottom: 44 },
   footTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
-  thanks: { fontFamily: "Bricolage", fontWeight: 700, fontSize: 13, color: T.leafDeep },
+  thanks: { fontFamily: "Fraunces", fontStyle: "italic", fontSize: 14, color: AQ.blue },
   terms: { fontSize: 7, color: T.muted, marginTop: 3, maxWidth: 300, lineHeight: 1.4 },
   verify: { alignItems: "flex-end" },
   verifyTop: { flexDirection: "row", alignItems: "center", gap: 4 },
-  verifyK: { fontSize: 8.5, fontWeight: 800, color: T.leafDeep },
+  verifyK: { fontSize: 8.5, fontWeight: 800, color: AQ.ink },
   verifySub: { fontSize: 7, color: T.muted, marginTop: 2 },
   footBottom: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
   tiny: { fontSize: 6.8, color: T.faint },
-  botWave: { position: "absolute", bottom: 0, left: 0 },
 });
 
 /**
@@ -103,7 +116,7 @@ const s = StyleSheet.create({
 const FIT = [
   {},
   {
-    page: { paddingTop: 44, paddingBottom: 108 },
+    page: { paddingTop: 52, paddingBottom: 108 },
     rule: { marginTop: 14, marginBottom: 14 },
     table: { marginTop: 16 },
     tr: { paddingVertical: 6 },
@@ -113,7 +126,7 @@ const FIT = [
     sign: { width: 150, height: 96, marginTop: 6 },
   },
   {
-    page: { paddingTop: 40, paddingBottom: 104 },
+    page: { paddingTop: 50, paddingBottom: 104 },
     logo: { width: 56, height: 56 },
     rule: { marginTop: 10, marginBottom: 10 },
     table: { marginTop: 12 },
@@ -125,7 +138,7 @@ const FIT = [
     sign: { width: 125, height: 80, marginTop: 4 },
   },
   {
-    page: { paddingTop: 36, paddingBottom: 102 },
+    page: { paddingTop: TOP_H + 1, paddingBottom: 102 },
     logo: { width: 48, height: 48 },
     rule: { marginTop: 8, marginBottom: 8 },
     kv: { marginBottom: 2.5 },
@@ -145,7 +158,7 @@ const FIT = [
     sign: { width: 105, height: 67, marginTop: 2 },
   },
   {
-    page: { paddingTop: 32, paddingBottom: 100 },
+    page: { paddingTop: TOP_H, paddingBottom: 100 },
     logo: { width: 42, height: 42 },
     rule: { marginTop: 6, marginBottom: 6 },
     kv: { marginBottom: 1.5 },
@@ -194,10 +207,8 @@ export function ReceiptDocument({
           // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt
           <Image src={watermark} style={s.watermark} fixed />
         ) : null}
-        <Svg width={595} height={42} viewBox="0 0 595 42" style={s.topWave} fixed>
-          <Path d={TOP_BACK} fill={T.aqua} fillOpacity={0.28} />
-          <Path d={TOP_FRONT} fill={T.aqua} />
-        </Svg>
+        <PdfFishBand />
+        <PdfGrassBand />
 
         {/* header */}
         <View style={s.header}>
@@ -212,7 +223,7 @@ export function ReceiptDocument({
             )}
             <View>
               <Text style={s.shopName}>{shop.name}</Text>
-              {shop.tagline ? <Text style={s.tagline}>{shop.tagline}</Text> : null}
+              {shop.tagline ? <Text style={s.tagline}>{shop.tagline.toUpperCase()}</Text> : null}
               {contact.length > 0 && <Text style={s.contact}>{contact.join("\n")}</Text>}
             </View>
           </View>
@@ -224,8 +235,8 @@ export function ReceiptDocument({
         </View>
 
         <View style={[s.rule, f.rule ?? {}]}>
-          <View style={{ flex: 3, backgroundColor: T.leaf, borderRadius: 1 }} />
-          <View style={{ flex: 1, backgroundColor: T.aqua, borderRadius: 1, marginLeft: 3 }} />
+          <View style={{ width: 36, height: 1.6, backgroundColor: AQ.green, borderRadius: 1 }} />
+          <View style={{ flex: 1, height: 0.6, backgroundColor: AQ.line, marginLeft: 4 }} />
         </View>
 
         {/* meta */}
@@ -369,10 +380,6 @@ export function ReceiptDocument({
             />
           </View>
         </View>
-        <Svg width={595} height={40} viewBox="0 0 595 40" style={s.botWave} fixed>
-          <Path d={WAVE_BACK} fill={T.leaf} fillOpacity={0.3} />
-          <Path d={WAVE_FRONT} fill={T.leaf} />
-        </Svg>
       </Page>
     </Document>
   );

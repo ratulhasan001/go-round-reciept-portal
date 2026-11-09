@@ -1,7 +1,7 @@
 "use client";
 
 import { ViewTransition } from "react";
-import { FilePlus2, Package, ReceiptText, Settings, TicketPercent, Users, type LucideIcon } from "lucide-react";
+import { FilePlus2, Package, ReceiptText, ScrollText, Settings, TicketPercent, Users, type LucideIcon } from "lucide-react";
 import type { Mode, SyncState } from "@/lib/store";
 import { useStore } from "@/lib/store";
 import { initials } from "@/lib/theme";
@@ -20,6 +20,7 @@ export interface Section {
 export const SECTIONS: Section[] = [
   { key: "receipts", href: "/receipts", label: "Receipts", short: "Receipts", blurb: "Every receipt, payment and balance due", icon: ReceiptText },
   { key: "new", href: "/new", label: "New receipt", short: "New", blurb: "Make a receipt in under a minute", icon: FilePlus2 },
+  { key: "letterhead", href: "/letterhead", label: "Letterhead", short: "Letter", blurb: "Letters on the Go Round letterhead - or a blank one", icon: ScrollText },
   { key: "products", href: "/products", label: "Products", short: "Products", blurb: "Price list and stock status", icon: Package },
   { key: "customers", href: "/customers", label: "Customers", short: "Customers", blurb: "Contacts, spending and dues", icon: Users },
   { key: "coupons", href: "/coupons", label: "Coupons", short: "Coupons", blurb: "Coupon codes, validity and usage", icon: TicketPercent },

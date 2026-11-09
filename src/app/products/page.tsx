@@ -62,6 +62,7 @@ export default function ProductsPage() {
       )}
       columns={[
         { key: "name", label: "Product name", placeholder: "e.g. Seachem Prime 325ml", width: "minmax(0,2fr)" },
+        { key: "unit", label: "Unit", placeholder: "e.g. pcs, bottle", width: "130px" },
         { key: "inStock", label: "Status", type: "toggle", on: "In stock", off: "Out of stock", width: "160px" },
         { key: "price", label: "Unit price (BDT)", type: "number", placeholder: "0.00", width: "160px", align: "right" },
       ]}

@@ -67,6 +67,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
+  unit?: string; // what the price is for, e.g. "pcs", "bottle", "pack"; missing on older saved products
   inStock?: boolean; // missing (older saved products) means in stock
   updatedAt?: number; // ms timestamp of the last edit; missing on older saved products
 }

@@ -36,6 +36,29 @@ body {
   letter-spacing: -0.02em;
 }
 
+/* the visiting card's serif, used on the receipt and letterhead (same files the PDF embeds) */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/Fraunces-400.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/Fraunces-600.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/Fraunces-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
 /* number inputs without spinners */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
@@ -1735,3 +1758,44 @@ input[type="number"] {
     animation: none !important;
   }
 }
+
+/* italic for the sans letter body (Manrope has none) - the same files the PDF embeds */
+@font-face {
+  font-family: "SansItalic";
+  src: url("/fonts/SansItalic-400.woff") format("woff");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SansItalic";
+  src: url("/fonts/SansItalic-700.woff") format("woff");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* the letter body editor: show lists, headings and tables the way the letter prints them */
+.rich-editor ul { list-style: disc; padding-left: 1.6em; }
+.rich-editor ol { list-style: decimal; padding-left: 1.6em; }
+.rich-editor h1 { font-size: 20pt; font-weight: 700; line-height: 1.3; }
+.rich-editor h2 { font-size: 16pt; font-weight: 700; line-height: 1.3; }
+.rich-editor h3 { font-size: 13pt; font-weight: 700; line-height: 1.3; }
+.rich-editor table { width: 100%; border-collapse: collapse; margin: 6px 0; table-layout: fixed; }
+.rich-editor td, .rich-editor th { border: 1px solid #113a2d; padding: 5px 7px; vertical-align: top; text-align: left; line-height: 1.4; }
+.rich-editor th { background: #e6eadb; font-weight: 700; }
+.rich-editor hr { border: 0; border-top: 1px solid #dfe4dc; margin: 8px 0; }
+/* Manrope has no italic: use the same stand-in as the PDF, unless the text is in another font */
+.rich-editor :is(i, em):not(font[face]:not([face="Manrope"]) *) { font-family: "SansItalic", var(--font-manrope), sans-serif; }
+/* the font menu writes <font face="…">; Manrope is loaded under a generated name */
+.rich-editor font[face="Manrope"] { font-family: var(--font-manrope), sans-serif; }
+
+/* product tables in the letter editor: drawn like the receipt's items table */
+.rich-editor table[data-calc] { border-collapse: separate; border-spacing: 0; }
+.rich-editor table[data-calc] td, .rich-editor table[data-calc] th { border: 0; padding: 8px 8px; vertical-align: middle; color: #0e2a23; }
+.rich-editor table[data-calc] td { border-bottom: 1px solid #dfe4dc; font-size: 9pt; }
+.rich-editor table[data-calc] tr:first-child th { background: #e6eadb; font-size: 7pt; font-weight: 800; letter-spacing: 0.12em; padding: 7px 8px; }
+.rich-editor table[data-calc] tr:first-child th:first-child, .rich-editor table[data-calc] tr[data-row="total"] th:first-child { border-radius: 6px 0 0 6px; }
+.rich-editor table[data-calc] tr:first-child th:last-child, .rich-editor table[data-calc] tr[data-row="total"] th:last-child { border-radius: 0 6px 6px 0; }
+.rich-editor table[data-calc] tr[data-row="total"] th { background: #e6eadb; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 12pt; border-top: 4px solid #fff; }
+.rich-editor table[data-calc] [contenteditable="false"] { cursor: default; }

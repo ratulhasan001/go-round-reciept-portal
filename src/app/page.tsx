@@ -25,6 +25,7 @@ const plural = (n: number, one: string, many = one + "s") => `${n} ${n === 1 ? o
 const TONE: Record<string, { badge: string; glow: string }> = {
   receipts: { badge: "bg-aqua-soft text-aqua-deep", glow: "rgb(86 202 238 / 0.18)" },
   new: { badge: "bg-deep text-lime", glow: "rgb(140 197 86 / 0.35)" },
+  letterhead: { badge: "bg-teal-50 text-teal-700", glow: "rgb(31 127 168 / 0.16)" },
   products: { badge: "bg-soft text-brand", glow: "rgb(140 197 86 / 0.2)" },
   customers: { badge: "bg-violet-50 text-violet-600", glow: "rgb(139 92 246 / 0.14)" },
   coupons: { badge: "bg-amber-50 text-amber-600", glow: "rgb(245 158 11 / 0.16)" },
@@ -53,17 +54,18 @@ export default function Home() {
   const meta: Record<string, string> = {
     receipts: `${plural(invoices.length, "receipt")} · ${stats.unpaid} not fully paid`,
     new: `Next number ${shop.invoicePrefix}${String(shop.nextNumber).padStart(4, "0")}`,
+    letterhead: "Print, PDF or Word · blank or written",
     products: `${plural(products.length, "product")} · ${products.filter((p) => p.inStock === false).length} out of stock`,
     customers: plural(customers.length, "saved customer"),
     coupons: `${coupons.filter((c) => couponStatus(c) === "available").length} available · ${coupons.filter((c) => couponStatus(c) === "used").length} used`,
     settings: `${shop.name} · prefix ${shop.invoicePrefix}`,
   };
 
-  // number keys 1-6 open a section
+  // number keys open a section
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest("input, textarea, select")) return;
-      const s = SECTIONS[Number(e.key) - 1];
+      const s = /^[1-9]$/.test(e.key) ? SECTIONS[Number(e.key) - 1] : undefined;
       if (s) router.push(s.href, { transitionTypes: ["nav-forward"] });
     };
     window.addEventListener("keydown", onKey);
@@ -140,7 +142,7 @@ export default function Home() {
 
       {/* sections */}
       <section className="relative -mt-24 px-4 sm:px-6 lg:px-10">
-        <div className="mx-auto grid max-w-[1300px] gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-[1300px] gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {SECTIONS.map((s, i) => (
             <Tile key={s.key} i={i} section={s} meta={meta[s.key]!} featured={s.key === "new"} />
           ))}
@@ -153,7 +155,7 @@ export default function Home() {
           <AquariumTank />
         </div>
         <p className="animate-home-in mt-6 hidden text-center text-[12.5px] text-muted [animation-delay:700ms] sm:block">
-          Tip: press <Kbd>1</Kbd>–<Kbd>6</Kbd> to jump straight to a section.
+          Tip: press <Kbd>1</Kbd>–<Kbd>{SECTIONS.length}</Kbd> to jump straight to a section.
         </p>
       </section>
     </div>
@@ -174,6 +176,7 @@ function Tile({ i, section, meta, featured }: { i: number; section: (typeof SECT
       style={{ animationDelay: `${260 + i * 70}ms`, "--glow": tone.glow } as React.CSSProperties}
       className={cx(
         "animate-tile-in group relative isolate flex min-h-44 flex-col overflow-hidden rounded-3xl border p-5 shadow-[0_1px_2px_rgba(20,32,26,0.05)] transition-[transform,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-deep/10 active:translate-y-0 active:scale-[0.985] sm:p-6",
+        featured && "sm:col-span-2",
         featured ? "border-lime/60 bg-gradient-to-br from-lime to-[#b6e27f] text-deep" : "border-line bg-white hover:border-transparent",
       )}
     >
