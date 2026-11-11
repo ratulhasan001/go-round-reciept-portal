@@ -13,7 +13,8 @@ const PUBLIC_API = (p: string) => p.startsWith("/api/site/") || p.startsWith("/a
  *   goroundbd.com         → the store, whose pages live under /store (so /products serves /store/products)
  *   verify.goroundbd.com  → the verify page (/store/verify), and /<code> → a staff member's verification page
  *   admin.goroundbd.com   → the admin panel, as below
- * Any other address (localhost, *.vercel.app) serves everything as before: admin at the root, store under /store.
+ * The old *.vercel.app address only forwards to these. Any other address (localhost) serves everything on one
+ * address: admin at the root, store under /store.
  *
  * Admin pages and API calls need the shop password, except the login page, the public customer form (/f/<token>, its
  * submit endpoint and the shop logo it shows), which is protected by its own one-time, 30-minute token, and the
@@ -27,6 +28,13 @@ export function proxy(request: NextRequest) {
   const to = (h: string, path: string) => NextResponse.redirect(`https://${h}${path}${search}`, 308);
 
   if (/^www\./i.test(host)) return to(host.replace(/^www\./i, "").split(":")[0]!, pathname);
+
+  // the old *.vercel.app address is retired: every page moves to its own goroundbd.com address
+  if (host.split(":")[0]!.toLowerCase().endsWith(".vercel.app")) {
+    if (pathname === `${STORE_BASE}/verify` || pathname.startsWith(`${STORE_BASE}/verify/`)) return to(HOSTS.verify, pathname.slice(`${STORE_BASE}/verify`.length) || "/");
+    if (isStorePath(pathname)) return to(HOSTS.store, pathname.slice(STORE_BASE.length) || "/");
+    return to(HOSTS.admin, pathname);
+  }
 
   // the shop's own data is only ever served on the admin address
   if ((area === "store" || area === "verify") && api && !PUBLIC_API(pathname)) return NextResponse.json({ error: "not found" }, { status: 404 });
