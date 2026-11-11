@@ -9,6 +9,7 @@ import type { OrderView } from "@/lib/server/orders";
 import { useShop } from "./StoreContext";
 import { OrderCard } from "./TrackView";
 import { Panel, SeaField, SeaInput, SeaTextarea, btn, cx } from "./ui";
+import { useSavedContact } from "./useSavedContact";
 
 interface Account {
   id: string;
@@ -53,6 +54,10 @@ function SignIn({ onDone }: { onDone: () => void }) {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
+  // ordered before as a guest? the account starts with the details we already have for this number
+  const saved = useSavedContact(f.phone, tab === "register", (c) => {
+    if (!c.account) setF((x) => ({ ...x, name: x.name.trim() ? x.name : c.name, email: x.email.trim() ? x.email : c.email, address: x.address.trim() ? x.address : c.address }));
+  });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,16 +94,28 @@ function SignIn({ onDone }: { onDone: () => void }) {
         ))}
       </div>
       <form onSubmit={submit} className="grid gap-4" noValidate>
-        {tab === "register" && (
-          <SeaField label="Full name" error={errors.name} htmlFor="a-name">
-            <SeaInput id="a-name" autoComplete="name" value={f.name} onChange={set("name")} invalid={!!errors.name} />
-          </SeaField>
-        )}
         <SeaField label="Mobile number" error={errors.phone} htmlFor="a-phone">
           <SeaInput id="a-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="01XXXXXXXXX" value={f.phone} onChange={set("phone")} invalid={!!errors.phone} />
         </SeaField>
+        {tab === "register" && saved && (
+          <p role="status" className="rounded-2xl bg-sea-leaf/10 px-4 py-3 text-[13.5px] font-semibold text-sea-ink">
+            {saved.account ? (
+              <>
+                This number already has an account.{" "}
+                <button type="button" onClick={() => setTab("login")} className="font-bold text-sea-teal underline underline-offset-4">
+                  Log in instead
+                </button>
+              </>
+            ) : (
+              <>Welcome back, {saved.name.split(" ")[0]}! We filled in the details from your earlier orders - your past orders will show in your account too.</>
+            )}
+          </p>
+        )}
         {tab === "register" && (
           <>
+            <SeaField label="Full name" error={errors.name} htmlFor="a-name">
+              <SeaInput id="a-name" autoComplete="name" value={f.name} onChange={set("name")} invalid={!!errors.name} />
+            </SeaField>
             <SeaField label="Email" hint="optional" error={errors.email} htmlFor="a-email">
               <SeaInput id="a-email" type="email" autoComplete="email" value={f.email} onChange={set("email")} invalid={!!errors.email} />
             </SeaField>

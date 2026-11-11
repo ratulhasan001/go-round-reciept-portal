@@ -11,6 +11,7 @@ import { rememberOrder, useShop } from "./StoreContext";
 import { useFreshCart } from "./CartView";
 import { PaymentInfo } from "./PaymentInfo";
 import { WhatsAppIcon } from "./Icons";
+import { useSavedContact } from "./useSavedContact";
 import { Panel, SeaField, SeaInput, SeaTextarea, btn, cx } from "./ui";
 
 interface Me {
@@ -44,6 +45,13 @@ export function CheckoutView() {
       })
       .catch(() => setMe(null));
   }, []);
+
+  // a returning guest: typing their number brings back the details they gave us last time (blank fields only)
+  const saved = useSavedContact(f.phone, me === null, (c) => {
+    if (c.account) return;
+    setF((x) => ({ ...x, name: x.name.trim() ? x.name : c.name, email: x.email.trim() ? x.email : c.email, address: x.address.trim() ? x.address : c.address }));
+    setErrors(({ name: _n, address: _a, email: _e, ...rest }) => (void _n, void _a, void _e, rest));
+  });
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setF((x) => ({ ...x, [k]: e.target.value }));
@@ -144,7 +152,9 @@ export function CheckoutView() {
           <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
             <div>
               <h2 className="font-serif text-[24px]">1. Customer form</h2>
-              <p className="mt-1 text-[13px] text-sea-muted">Your details go straight into our customer list, so we know where to send your order.</p>
+              <p className="mt-1 text-[13px] text-sea-muted">
+                {me === null ? "Start with your number - if you've ordered before, we'll fill in the rest." : "Your details go straight into our customer list, so we know where to send your order."}
+              </p>
             </div>
             {me === null && (
               <Link href={`${links.store("/account")}?next=checkout`} className="text-[13.5px] font-bold text-sea-teal hover:underline">
@@ -154,12 +164,27 @@ export function CheckoutView() {
             {me && <span className="text-[13px] font-semibold text-sea-leaf">Logged in as {me.name}</span>}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <SeaField label="Full name" error={errors.name} htmlFor="c-name">
-              <SeaInput id="c-name" name="name" autoComplete="name" value={f.name} onChange={set("name")} invalid={!!errors.name} required />
-            </SeaField>
             <SeaField label="WhatsApp number" hint="for order updates" error={errors.phone} htmlFor="c-phone">
               <SeaInput id="c-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="01XXXXXXXXX" value={f.phone} onChange={set("phone")} invalid={!!errors.phone} required />
             </SeaField>
+            <SeaField label="Full name" error={errors.name} htmlFor="c-name">
+              <SeaInput id="c-name" name="name" autoComplete="name" value={f.name} onChange={set("name")} invalid={!!errors.name} required />
+            </SeaField>
+            {saved && (
+              <p role="status" className="rounded-2xl bg-sea-leaf/10 px-4 py-3 text-[13.5px] font-semibold text-sea-ink sm:col-span-2">
+                {saved.account ? (
+                  <>
+                    This number has an account.{" "}
+                    <Link href={`${links.store("/account")}?next=checkout`} className="font-bold text-sea-teal underline underline-offset-4">
+                      Log in
+                    </Link>{" "}
+                    to use your saved details - or just fill them in below.
+                  </>
+                ) : (
+                  <>Welcome back, {saved.name.split(" ")[0]}! We filled in the details you gave us last time - change anything that&apos;s different.</>
+                )}
+              </p>
+            )}
             <SeaField label="Delivery address" error={errors.address} className="sm:col-span-2" htmlFor="c-address">
               <SeaTextarea id="c-address" name="address" autoComplete="street-address" rows={3} placeholder="House, road, area, city" value={f.address} onChange={set("address")} invalid={!!errors.address} required />
             </SeaField>

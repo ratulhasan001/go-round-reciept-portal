@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkPassword, currentAccount, endSession, hashPassword, newAccountId, startSession } from "@/lib/server/accounts";
 import { db, dbEnabled, ensureSchema } from "@/lib/server/db";
 import { accountOrders, readContact } from "@/lib/server/orders";
+import { findCustomer, upsertCustomer } from "@/lib/server/customers";
 import { phoneKey } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export async function GET() {
   try {
     const account = await currentAccount();
     if (!account) return NextResponse.json({ account: null });
-    return NextResponse.json({ account, orders: await accountOrders(account.id) });
+    return NextResponse.json({ account, orders: await accountOrders(account.id, account.phone) });
   } catch (e) {
     console.error("GET /api/site/account failed", e);
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
@@ -33,15 +34,26 @@ export async function POST(req: Request) {
     await ensureSchema();
     switch (body.action) {
       case "register": {
-        const { name, phone, email, address, errors } = readContact(body);
+        const contact = readContact(body);
+        const { name, phone, errors } = contact;
         if (password.length < 6) errors.password = "Use at least 6 characters.";
         if (Object.keys(errors).length) return bad(errors);
+        const pass = await hashPassword(password);
         const id = newAccountId();
-        const [row] = await db()<{ id: string }[]>`
-          insert into gr_accounts (id, phone_key, phone, name, email, address, pass_hash)
-          values (${id}, ${phoneKey(phone)}, ${phone}, ${name}, ${email}, ${address}, ${await hashPassword(password)})
-          on conflict (phone_key) do nothing returning id`;
-        if (!row) return bad({ phone: "This number already has an account. Log in instead." });
+        const made = await db().begin(async (tx) => {
+          // details left blank come from what this number already gave us (an earlier order or customer form)
+          const saved = (await findCustomer(tx, phone))?.data ?? {};
+          const pick = (v: string, k: string) => v || (typeof saved[k] === "string" ? (saved[k] as string).trim() : "");
+          const email = pick(contact.email, "email");
+          const address = pick(contact.address, "address");
+          const [row] = await tx<{ id: string }[]>`
+            insert into gr_accounts (id, phone_key, phone, name, email, address, pass_hash)
+            values (${id}, ${phoneKey(phone)}, ${phone}, ${name}, ${email}, ${address}, ${pass})
+            on conflict (phone_key) do nothing returning id`;
+          if (row) await upsertCustomer(tx, { name, phone, email, address });
+          return !!row;
+        });
+        if (!made) return bad({ phone: "This number already has an account. Log in instead." });
         await startSession(id);
         return NextResponse.json({ ok: true });
       }
@@ -65,7 +77,10 @@ export async function POST(req: Request) {
         if (Object.keys(errors).length) return bad(errors);
         const [clash] = await db()`select 1 from gr_accounts where phone_key = ${phoneKey(phone)} and id <> ${me.id}`;
         if (clash) return bad({ phone: "Another account uses this number." });
-        await db()`update gr_accounts set name = ${name}, phone = ${phone}, phone_key = ${phoneKey(phone)}, email = ${email}, address = ${address} where id = ${me.id}`;
+        await db().begin(async (tx) => {
+          await tx`update gr_accounts set name = ${name}, phone = ${phone}, phone_key = ${phoneKey(phone)}, email = ${email}, address = ${address} where id = ${me.id}`;
+          await upsertCustomer(tx, { name, phone, email, address });
+        });
         return NextResponse.json({ ok: true });
       }
       case "password": {

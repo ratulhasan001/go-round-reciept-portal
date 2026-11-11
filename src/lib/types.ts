@@ -159,6 +159,7 @@ export interface Customer {
   name: string;
   phone: string;
   address: string;
+  email?: string; // from the website (checkout or account)
   updatedAt?: number; // ms timestamp of the last change; missing on older saved customers
 }
 

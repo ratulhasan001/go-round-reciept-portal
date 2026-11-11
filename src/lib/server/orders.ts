@@ -4,7 +4,7 @@ import { cleanCode, deliveryFee, makeOrderCode, needsTrxAtCheckout, onSite, site
 import { ORDER_PAY_METHODS, type Invoice, type Order, type OrderItem, type OrderPayMethod, type Product } from "@/lib/types";
 import { db } from "./db";
 import { loadShop } from "./catalog";
-import { upsertCustomer } from "./customers";
+import { syncAccount, upsertCustomer } from "./customers";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -42,7 +42,8 @@ export class OrderError extends Error {
 
 /**
  * Places a website order. Prices, stock and delivery come from the database, never from the browser.
- * The customer is also added to (or updated in) the shop's customer list.
+ * The customer is also added to (or updated in) the shop's customer list, and a logged-in customer's account takes the
+ * details they ordered with (when they ordered for their own number). A guest never changes an account.
  */
 export async function placeOrder(body: Record<string, unknown>, accountId: string | null): Promise<Order> {
   const { name, phone, email, address, errors } = readContact(body);
@@ -110,7 +111,8 @@ export async function placeOrder(body: Record<string, unknown>, accountId: strin
       if (!taken) order.code = code;
     }
     await tx`insert into gr_docs (kind, id, data) values ('order', ${order.id}, ${tx.json(order as never)})`;
-    await upsertCustomer(tx, { name, phone, address });
+    await upsertCustomer(tx, { name, phone, address, email });
+    if (accountId) await syncAccount(tx, { name, phone, address, email }, accountId);
   });
   return order;
 }
@@ -183,10 +185,16 @@ export async function addPayment(order: Order, body: Record<string, unknown>) {
   return next;
 }
 
-/** Orders placed from a customer account, newest first. */
-export async function accountOrders(accountId: string) {
+/** Orders placed from a customer account, or as a guest with the account's phone number, newest first. */
+export async function accountOrders(accountId: string, phone: string) {
+  const digits = phoneKey(phone).slice(-10);
   const rows = await db()<{ data: Order }[]>`
-    select data from gr_docs where kind = 'order' and data->>'accountId' = ${accountId} order by (data->>'createdAt')::bigint desc limit 100`;
+    select data from gr_docs
+    where kind = 'order' and (
+      data->>'accountId' = ${accountId}
+      or (length(${digits}) = 10 and right(regexp_replace(coalesce(data->'customer'->>'phone', ''), '[^0-9]', '', 'g'), 10) = ${digits})
+    )
+    order by (data->>'createdAt')::bigint desc limit 100`;
   return rows.map((r) => orderView(r.data));
 }
 

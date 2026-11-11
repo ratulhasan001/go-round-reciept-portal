@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE, isAuthed } from "@/lib/server/auth";
 import { KINDS, type Kind, db, dbEnabled, ensureSchema } from "@/lib/server/db";
 import { mergeOrder } from "@/lib/server/orders";
+import { syncAccount } from "@/lib/server/customers";
 import type { Order } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,16 @@ export async function POST(req: Request) {
           await tx`
             insert into gr_docs (kind, id, data) values ('order', ${c.id}, ${tx.json(data as never)})
             on conflict (kind, id) do update set data = excluded.data, updated_at = now()`;
+        } else if (c.kind === "customer") {
+          // an edited customer passes the new details on to their website account (same phone number), if any
+          const [cur] = await tx<{ data: Record<string, unknown> }[]>`select data from gr_docs where kind = 'customer' and id = ${c.id}`;
+          await tx`
+            insert into gr_docs (kind, id, data) values ('customer', ${c.id}, ${tx.json(c.data as never)})
+            on conflict (kind, id) do update set data = excluded.data, updated_at = now()`;
+          const s = (v: unknown) => (typeof v === "string" ? v : "");
+          const d = c.data;
+          const changed = !cur || ["name", "phone", "address", "email"].some((k) => s(cur.data[k]) !== s(d[k]));
+          if (changed) await syncAccount(tx, { name: s(d.name), phone: s(d.phone), address: s(d.address), email: s(d.email) });
         } else
           await tx`
             insert into gr_docs (kind, id, data) values (${c.kind}, ${c.id}, ${tx.json(c.data as never)})

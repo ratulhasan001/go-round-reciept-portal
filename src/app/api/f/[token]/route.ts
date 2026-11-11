@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { db, dbEnabled, ensureSchema } from "@/lib/server/db";
 import { formStatus, hashToken, validToken } from "@/lib/server/forms";
 import { clean, normPhone, phoneKey } from "@/lib/phone";
-import { upsertCustomer } from "@/lib/server/customers";
+import { saveContact } from "@/lib/server/customers";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Public: a customer submits the form behind a link. The link is claimed and the customer saved in one
  * transaction, so a link can only ever be used once. The same phone number updates the saved customer
- * instead of adding a duplicate.
+ * instead of adding a duplicate, and the website account with that number takes the same details.
  */
 export async function POST(req: Request, ctx: RouteContext<"/api/f/[token]">) {
   const { token } = await ctx.params;
@@ -40,7 +40,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/f/[token]">) {
         returning token_hash`;
       if (!claimed) return false;
 
-      await upsertCustomer(tx, { name, phone, address });
+      await saveContact(tx, { name, phone, address }); // the customer list and their website account, if they have one
       return true;
     });
     if (!saved) {
