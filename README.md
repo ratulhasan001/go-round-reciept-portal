@@ -1,8 +1,16 @@
-# Go Round · Receipt Studio
+# Go Round · Web
 
-A receipt and customer-ledger app for **Go Round**, an aquarium supply shop in Bangladesh. Make a professional A4 payment receipt in under a minute, then download it as a **PDF** or **Excel** file, print it, or send it on WhatsApp. The app also tracks who still owes money, keeps your price list and customers, runs a coupon sheet, and lets customers type in their own details from a one-time link.
+An online store and a receipt and customer-ledger app for **Go Round**, an aquarium supply shop in Bangladesh. Make a professional A4 payment receipt in under a minute, then download it as a **PDF** or **Excel** file, print it, or send it on WhatsApp. The app also tracks who still owes money, keeps your price list and customers, runs a coupon sheet, and lets customers type in their own details from a one-time link.
 
-**Live:** https://go-round-reciept.vercel.app
+**Live:**
+
+| Address | What it is |
+|---|---|
+| https://goroundbd.com | The customer store |
+| https://admin.goroundbd.com | The admin panel (receipts, orders, products, staff…), behind the shop password |
+| https://verify.goroundbd.com | Check a purchase or order status with the payment's transaction ID (and download the receipt), or verify a staff member; staff QR codes open here |
+
+All three are served by this one Next.js app: `src/proxy.ts` routes each address to its pages. Any other address (localhost, the `*.vercel.app` one) serves everything on one address: the admin panel at `/`, the store at `/store` and the verify page at `/store/verify`.
 
 Built with Next.js 16 (App Router), React 19, Tailwind CSS 4, `@react-pdf/renderer`, ExcelJS and Postgres (Neon). The app is mobile-first and can be installed to the home screen.
 
@@ -27,6 +35,27 @@ Built with Next.js 16 (App Router), React 19, Tailwind CSS 4, `@react-pdf/render
 ---
 
 ## Features
+
+### Customer website (goroundbd.com)
+- A public online store in the style of the Go Round visiting card (Aquascape Editorial): cream paper, Fraunces serif, swaying aquatic grass, line-drawn fish and gentle scroll motion. It is built for phones first.
+- **Pages:** Home (featured products, categories and the interactive aquarium in guest mode), Shop (search, category chips, sort, in-stock filter), product pages, Cart, Checkout, Order status, About us, Contact us, FAQ and My account.
+- **Ordering:** as a guest or with an account (an account can also be created at checkout). Checkout starts with the **customer form** (name, WhatsApp number, address), which also saves the customer to the Customers list. Payment is **bKash** or **bank transfer**, checked by hand: the customer pays the total shown and types the transaction ID at checkout. The ID is optional only for a bank transfer when no bank details are set, since the customer has to ask for them first. Prices, stock and delivery are always worked out on the server.
+- **Approval, then receipt:** the order waits as *Waiting for approval* until the shop approves the payment. The order page checks for the approval every 30 seconds. Once approved, the customer gets **Download receipt**, the same A4 PDF the shop prints, stamped PAID. If the shop marks the payment *not found*, the customer is asked to check the transaction ID and send it again.
+- **Order status** (`/order-status`, no account needed): the customer types the **transaction ID** of their bKash or bank payment to see the order's progress (placed → approved → shipped → delivered), payment status and courier info, and to download the receipt. Before paying, they can use the order code (e.g. `GR7K3F9Q`) plus their WhatsApp number instead. The old `/store/track` link redirects here.
+- **Accounts:** log in with phone number and password. Customers see their orders and edit their details. A forgotten password is reset by the shop from Customers → Website accounts.
+- A floating WhatsApp button, plus Facebook and WhatsApp links throughout. Products without a photo get a drawn aquascape placeholder.
+
+### Admin panel (admin.goroundbd.com)
+- Same look as the store: cream paper, ink green, teal accents and Fraunces headings.
+- **Orders:** to approve / to ship / shipped / delivered / cancelled tabs with a badge for unseen orders. Open an order and check the bKash TrxID. **Approve payment** marks it paid, moves the order to *Approved*, and makes the receipt the customer downloads from the website. **Payment not found** asks the customer to resend the ID, and **Undo** takes an approval back. From there: one button for each next step, courier info, a private note, and a ready-made WhatsApp update for the customer. New orders appear within a minute.
+- **Website:** taking-orders switch, announcement bar, WhatsApp and Facebook links, bKash number and type, bank details, delivery areas and fees, free-delivery threshold, About us text and FAQ.
+- **Products:** *Photos & details* on each product: photos (resized in the browser), description, category, *Show on website* and *Feature on home page*.
+- **Visit store** button in the navbar and on the home page.
+
+### Employees
+- Staff records: name, phone, role, joining date, monthly salary, notes and an active / former switch, with the active headcount and monthly salary total at the top.
+- Every new employee automatically gets a private random code and a **verification QR code**. Download the QR on its own, or a printable **ID card** (card size, in the visiting card's style).
+- Scanning the QR opens `verify.goroundbd.com/<code>`: **Verified staff** with their name, role and start month, **No longer with us** once they're marked as former, or **Not verified** for an unknown code. Phone, salary and notes are never shown.
 
 ### Receipts
 - **Live A4 preview** that matches the downloaded PDF. On a phone, you switch between Edit and Preview.
@@ -258,13 +287,22 @@ Every route needs the shop session cookie, except where marked **public**. When 
 | `POST /api/login` | **Public.** `{ password }` → sets the `gr_session` cookie. Wrong passwords are slowed down. |
 | `POST /api/logout` | Clears the session cookie. |
 | `GET /api/data` | `{ db, auth, shop, products, customers, coupons, invoices }`, or `{ db: false }` in local mode. |
-| `POST /api/sync` | `{ changes: [{ kind, id, data \| null }] }`. Up to 5000 upserts / deletes in one transaction. `kind` is one of `shop`, `product`, `customer`, `invoice`, `coupon`. |
+| `POST /api/sync` | `{ changes: [{ kind, id, data \| null }] }`. Up to 5000 upserts / deletes in one transaction. `kind` is one of `shop`, `product`, `customer`, `invoice`, `coupon`, `letter`, `order`, `employee`. |
 | `POST /api/forms` | Creates a customer form link → `{ token, expiresAt }`. |
 | `GET /api/forms?token=…` | Link status: `active`, `used` (with the customer's name), `expired` or `missing`. |
 | `GET /api/forms?list=1` | The 25 most recent links. |
 | `DELETE /api/forms?token=…` or `?id=…` | Cancels a link that hasn't been used. |
 | `POST /api/f/[token]` | **Public.** `{ name, phone, address }`. Claims the link and saves the customer in one transaction. Returns `422` with field errors or `410` once the link is used or expired. |
 | `GET /api/shop-logo` | **Public.** The shop logo image (raster only), cached by version. |
+| `POST /api/site/orders` | **Public.** Places a website order (`name, phone, address, email?, note?, zone, method, trxId?, sender?, password?, items: [{id, qty}]`). |
+| `POST /api/site/track` | **Public.** `{ trxId }` (6+ characters; case, spaces and dashes ignored) or `{ code, phone }` → the order (without the shop's private note). |
+| `POST /api/site/pay` | **Public.** `{ code, phone, method, trxId, sender? }` adds payment details to an unpaid order. |
+| `GET/POST /api/site/account` | **Public.** The logged-in customer and their orders; `action`: `register`, `login`, `logout`, `update`, `password`. |
+| `GET /api/site/products` | **Public.** Current prices and stock for the cart. |
+| `POST /api/site/receipt` | **Public.** `{ code, phone }` → the receipt and the shop details it prints, once the payment is approved (`409` before). |
+| `GET /api/img/[id]` | **Public.** A product photo (`-t` on the end = thumbnail). |
+| `POST/DELETE /api/images` | Upload (`full` + `thumb` form fields) or remove a product photo. |
+| `GET/POST /api/accounts` | List website accounts; `{ id, action: "reset" \| "delete" }`. |
 
 ---
 
@@ -273,6 +311,7 @@ Every route needs the shop session cookie, except where marked **public**. When 
 - **Login:** `src/proxy.ts` sends every page to `/login` (and returns `401` for API routes) until the password is entered. The session cookie is an HMAC derived from `APP_PASSWORD`. It is `httpOnly`, `sameSite=lax`, and `secure` in production, and is compared in constant time.
 - **Customer form links** are random 18-byte tokens. Only their SHA-256 hash is stored, they expire after 30 minutes (timed by the database clock), and each can be used once. Old links are cleaned up after a day.
 - The public form only ever sees the shop name, tagline and logo. It never sees customers, receipts or prices.
+- The customer website (`/store`, `/api/site/…`, `/api/img/…`) is public. It only ever sees shop name, contact details, website settings and products marked *Show on website*. Customer passwords are hashed with scrypt and live in `gr_accounts`, never in `gr_docs`, so they never reach the admin browser. Login tokens are stored hashed in `gr_sessions`.
 - Only PNG / JPEG / WebP / GIF logos are served from the app's own domain (an SVG could carry script).
 - Logging out removes the shop data from that browser, unless changes are still waiting to sync.
 

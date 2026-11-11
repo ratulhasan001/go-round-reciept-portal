@@ -1,11 +1,13 @@
 "use client";
 
 import { ViewTransition } from "react";
-import { FilePlus2, Package, ReceiptText, ScrollText, Settings, TicketPercent, Users, type LucideIcon } from "lucide-react";
+import { ExternalLink, FilePlus2, Globe, IdCard, Package, ReceiptText, ScrollText, Settings, ShoppingBag, Store, TicketPercent, Users, type LucideIcon } from "lucide-react";
 import type { Mode, SyncState } from "@/lib/store";
 import { useStore } from "@/lib/store";
 import { initials } from "@/lib/theme";
-import { cx } from "./ui";
+import { publicLinks } from "@/lib/site";
+import type { Order } from "@/lib/types";
+import { cx, useClientValue } from "./ui";
 
 export interface Section {
   key: string;
@@ -18,12 +20,15 @@ export interface Section {
 
 /** Every part of the app, in navbar order. */
 export const SECTIONS: Section[] = [
+  { key: "orders", href: "/orders", label: "Orders", short: "Orders", blurb: "Website orders, payments and delivery", icon: ShoppingBag },
   { key: "receipts", href: "/receipts", label: "Receipts", short: "Receipts", blurb: "Every receipt, payment and balance due", icon: ReceiptText },
   { key: "new", href: "/new", label: "New receipt", short: "New", blurb: "Make a receipt in under a minute", icon: FilePlus2 },
   { key: "letterhead", href: "/letterhead", label: "Letterhead", short: "Letter", blurb: "Letters on the Go Round letterhead - or a blank one", icon: ScrollText },
   { key: "products", href: "/products", label: "Products", short: "Products", blurb: "Price list and stock status", icon: Package },
   { key: "customers", href: "/customers", label: "Customers", short: "Customers", blurb: "Contacts, spending and dues", icon: Users },
+  { key: "employees", href: "/employees", label: "Employees", short: "Staff", blurb: "Staff records, salaries and verification QR codes", icon: IdCard },
   { key: "coupons", href: "/coupons", label: "Coupons", short: "Coupons", blurb: "Coupon codes, validity and usage", icon: TicketPercent },
+  { key: "website", href: "/website", label: "Website", short: "Website", blurb: "Your online store: payments, delivery, pages", icon: Globe },
   { key: "settings", href: "/settings", label: "Settings", short: "Settings", blurb: "Shop details, charges and backups", icon: Settings },
 ];
 
@@ -73,5 +78,33 @@ export function SyncDot({ mode, sync }: { mode: Mode; sync: SyncState }) {
       {mode === "cloud" && sync !== "offline" && <span className={cx("absolute inset-0 animate-ping rounded-full opacity-60", color)} />}
       <span className={cx("relative size-2 rounded-full", color)} />
     </span>
+  );
+}
+
+/** Website orders nobody has opened yet in the admin panel. */
+export const unseenOrders = (orders: Order[]) => orders.filter((o) => !o.seen && o.status !== "cancelled").length;
+
+/** Opens the customer website in a new tab. `tone` matches the dark navbar / hero or a light page. */
+/** `compact`: icon only while the navbar shares its row with every section (lg–2xl). */
+export function VisitStore({ tone = "dark", className, compact = false }: { tone?: "dark" | "light"; className?: string; compact?: boolean }) {
+  const href = useClientValue(() => publicLinks(window.location.host).store(), "/store");
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener"
+      title="Open your customer website in a new tab"
+      aria-label="Visit store (opens in a new tab)"
+      className={cx(
+        "group inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-2.5 text-[12.5px] font-bold transition active:scale-95 sm:px-3.5",
+        compact && "lg:px-2.5 min-[1680px]:px-3.5",
+        tone === "dark" ? "bg-lime text-deep hover:bg-white" : "bg-deep text-white hover:bg-ink",
+        className,
+      )}
+    >
+      <Store className="size-4" />
+      <span className={cx("hidden sm:inline", compact && "lg:hidden min-[1680px]:inline")}>Visit store</span>
+      <ExternalLink className={cx("hidden size-3.5 opacity-70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 sm:block", compact && "lg:hidden min-[1680px]:block")} />
+    </a>
   );
 }

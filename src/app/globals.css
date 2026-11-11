@@ -9,23 +9,40 @@
 
 @theme inline {
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), var(--font-manrope), ui-sans-serif, sans-serif;
+  /* the admin panel wears the customer website's look (the Aquascape Editorial visiting card) */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
 
-  --color-ink: #0e2a23;
-  --color-body: #34463f;
-  --color-muted: #6a7b74;
-  --color-faint: #a0ada7;
-  --color-line: #e3eae6;
-  --color-canvas: #f4f7f5;
-  --color-soft: #f1f8ea;
-  --color-brand: #3f7d1e;
-  --color-brand-600: #33681a;
-  --color-deep: #0e2a23;
-  --color-mint: #b9d8c9;
-  --color-lime: #8cc556;
+  --color-ink: #113a2d;
+  --color-body: #3d5249;
+  --color-muted: #6f7f76;
+  --color-faint: #a7ada4;
+  --color-line: #e2dccf;
+  --color-canvas: #f3efe6;
+  --color-soft: #edf2e2;
+  --color-brand: #1e5a45;
+  --color-brand-600: #164536;
+  --color-deep: #113a2d;
+  --color-mint: #c5dcc9;
+  --color-lime: #8cbf5a;
   --color-aqua: #56caee;
-  --color-aqua-deep: #1a86ae;
-  --color-aqua-soft: #eaf7fc;
+  --color-aqua-deep: #1f7fa8;
+  --color-aqua-soft: #e3eff3;
+
+  /* customer website - the Aquascape Editorial visiting card */
+  --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --color-sea-cream: #f3efe6;
+  --color-sea-paper: #fbf9f4;
+  --color-sea-sand: #e9e3d6;
+  --color-sea-line: #ddd6c6;
+  --color-sea-ink: #113a2d;
+  --color-sea-body: #3d5249;
+  --color-sea-muted: #6f7f76;
+  --color-sea-moss: #1e5a45;
+  --color-sea-leaf: #5e9e39;
+  --color-sea-sprout: #8cbf5a;
+  --color-sea-teal: #1f7fa8;
+  --color-sea-teal-soft: #e3eff3;
+  --color-wa: #25d366;
 }
 
 html {
@@ -1806,3 +1823,157 @@ input[type="number"] {
 .rich-editor table[data-calc] tr:first-child th:last-child, .rich-editor table[data-calc] tr[data-row="total"] th:last-child { border-radius: 0 6px 6px 0; }
 .rich-editor table[data-calc] tr[data-row="total"] th { background: #e6eadb; font-family: var(--font-manrope), sans-serif; font-weight: 800; font-size: 11.5pt; font-variant-numeric: tabular-nums; border-top: 4px solid #fff; }
 .rich-editor table[data-calc] [contenteditable="false"] { cursor: default; }
+
+
+/* ================= customer website ================= */
+
+.store-root {
+  background: var(--color-sea-cream);
+  color: var(--color-sea-ink);
+  font-feature-settings: normal;
+}
+.store-root ::selection {
+  background: color-mix(in srgb, var(--color-sea-sprout) 45%, transparent);
+}
+.font-serif {
+  letter-spacing: -0.015em;
+}
+.store-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-sea-ink) 62%, transparent);
+}
+
+/* grass blades sway from their roots */
+@keyframes sea-sway {
+  0%,
+  100% {
+    transform: rotate(calc(var(--amp, 2deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--amp, 2deg));
+  }
+}
+.sea-blade {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: sea-sway var(--dur, 6s) ease-in-out var(--delay, 0s) infinite;
+}
+
+@keyframes sea-swim {
+  0% {
+    transform: translate(-8vw, 0) scaleX(1);
+  }
+  48% {
+    transform: translate(calc(var(--reach, 60vw)), -10px) scaleX(1);
+  }
+  50% {
+    transform: translate(calc(var(--reach, 60vw)), -10px) scaleX(-1);
+  }
+  98% {
+    transform: translate(-8vw, 0) scaleX(-1);
+  }
+  100% {
+    transform: translate(-8vw, 0) scaleX(1);
+  }
+}
+.sea-fish {
+  animation: sea-swim var(--dur, 34s) ease-in-out var(--delay, 0s) infinite;
+}
+@keyframes sea-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.sea-bob {
+  animation: sea-bob 5s ease-in-out infinite;
+}
+@keyframes sea-rise {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-120px) scale(1);
+    opacity: 0;
+  }
+}
+.sea-bubble {
+  animation: sea-rise var(--dur, 6s) ease-in var(--delay, 0s) infinite;
+}
+
+/* scroll reveal: elements fade up the first time they come into view */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes sea-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.sea-pop {
+  animation: sea-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes sea-sheet-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.sea-sheet-in {
+  animation: sea-sheet-in 0.28s ease-out both;
+}
+@keyframes sea-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.sea-drawer-in {
+  animation: sea-drawer-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sea-blade,
+  .sea-fish,
+  .sea-bob,
+  .sea-bubble {
+    animation: none;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

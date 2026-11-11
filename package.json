@@ -1,5 +1,5 @@
 {
-  "name": "go-round-receipts",
+  "name": "go-round-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -15,12 +15,14 @@
     "lucide-react": "^1.48.0",
     "next": "16.3.6",
     "postgres": "^3.4.9",
+    "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

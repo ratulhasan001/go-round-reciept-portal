@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, isAuthed } from "@/lib/server/auth";
 import { KINDS, type Kind, db, dbEnabled, ensureSchema } from "@/lib/server/db";
+import { mergeOrder } from "@/lib/server/orders";
+import type { Order } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +37,14 @@ export async function POST(req: Request) {
     await sql.begin(async (tx) => {
       for (const c of changes as Change[]) {
         if (c.data === null) await tx`delete from gr_docs where kind = ${c.kind} and id = ${c.id}`;
-        else
+        else if (c.kind === "order") {
+          // customers can add payment details to an order while the admin panel holds an older copy of it
+          const [cur] = await tx<{ data: Order }[]>`select data from gr_docs where kind = 'order' and id = ${c.id} for update`;
+          const data = mergeOrder(cur?.data, c.data as unknown as Order);
+          await tx`
+            insert into gr_docs (kind, id, data) values ('order', ${c.id}, ${tx.json(data as never)})
+            on conflict (kind, id) do update set data = excluded.data, updated_at = now()`;
+        } else
           await tx`
             insert into gr_docs (kind, id, data) values (${c.kind}, ${c.id}, ${tx.json(c.data as never)})
             on conflict (kind, id) do update set data = excluded.data, updated_at = now()`;

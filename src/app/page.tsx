@@ -7,12 +7,13 @@ import { ArrowUpRight, Clock3, LogOut, ReceiptText, TrendingUp, Wallet } from "l
 import { useStore } from "@/lib/store";
 import { computeTotals, money, todayISO } from "@/lib/calc";
 import { couponStatus } from "@/lib/coupons";
-import { WAVE_BACK, WAVE_FRONT } from "@/lib/theme";
-import { Mark, SECTIONS, SectionIcon, SyncDot, syncLabel } from "@/components/nav";
+import { Mark, SECTIONS, SectionIcon, SyncDot, VisitStore, syncLabel } from "@/components/nav";
+import { onSite, siteSettings } from "@/lib/site";
 import { cx, useClientValue } from "@/components/ui";
 import { FlipClock } from "@/components/FlipClock";
 import { Aquarium } from "@/components/Aquarium";
 import { AquariumTank } from "@/components/aquarium/AquariumTank";
+import { Fish, Grass } from "@/components/store/Art";
 import { CalendarTile } from "@/components/CalendarTile";
 
 const greeting = () => {
@@ -23,17 +24,20 @@ const plural = (n: number, one: string, many = one + "s") => `${n} ${n === 1 ? o
 
 // each tile's colour story
 const TONE: Record<string, { badge: string; glow: string }> = {
+  orders: { badge: "bg-lime/20 text-brand", glow: "rgb(140 197 86 / 0.28)" },
+  website: { badge: "bg-aqua-soft text-aqua-deep", glow: "rgb(31 127 168 / 0.18)" },
   receipts: { badge: "bg-aqua-soft text-aqua-deep", glow: "rgb(86 202 238 / 0.18)" },
   new: { badge: "bg-deep text-lime", glow: "rgb(140 197 86 / 0.35)" },
   letterhead: { badge: "bg-teal-50 text-teal-700", glow: "rgb(31 127 168 / 0.16)" },
   products: { badge: "bg-soft text-brand", glow: "rgb(140 197 86 / 0.2)" },
   customers: { badge: "bg-violet-50 text-violet-600", glow: "rgb(139 92 246 / 0.14)" },
+  employees: { badge: "bg-rose-50 text-rose-600", glow: "rgb(244 63 94 / 0.12)" },
   coupons: { badge: "bg-amber-50 text-amber-600", glow: "rgb(245 158 11 / 0.16)" },
   settings: { badge: "bg-canvas text-ink", glow: "rgb(14 42 35 / 0.1)" },
 };
 
 export default function Home() {
-  const { shop, invoices, products, customers, coupons, mode, sync, authEnabled, logout } = useStore();
+  const { shop, invoices, products, customers, coupons, orders, employees, mode, sync, authEnabled, logout } = useStore();
   const router = useRouter();
   const greet = useClientValue(greeting, "Welcome back");
 
@@ -51,12 +55,17 @@ export default function Home() {
   }, [invoices, month]);
 
   // one live line per tile
+  const newOrders = orders.filter((o) => o.status === "placed").length;
+  const toShip = orders.filter((o) => o.status === "confirmed").length;
   const meta: Record<string, string> = {
+    orders: orders.length ? `${newOrders} to approve · ${toShip} to ship` : "No website orders yet",
+    website: `${siteSettings(shop).open ? "Taking orders" : "Orders paused"} · ${plural(products.filter(onSite).length, "product")} on the site`,
     receipts: `${plural(invoices.length, "receipt")} · ${stats.unpaid} not fully paid`,
     new: `Next number ${shop.invoicePrefix}${String(shop.nextNumber).padStart(4, "0")}`,
     letterhead: "Print, PDF or Word · blank or written",
     products: `${plural(products.length, "product")} · ${products.filter((p) => p.inStock === false).length} out of stock`,
     customers: plural(customers.length, "saved customer"),
+    employees: employees.length ? `${plural(employees.filter((e) => e.active !== false).length, "active employee")}` : "Add your staff and their QR codes",
     coupons: `${coupons.filter((c) => couponStatus(c) === "available").length} available · ${coupons.filter((c) => couponStatus(c) === "used").length} used`,
     settings: `${shop.name} · prefix ${shop.invoicePrefix}`,
   };
@@ -76,17 +85,13 @@ export default function Home() {
     <div className="min-h-dvh pb-16">
       {/* hero */}
       <section className="relative overflow-hidden bg-deep px-4 pb-36 pt-5 text-white sm:px-6 lg:px-10">
-        <div className="animate-aurora pointer-events-none absolute -left-40 -top-40 size-[520px] rounded-full bg-aqua/25 blur-3xl" />
-        <div className="animate-aurora-slow pointer-events-none absolute -right-32 top-10 size-[460px] rounded-full bg-lime/20 blur-3xl" />
-        <div className="animate-aurora pointer-events-none absolute bottom-0 left-1/3 size-[380px] rounded-full bg-emerald-400/10 blur-3xl [animation-delay:-6s]" />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "24px 24px" }}
-        />
-        <svg viewBox="0 0 595 40" preserveAspectRatio="none" className="animate-wave pointer-events-none absolute inset-x-0 bottom-0 h-16 w-full" aria-hidden>
-          <path d={WAVE_BACK} className="fill-aqua/20" />
-          <path d={WAVE_FRONT} className="fill-canvas" />
-        </svg>
+        {/* the store's aquascape: swaying grass and a couple of line fish, on the card's ink green */}
+        <Grass blades={120} seed={11} height={200} className="pointer-events-none absolute inset-x-0 bottom-0 h-32 w-full opacity-45 sm:h-40" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 h-0">
+          <div className="sea-fish absolute left-0" style={{ "--dur": "44s", "--reach": "80vw" } as React.CSSProperties}>
+            <Fish className="w-12 opacity-70" stroke="#8cbf5a" />
+          </div>
+        </div>
 
         <div className="relative mx-auto max-w-[1300px]">
           {/* top bar */}
@@ -96,6 +101,7 @@ export default function Home() {
               <div className="truncate font-display text-2xl font-extrabold leading-tight sm:text-3xl">{shop.name}</div>
               <div className="text-[13px] text-mint/85 sm:text-sm">Witness the Underwater World Through Us</div>
             </div>
+            <VisitStore />
             <span className="flex items-center gap-2 rounded-full bg-white/8 px-3 py-1.5 text-[12px] font-semibold text-mint/90 backdrop-blur" title={syncLabel(mode, sync)}>
               <SyncDot mode={mode} sync={sync} />
               <span className="hidden sm:inline">{syncLabel(mode, sync, true)}</span>
@@ -177,6 +183,7 @@ function Tile({ i, section, meta, featured }: { i: number; section: (typeof SECT
       className={cx(
         "animate-tile-in group relative isolate flex min-h-44 flex-col overflow-hidden rounded-3xl border p-5 shadow-[0_1px_2px_rgba(20,32,26,0.05)] transition-[transform,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-deep/10 active:translate-y-0 active:scale-[0.985] sm:p-6",
         featured && "sm:col-span-2",
+        (section.key === "website" || section.key === "settings") && "lg:col-span-2", // keeps the last row of four full
         featured ? "border-lime/60 bg-gradient-to-br from-lime to-[#b6e27f] text-deep" : "border-line bg-white hover:border-transparent",
       )}
     >
@@ -226,7 +233,7 @@ function Glance({ i, icon, label, value, money: isMoney, warn }: { i: number; ic
         <span className={cx("grid size-7 place-items-center rounded-lg", warn ? "bg-red-400/20 text-red-200" : "bg-lime/15 text-lime")}>{icon}</span>
         {label}
       </div>
-      <div className={cx("mt-2 text-xl tabular-nums sm:text-2xl", isMoney ? "font-amount" : "font-display font-extrabold")}>
+      <div className={cx("mt-2 text-xl tabular-nums sm:text-2xl", "font-amount")}>
         {isMoney && <span className="mr-1 text-[0.7em] font-bold text-mint/70">৳</span>}
         {isMoney ? money(n) : Math.round(n)}
       </div>

@@ -18,6 +18,7 @@ import { Combobox } from "./Combobox";
 import { SectionIcon } from "./nav";
 import { couponProblem, givenBy, normCode, offerFromCode, offerLabel } from "@/lib/coupons";
 import ReceiptPreview from "./ReceiptPreview";
+import { invoiceFromOrder } from "@/lib/orderReceipt";
 
 const blankItem = (): LineItem => ({ id: uid(), description: "", price: 0, qty: 1 });
 const numOrZero = (v: string) => (v === "" ? 0 : Number(v));
@@ -25,7 +26,7 @@ type Job = "" | "pdf" | "xlsx" | "print" | "share";
 
 export default function Editor() {
   const store = useStore();
-  const { shop, invoices, ready } = store;
+  const { shop, invoices, orders, ready } = store;
   const params = useSearchParams();
   const [inv, setInv] = useState<Invoice | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -33,17 +34,20 @@ export default function Editor() {
 
   const id = params.get("id");
   const copy = params.get("copy");
+  const fromOrder = params.get("order");
 
   // build the draft once the store has loaded
   useEffect(() => {
     if (!ready) return;
-    const key = `${id}|${copy}`;
+    const key = `${id}|${copy}|${fromOrder}`;
     if (initKey.current === key) return;
     initKey.current = key;
     const existing = id ? invoices.find((i) => i.id === id) : null;
     const source = copy ? invoices.find((i) => i.id === copy) : null;
+    const order = fromOrder ? orders.find((o) => o.id === fromOrder) : null;
     let draft: Invoice;
     if (existing) draft = structuredClone(existing);
+    else if (order) draft = invoiceFromOrder(order, store.nextInvoiceNumber());
     else if (source)
       draft = {
         ...structuredClone(source),
@@ -52,6 +56,7 @@ export default function Editor() {
         date: todayISO(),
         payments: [],
         coupon: undefined, // a coupon belongs to one receipt only
+        orderId: undefined, // and a website order to one receipt
         items: source.items.map((i) => ({ ...i, id: uid() })),
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -72,10 +77,10 @@ export default function Editor() {
       };
     setInv(draft);
     setDirty(false);
-  }, [ready, id, copy, invoices, shop.defaultDelivery, store]);
+  }, [ready, id, copy, fromOrder, invoices, orders, shop.defaultDelivery, store]);
 
   if (!inv) return <div className="grid h-[60vh] place-items-center text-muted">Loading…</div>;
-  return <EditorForm inv={inv} setInv={setInv} dirty={dirty} setDirty={setDirty} onFirstSave={(savedId) => (initKey.current = `${savedId}|null`)} />;
+  return <EditorForm inv={inv} setInv={setInv} dirty={dirty} setDirty={setDirty} onFirstSave={(savedId) => (initKey.current = `${savedId}|null|null`)} />;
 }
 
 function EditorForm({

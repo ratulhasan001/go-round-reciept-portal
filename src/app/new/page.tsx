@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Editor from "@/components/Editor";
 
-export const metadata = { title: "New receipt · Go Round" };
+export const metadata = { title: "New receipt · Go Round Admin" };
 
 export default function NewReceiptPage() {
   return (

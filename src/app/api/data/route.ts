@@ -5,7 +5,7 @@ import { db, dbEnabled, ensureSchema } from "@/lib/server/db";
 
 export const dynamic = "force-dynamic";
 
-/** All shop data in one go: settings, products, customers, coupons, receipts and letters. */
+/** All shop data in one go: settings, products, customers, coupons, receipts, letters and website orders. */
 export async function GET() {
   if (!isAuthed((await cookies()).get(SESSION_COOKIE)?.value)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!dbEnabled()) return NextResponse.json({ db: false, auth: authEnabled() });
@@ -22,6 +22,8 @@ export async function GET() {
       coupons: pick("coupon"),
       invoices: pick("invoice"),
       letters: pick("letter"),
+      orders: pick("order"),
+      employees: pick("employee"),
     });
   } catch (e) {
     console.error("GET /api/data failed", e);

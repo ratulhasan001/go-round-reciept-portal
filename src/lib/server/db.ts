@@ -1,11 +1,12 @@
 import postgres from "postgres";
 
 /**
- * Everything (shop settings, products, customers, coupons, receipts, letters) is stored as JSON
+ * Everything (shop settings, products, customers, coupons, receipts, letters, website orders) is stored as JSON
  * documents in one table: gr_docs(kind, id, data). PDFs / Excel files are never
- * stored - they are generated in the browser on demand.
+ * stored - they are generated in the browser on demand. Product photos live in gr_images, and the customer
+ * website's accounts in gr_accounts / gr_sessions (kept out of gr_docs so password hashes never reach a browser).
  */
-export const KINDS = ["shop", "product", "customer", "invoice", "coupon", "letter"] as const;
+export const KINDS = ["shop", "product", "customer", "invoice", "coupon", "letter", "order", "employee"] as const;
 export type Kind = (typeof KINDS)[number];
 
 export const dbEnabled = () => !!process.env.DATABASE_URL;
@@ -48,9 +49,42 @@ export function ensureSchema() {
         )`,
     )
     .then(() => db()`alter table gr_forms add column if not exists cancelled_at timestamptz`)
+    // product photos, uploaded from the admin panel
+    .then(
+      () => db()`
+        create table if not exists gr_images (
+          id text primary key,
+          mime text not null,
+          bytes bytea not null,
+          created_at timestamptz not null default now()
+        )`,
+    )
+    // customer accounts on the website; phone_key = digits of the normalised phone number
+    .then(
+      () => db()`
+        create table if not exists gr_accounts (
+          id text primary key,
+          phone_key text not null unique,
+          phone text not null,
+          name text not null,
+          email text not null default '',
+          address text not null default '',
+          pass_hash text not null,
+          created_at timestamptz not null default now()
+        )`,
+    )
+    // only a hash of each login token is kept
+    .then(
+      () => db()`
+        create table if not exists gr_sessions (
+          token_hash text primary key,
+          account_id text not null references gr_accounts(id) on delete cascade,
+          expires_at timestamptz not null
+        )`,
+    )
     .catch((e) => {
-    g.__grSchema = undefined; // retry on the next request
-    throw e;
-  });
+      g.__grSchema = undefined; // retry on the next request
+      throw e;
+    });
   return g.__grSchema;
 }

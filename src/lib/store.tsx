@@ -2,11 +2,12 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import type { CouponCode, Customer, Invoice, Letter, Product, Shop } from "./types";
+import type { CouponCode, Customer, Employee, Invoice, Letter, Order, Product, Shop } from "./types";
 import { DEFAULT_SHOP, SEED_CUSTOMERS, SEED_INVOICES, SEED_PRODUCTS } from "./seed";
 import { uid } from "./calc";
 import { couponProblem, givenBy, usedBy } from "./coupons";
 import { normPhone } from "./phone";
+import { isStorePath, type Area } from "./site";
 
 const KEY = "go-round-receipts:v1"; // this device's copy of the data
 const OUTBOX = "go-round-receipts:outbox"; // changes not yet confirmed by the server
@@ -19,6 +20,8 @@ interface Data {
   coupons: CouponCode[];
   invoices: Invoice[];
   letters: Letter[];
+  orders: Order[]; // from the customer website
+  employees: Employee[]; // staff records
 }
 
 /** "local" = no database configured (data lives in this browser); "cloud" = saved to the database. */
@@ -34,6 +37,9 @@ interface Store extends Data {
   setProducts: (p: Product[]) => void;
   setCustomers: (c: Customer[]) => void;
   setCoupons: (c: CouponCode[]) => void;
+  setEmployees: (e: Employee[]) => void;
+  /** Saves changes to a website order (status, payment check, notes…). */
+  saveOrder: (o: Order) => void;
   /** remember: also add / update the customer and products it uses (off for auto-saves while typing). */
   saveInvoice: (inv: Invoice, opts?: { remember?: boolean }) => Invoice;
   deleteInvoice: (id: string) => void;
@@ -55,6 +61,8 @@ const seed = (): Data => ({
   coupons: [],
   invoices: SEED_INVOICES,
   letters: [],
+  orders: [],
+  employees: [],
 });
 
 const Ctx = createContext<Store | null>(null);
@@ -119,7 +127,7 @@ const withDefaults = (shop?: Partial<Shop> | null): Shop => ({
 
 // ---------- document diffing (what changed since the last sync) ----------
 
-type Kind = "shop" | "product" | "customer" | "coupon" | "invoice" | "letter";
+type Kind = "shop" | "product" | "customer" | "coupon" | "invoice" | "letter" | "order" | "employee";
 interface Change {
   kind: Kind;
   id: string;
@@ -131,6 +139,8 @@ const LISTS: [Kind, keyof Omit<Data, "shop">][] = [
   ["coupon", "coupons"],
   ["invoice", "invoices"],
   ["letter", "letters"],
+  ["order", "orders"],
+  ["employee", "employees"],
 ];
 
 function docs(d: Data) {
@@ -150,7 +160,7 @@ function diff(prev: Data, next: Data): Change[] {
 }
 
 function applyChanges(d: Data, changes: Change[]): Data {
-  const next: Data = { ...d, products: [...d.products], customers: [...d.customers], coupons: [...d.coupons], invoices: [...d.invoices], letters: [...d.letters] };
+  const next: Data = { ...d, products: [...d.products], customers: [...d.customers], coupons: [...d.coupons], invoices: [...d.invoices], letters: [...d.letters], orders: [...d.orders], employees: [...d.employees] };
   for (const c of changes) {
     if (c.kind === "shop") {
       if (c.data) next.shop = withDefaults(c.data as Shop);
@@ -180,10 +190,10 @@ const writeJSON = (key: string, value: unknown) => {
   }
 };
 
-export function StoreProvider({ children }: { children: React.ReactNode }) {
+export function StoreProvider({ area, children }: { area: Area; children: React.ReactNode }) {
   const path = usePathname();
-  // the login page and the public customer form (/f/…) never load the shop's data
-  const offApp = path === "/login" || path.startsWith("/f/");
+  // the login page, the public customer form (/f/…) and the customer website never load the shop's data
+  const offApp = area === "store" || area === "verify" || path === "/login" || path.startsWith("/f/") || isStorePath(path);
   const [data, setData] = useState<Data>(seed);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<Mode>("loading");
@@ -269,6 +279,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       coupons: body.coupons ?? [],
       invoices: body.invoices ?? [],
       letters: body.letters ?? [],
+      orders: body.orders ?? [],
+      employees: body.employees ?? [],
     };
     const pending: Change[] = [];
     let merged = server;
@@ -287,7 +299,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       if (serverEmpty && pending.every((c) => c.kind === "shop")) {
         // brand-new shop: start with the default settings and product list (keeping this device's settings, if any)
-        const starter = docs({ shop: DEFAULT_SHOP, products: SEED_PRODUCTS, customers: [], coupons: [], invoices: [], letters: [] });
+        const starter = docs({ shop: DEFAULT_SHOP, products: SEED_PRODUCTS, customers: [], coupons: [], invoices: [], letters: [], orders: [], employees: [] });
         pending.unshift(...[...starter.values()].filter((c) => !pending.some((p) => p.kind === c.kind)));
       }
       merged = applyChanges(server, pending);
@@ -355,7 +367,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (document.visibilityState === "visible" && outbox.current.size === 0 && !flushing.current) void loadFromServer();
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    // and look for new website orders every minute while the app is open
+    const poll = setInterval(() => {
+      if (document.visibilityState === "visible" && outbox.current.size === 0 && !flushing.current) void loadFromServer();
+    }, 60_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(poll);
+    };
   }, [mode, loadFromServer]);
 
   const nextInvoiceNumber = useCallback(() => {
@@ -396,7 +415,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (!products.some((p) => norm(p.name) === norm(it.description)))
           products = [...products, { id: uid(), name: it.description.trim(), price: Number(it.price), inStock: true, updatedAt: Date.now() }];
       }
-      return { ...d, invoices, shop, customers, products, coupons: linkCoupon(d.coupons, saved) };
+      // a receipt made from a website order is linked to it
+      const orders = inv.orderId
+        ? d.orders.map((o) => (o.id === inv.orderId && (o.invoiceId !== saved.id || o.invoiceNumber !== saved.number) ? { ...o, invoiceId: saved.id, invoiceNumber: saved.number, updatedAt: Date.now() } : o))
+        : d.orders;
+      return { ...d, invoices, shop, customers, products, orders, coupons: linkCoupon(d.coupons, saved) };
     });
     return saved;
   }, []);
@@ -419,6 +442,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setProducts: (products) => setData((d) => ({ ...d, products })),
       setCustomers: (customers) => setData((d) => ({ ...d, customers })),
       setCoupons: (coupons) => setData((d) => ({ ...d, coupons })),
+      setEmployees: (employees) => setData((d) => ({ ...d, employees })),
+      saveOrder: (o) => setData((d) => ({ ...d, orders: d.orders.map((x) => (x.id === o.id ? { ...o, updatedAt: Date.now() } : x)) })),
       saveInvoice,
       deleteInvoice: (id) =>
         setData((d) => {
@@ -427,7 +452,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           let shop = d.shop;
           const m = inv?.number.startsWith(shop.invoicePrefix) ? Number(inv.number.slice(shop.invoicePrefix.length)) : NaN;
           if (m >= 1 && m === shop.nextNumber - 1) shop = { ...shop, nextNumber: m };
-          return { ...d, shop, invoices: d.invoices.filter((i) => i.id !== id), coupons: inv ? linkCoupon(d.coupons, inv, true) : d.coupons };
+          // a website order made into this receipt no longer has one
+          const orders = d.orders.map((o) => (o.invoiceId === id ? { ...o, invoiceId: undefined, invoiceNumber: undefined, updatedAt: Date.now() } : o));
+          return { ...d, shop, orders, invoices: d.invoices.filter((i) => i.id !== id), coupons: inv ? linkCoupon(d.coupons, inv, true) : d.coupons };
         }),
       nextInvoiceNumber,
       saveLetter: (l) => {
@@ -450,6 +477,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           coupons: parsed.coupons ?? [],
           invoices: parsed.invoices,
           letters: parsed.letters ?? [],
+          orders: parsed.orders ?? [],
+          employees: parsed.employees ?? [],
         });
       },
       resetAll: () => setData(seed()),

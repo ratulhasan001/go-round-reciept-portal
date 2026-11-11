@@ -61,6 +61,79 @@ export interface Shop {
   logo: string; // data URL (png/jpg) or ""
   watermark: boolean; // faint logo behind the receipt
   rates: ChargeRates;
+  site?: SiteSettings; // the customer website (missing on shops saved before the website existed)
+}
+
+// ---------- customer website ----------
+
+export interface DeliveryZone {
+  id: string;
+  name: string; // e.g. "Inside Dhaka"
+  fee: number; // BDT
+}
+
+export interface Faq {
+  q: string;
+  a: string;
+}
+
+/** Settings for the public store, edited on the admin "Website" page. */
+export interface SiteSettings {
+  open: boolean; // taking orders on the website
+  announcement: string; // thin bar above the store header ("" = none)
+  whatsapp: string; // WhatsApp number customers message
+  facebook: string; // Facebook page link
+  bkash: { number: string; type: "Personal" | "Merchant" | "Agent" };
+  bank: { bank: string; accountName: string; accountNumber: string; branch: string; routing: string };
+  zones: DeliveryZone[];
+  freeDeliveryOver: number; // order subtotal from which delivery is free (0 = never)
+  about: string; // About us page text (blank lines start a new paragraph)
+  faq: Faq[];
+}
+
+export type OrderStatus = "placed" | "confirmed" | "shipped" | "delivered" | "cancelled";
+export type OrderPayMethod = "bKash" | "Bank Transfer";
+export const ORDER_PAY_METHODS: OrderPayMethod[] = ["bKash", "Bank Transfer"];
+
+export interface OrderItem {
+  productId: string;
+  name: string;
+  unit?: string;
+  price: number;
+  qty: number;
+  image?: string;
+}
+
+/** An order placed on the customer website. Stored like everything else (kind "order"). */
+export interface Order {
+  id: string;
+  code: string; // what the customer tracks it with, e.g. GR7K3F9Q
+  status: OrderStatus;
+  history: { status: OrderStatus; at: number }[];
+  customer: { name: string; phone: string; email?: string; address: string };
+  accountId?: string; // placed while logged in to a customer account
+  items: OrderItem[];
+  subtotal: number;
+  delivery: number;
+  zone: string; // delivery zone name
+  total: number;
+  payment: {
+    method: OrderPayMethod;
+    trxId?: string; // bKash transaction id / bank reference the customer typed
+    sender?: string; // bKash number or account name it was paid from
+    submittedAt?: number; // when the customer gave the payment details
+    verified?: boolean; // the shop has checked the money arrived
+    verifiedAt?: number;
+    rejectedAt?: number; // the shop couldn't find this payment; a newer submittedAt means the customer sent it again
+  };
+  note?: string; // from the customer
+  adminNote?: string; // private, only in the admin panel
+  tracking?: string; // courier / tracking info shown to the customer
+  invoiceId?: string; // receipt made from this order
+  invoiceNumber?: string;
+  seen?: boolean; // opened in the admin panel
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface Product {
@@ -70,6 +143,12 @@ export interface Product {
   unit?: string; // what the price is for, e.g. "pcs", "bottle", "pack"; missing on older saved products
   inStock?: boolean; // missing (older saved products) means in stock
   updatedAt?: number; // ms timestamp of the last edit; missing on older saved products
+  // customer website (all optional, so older saved products keep working)
+  images?: string[]; // photo addresses (/api/img/<id>, or data URLs when there is no database); none = placeholder
+  description?: string;
+  category?: string;
+  onSite?: boolean; // missing means shown on the website
+  featured?: boolean; // shown on the store's home page
 }
 
 export interface Customer {
@@ -78,6 +157,20 @@ export interface Customer {
   phone: string;
   address: string;
   updatedAt?: number; // ms timestamp of the last change; missing on older saved customers
+}
+
+/** A staff record. Only kept for the shop's reference - an employee can't log in. */
+export interface Employee {
+  id: string;
+  name: string;
+  phone: string;
+  role: string; // e.g. Packing, Delivery, Sales
+  joined: string; // yyyy-mm-dd, "" = not set
+  salary: number; // monthly, BDT
+  notes: string;
+  active?: boolean; // missing means still working here
+  code: string; // random, unguessable: the address of their public verification page (what their QR code opens)
+  updatedAt?: number;
 }
 
 /** A coupon from the coupon sheet. The offer comes from the code's ending (a = 1% … e = 5%, fd = free delivery). */
@@ -128,6 +221,7 @@ export interface Invoice {
   extras?: Extras;
   payments: Payment[];
   notes: string;
+  orderId?: string; // the website order this receipt was made from
   createdAt: number;
   updatedAt: number;
 }

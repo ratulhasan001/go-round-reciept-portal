@@ -10,6 +10,7 @@ import { ListEditor } from "@/components/ListEditor";
 import { ImportDialog } from "@/components/ImportDialog";
 import { cx, useToast } from "@/components/ui";
 import { CustomerFormDialog } from "@/components/CustomerFormDialog";
+import { AccountsDialog } from "@/components/AccountsDialog";
 import { SAMPLE_CSV, planImport, readCustomerFile } from "@/lib/customerImport";
 
 // friendly avatar colours, picked from the initials so each customer keeps theirs
@@ -106,6 +107,7 @@ export default function CustomersPage() {
       actions={
         <>
         <CustomerFormDialog />
+        <AccountsDialog />
         <ImportDialog
           title="Import customers"
           hint="From Excel (.xlsx) or CSV - duplicates are skipped."

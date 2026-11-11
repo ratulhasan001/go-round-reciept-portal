@@ -5,8 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { House, LogOut } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { Mark, SECTIONS, SyncDot, lateral, sectionIndex, syncLabel } from "./nav";
+import { Mark, SECTIONS, SyncDot, VisitStore, lateral, sectionIndex, syncLabel, unseenOrders } from "./nav";
 import { cx } from "./ui";
+import { isStorePath, type Area } from "@/lib/site";
 
 /**
  * Page animations run on the browser's View Transitions API: the page is keyed by its path, so each
@@ -22,10 +23,10 @@ function PageTransition({ path, children }: { path: string; children: React.Reac
   );
 }
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({ area, children }: { area: Area; children: React.ReactNode }) {
   const path = usePathname();
 
-  if (path === "/login" || path.startsWith("/f/")) return <>{children}</>;
+  if (area === "store" || area === "verify" || path === "/login" || path.startsWith("/f/") || isStorePath(path)) return <>{children}</>;
   if (path === "/") return <PageTransition path={path}>{children}</PageTransition>;
 
   return (
@@ -39,8 +40,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function NavBar({ path }: { path: string }) {
-  const { shop, mode, sync, authEnabled, logout } = useStore();
+  const { shop, mode, sync, authEnabled, logout, orders } = useStore();
   const current = sectionIndex(path);
+  const fresh = unseenOrders(orders);
   const track = useRef<HTMLDivElement>(null);
   const links = useRef<(HTMLAnchorElement | null)[]>([]);
   const [pill, setPill] = useState<{ x: number; w: number; ready: boolean } | null>(null);
@@ -91,7 +93,7 @@ function NavBar({ path }: { path: string }) {
     <header
       ref={header}
       style={{ viewTransitionName: "site-header" }}
-      className={cx("sticky top-0 z-40 bg-deep text-white transition-shadow duration-300", scrolled ? "shadow-lg shadow-deep/25" : "shadow-none")}
+      className={cx("sticky top-0 z-40 border-b text-ink transition-[background-color,border-color,box-shadow] duration-300", scrolled ? "border-line bg-canvas/90 shadow-[0_6px_24px_-18px_rgba(17,58,45,0.5)] backdrop-blur-md" : "border-transparent bg-canvas")}
     >
       <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-3 sm:px-6 lg:flex-nowrap lg:px-10 lg:py-3">
         <Link href="/" transitionTypes={["nav-back"]} className="group flex min-w-0 items-center gap-2.5 rounded-2xl py-1 pr-2" title="Home">
@@ -102,20 +104,21 @@ function NavBar({ path }: { path: string }) {
             </span>
           </span>
           <span className="min-w-0">
-            <span className="block truncate font-display text-[15.5px] font-bold leading-tight">{shop.name}</span>
-            <span className="block text-[11px] font-semibold text-mint/70 transition-colors group-hover:text-lime">← Home</span>
+            <span className="block truncate font-display text-[19px] font-semibold leading-tight">{shop.name}</span>
+            <span className="block text-[11px] font-semibold text-muted transition-colors group-hover:text-brand">← Home</span>
           </span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-1 lg:order-last lg:ml-0">
-          <span className="flex items-center gap-2 rounded-full bg-white/8 px-3 py-1.5 text-[12px] font-semibold text-mint/90" title={syncLabel(mode, sync)}>
+        <div className="ml-auto flex items-center gap-1.5 lg:order-last lg:ml-0">
+          <VisitStore compact tone="light" />
+          <span className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-body ring-1 ring-line" title={syncLabel(mode, sync)}>
             <SyncDot mode={mode} sync={sync} />
-            <span className="hidden sm:inline">{syncLabel(mode, sync, true)}</span>
+            <span className="hidden sm:inline lg:hidden min-[1680px]:inline">{syncLabel(mode, sync, true)}</span>
           </span>
           {authEnabled && (
             <button
               onClick={() => void logout()}
-              className="grid size-9 place-items-center rounded-xl text-mint/70 transition hover:bg-white/10 hover:text-white active:scale-90"
+              className="grid size-9 place-items-center rounded-xl text-muted transition hover:bg-sea-sand/70 hover:text-ink active:scale-90"
               aria-label="Log out"
               title="Log out"
             >
@@ -130,12 +133,12 @@ function NavBar({ path }: { path: string }) {
               <span
                 aria-hidden
                 className={cx(
-                  "absolute left-0 top-0 h-10 rounded-xl bg-white/12 ring-1 ring-white/10",
+                  "absolute left-0 top-0 h-10 rounded-xl bg-white shadow-sm ring-1 ring-line",
                   pill.ready && "transition-[transform,width] duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)]",
                 )}
                 style={{ transform: `translateX(${pill.x}px)`, width: pill.w }}
               >
-                <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-lime shadow-[0_0_12px_2px] shadow-lime/60" />
+                <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-sea-leaf" />
               </span>
             )}
             {SECTIONS.map((s, i) => {
@@ -152,12 +155,20 @@ function NavBar({ path }: { path: string }) {
                   aria-current={on ? "page" : undefined}
                   className={cx(
                     "group relative flex h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-[13.5px] font-semibold transition-colors duration-300",
-                    on ? "text-white" : "text-mint/70 hover:bg-white/5 hover:text-white",
+                    on ? "text-ink" : "text-body hover:bg-sea-sand/60 hover:text-ink",
                   )}
                 >
-                  <Icon className={cx("size-[17px] transition-all duration-300", on ? "scale-110 text-lime" : "group-hover:-translate-y-0.5 group-hover:text-lime")} />
+                  <Icon className={cx("size-[17px] transition-all duration-300", on ? "scale-110 text-sea-teal" : "group-hover:-translate-y-0.5 group-hover:text-sea-teal")} />
                   <span className="xl:hidden">{s.short}</span>
                   <span className="hidden xl:inline">{s.label}</span>
+                  {s.key === "orders" && fresh > 0 && (
+                    <span
+                      className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-sea-teal px-1 text-[11px] font-extrabold tabular-nums text-white"
+                      aria-label={`${fresh} new`}
+                    >
+                      {fresh}
+                    </span>
+                  )}
                 </Link>
               );
             })}

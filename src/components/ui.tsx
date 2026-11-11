@@ -42,7 +42,7 @@ export const buttonClass = (variant: BtnVariant = "secondary", size: keyof typeo
 
 export function Card({ className, children, ...p }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cx("rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(20,32,26,0.04)]", className)} {...p}>
+    <div className={cx("rounded-2xl border border-line bg-sea-paper shadow-[0_1px_2px_rgba(17,58,45,0.05)]", className)} {...p}>
       {children}
     </div>
   );

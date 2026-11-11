@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { Package, PackageCheck, PackageX } from "lucide-react";
+import { ImageOff, Package } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { uid } from "@/lib/calc";
 import type { Product } from "@/lib/types";
 import { ListEditor } from "@/components/ListEditor";
 import { cx } from "@/components/ui";
+import { ProductDetailsButton } from "@/components/ProductDetailsDialog";
+import { thumb } from "@/lib/site";
 
 const inStock = (p: Product) => p.inStock !== false;
 const byName = (a: Product, b: Product) => a.name.trim().localeCompare(b.name.trim(), undefined, { numeric: true, sensitivity: "base" });
@@ -29,7 +31,7 @@ export default function ProductsPage() {
     <ListEditor<Product>
       section="products"
       title="Products"
-      subtitle="Your price list - pick these while making a receipt and the price fills in."
+      subtitle="Your price list - used on receipts and on your website. Tap the photo button to add photos, a description and a category."
       icon={<Package className="size-5" />}
       noun="Product"
       rows={products}
@@ -50,14 +52,29 @@ export default function ProductsPage() {
       filters={[
         { label: "In stock", test: inStock },
         { label: "Out of stock", test: (p) => !inStock(p) },
+        { label: "On website", test: (p) => p.onSite !== false },
+        { label: "Hidden from website", test: (p) => p.onSite === false },
+        { label: "No photo", test: (p) => !p.images?.length },
       ]}
+      rowActions={(p) => <ProductDetailsButton product={p} />}
       lead={(p) => (
         <span
           key={String(inStock(p))}
-          title={fmtUpdated(p)}
-          className={cx("animate-lead-pop grid size-9 place-items-center rounded-xl", inStock(p) ? "bg-soft text-brand" : "bg-red-50 text-red-500")}
+          title={`${inStock(p) ? "In stock" : "Out of stock"}${p.onSite === false ? " · hidden from website" : ""} · ${fmtUpdated(p)}`}
+          className={cx(
+            "animate-lead-pop relative grid size-9 place-items-center overflow-hidden rounded-xl",
+            inStock(p) ? "bg-soft text-brand" : "bg-red-50 text-red-500",
+            p.onSite === false && "opacity-50",
+          )}
         >
-          {inStock(p) ? <PackageCheck className="size-[18px]" /> : <PackageX className="size-[18px]" />}
+          {p.images?.[0] ? (
+            // eslint-disable-next-line @next/next/no-img-element -- uploaded product photo
+            <img src={thumb(p.images[0])} alt="" className="size-full object-cover" loading="lazy" />
+          ) : (
+            <ImageOff className="size-[16px]" />
+          )}
+          {/* stock dot */}
+          <span className={cx("absolute bottom-0.5 right-0.5 size-2 rounded-full ring-2 ring-white", inStock(p) ? "bg-lime" : "bg-red-500")} />
         </span>
       )}
       columns={[
