@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { prettyPhone, waLink, type Links, type PublicShop } from "@/lib/site";
 import { Grass } from "./Art";
 import { FacebookIcon, WhatsAppIcon } from "./Icons";
@@ -51,6 +51,13 @@ export function Footer({ shop, links }: { shop: PublicShop; links: Links }) {
               <li>
                 <a href={`tel:${shop.phone.replace(/[^\d+]/g, "")}`} className="flex items-center gap-2.5 transition hover:text-sea-teal">
                   <Phone className="size-[18px]" /> {shop.phone}
+                </a>
+              </li>
+            )}
+            {shop.email && (
+              <li>
+                <a href={`mailto:${shop.email}`} className="flex items-center gap-2.5 break-all transition hover:text-sea-teal">
+                  <Mail className="size-[18px] shrink-0" /> {shop.email}
                 </a>
               </li>
             )}

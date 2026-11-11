@@ -6,7 +6,12 @@ import type { Product, Shop } from "@/lib/types";
 import { db, dbEnabled, ensureSchema } from "./db";
 import { logoSrc } from "./logo";
 
-const withDefaults = (shop: Partial<Shop> | null | undefined): Shop => ({ ...DEFAULT_SHOP, ...shop, rates: DEFAULT_SHOP.rates });
+const withDefaults = (shop: Partial<Shop> | null | undefined): Shop => ({
+  ...DEFAULT_SHOP,
+  ...shop,
+  email: shop?.email?.trim() || DEFAULT_SHOP.email, // shops saved without an email address use the default one
+  rates: DEFAULT_SHOP.rates,
+});
 
 /** The saved shop settings (defaults when there is no database or nothing saved yet). */
 export async function loadShop(): Promise<Shop> {

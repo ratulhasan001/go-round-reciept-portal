@@ -120,6 +120,8 @@ const withDefaults = (shop?: Partial<Shop> | null): Shop => ({
   ...DEFAULT_SHOP,
   ...shop,
   tagline: shop?.tagline === undefined || isOldTagline(shop.tagline) ? DEFAULT_SHOP.tagline : shop.tagline,
+  // shops saved before the shop had an email address pick up the default one
+  email: shop?.email?.trim() || DEFAULT_SHOP.email,
   rates: {
     pay: { ...DEFAULT_SHOP.rates.pay, ...shop?.rates?.pay },
     courier: { ...DEFAULT_SHOP.rates.courier, ...shop?.rates?.courier },

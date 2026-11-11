@@ -5,7 +5,7 @@ export const DEFAULT_SHOP: Shop = {
   tagline: "Witness the Underwater World Through Us",
   address: "Khulna / Dhaka, Bangladesh",
   phone: "+880 1309-372143",
-  email: "",
+  email: "contact@goroundbd.com",
   website: "",
   invoicePrefix: "GR-",
   nextNumber: 2,
