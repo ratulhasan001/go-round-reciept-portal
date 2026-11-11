@@ -8,11 +8,14 @@ import { Floating } from "@/components/store/Floating";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { shop } = await loadCatalog();
+  // as on the visiting card: "Importer & supplier of aquarium plants & accessories"
+  const title = `${shop.name} · Importer & Supplier of Aquarium Plants & Accessories`;
+  const description = `${shop.tagline}. Importer and supplier of aquarium plants, fertilisers and accessories in Bangladesh - order online, pay with bKash or bank transfer.`;
   return {
-    title: { default: `${shop.name} · Aquarium plants & accessories`, template: `%s · ${shop.name}` },
-    description: `${shop.tagline}. Aquarium plants, fertilisers and accessories in Bangladesh - order online, pay with bKash or bank transfer.`,
+    title: { default: title, template: `%s · ${shop.name}` },
+    description,
     applicationName: shop.name,
-    openGraph: { siteName: shop.name, type: "website" },
+    openGraph: { siteName: shop.name, type: "website", title, description },
   };
 }
 
