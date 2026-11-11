@@ -32,7 +32,7 @@ function Row({ k, v, copy }: { k: string; v: string; copy?: boolean }) {
     <div className="flex items-center justify-between gap-3 py-2">
       <span className="text-[13px] font-semibold text-sea-muted">{k}</span>
       <span className="flex items-center gap-2 text-right text-[14.5px] font-extrabold">
-        {v} {copy && <CopyText text={v.replace(/^\+880 /, "0").replace(/[-\s]/g, "")} label={k} />}
+        <span className={copy ? "whitespace-nowrap" : undefined}>{v}</span> {copy && <CopyText text={v.replace(/^\+880 /, "0").replace(/[-\s]/g, "")} label={k} />}
       </span>
     </div>
   );

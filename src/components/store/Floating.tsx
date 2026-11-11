@@ -13,6 +13,8 @@ export function Floating() {
   const { shop, added, dismissAdded, count, links } = useShop();
   const path = usePathname();
   const onCheckout = path.startsWith(links.store("/checkout")) || path.startsWith(links.store("/cart"));
+  // on a phone the corner button sat on top of "Buy now"; product pages have their own "Ask about this product" link
+  const onProduct = path.startsWith(links.store("/products/"));
 
   useEffect(() => {
     if (!added) return;
@@ -27,7 +29,7 @@ export function Floating() {
           href={waLink(shop.site.whatsapp, `Hi ${shop.name}! `)}
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-5 right-4 z-30 grid size-14 place-items-center rounded-full bg-wa text-white shadow-[0_10px_30px_-8px_rgba(37,211,102,0.7)] transition hover:scale-105 active:scale-95 sm:bottom-6 sm:right-6"
+          className={`fixed bottom-5 right-4 z-30 ${onProduct ? "hidden sm:grid" : "grid"} size-14 place-items-center rounded-full bg-wa text-white shadow-[0_10px_30px_-8px_rgba(37,211,102,0.7)] transition hover:scale-105 active:scale-95 sm:bottom-6 sm:right-6`}
           aria-label="Chat with us on WhatsApp"
         >
           <WhatsAppIcon className="size-7" />

@@ -77,8 +77,11 @@ export function Footer({ shop, links }: { shop: PublicShop; links: Links }) {
           <p className="mt-5 text-[12.5px] text-sea-muted">We accept bKash and bank transfer.</p>
         </div>
       </div>
-      <p className="relative pb-6 text-center text-[12px] font-semibold text-sea-ink/60">
-        © {new Date().getFullYear()} {shop.name} · <Link href={links.store("/faq")} className="hover:text-sea-ink">Help</Link>
+      <p className="relative pb-6 text-center text-[12px] font-semibold text-sea-ink/80">
+        {/* a backing so the line stays readable over the grass */}
+        <span className="inline-block rounded-full bg-sea-paper/90 px-3 py-1">
+          © {new Date().getFullYear()} {shop.name} · <Link href={links.store("/faq")} className="underline-offset-2 hover:text-sea-ink hover:underline">Help</Link>
+        </span>
       </p>
     </footer>
   );
