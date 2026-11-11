@@ -108,41 +108,41 @@ export default function LoginPage() {
   const Lock = status === "success" ? LockKeyholeOpen : LockKeyhole;
 
   return (
-    <main className="relative grid min-h-dvh place-items-center overflow-hidden bg-deep px-5 py-10 text-white select-none">
+    <main className="relative grid min-h-dvh place-items-center overflow-hidden bg-[#0e2a23] px-5 py-10 text-white select-none">
       {/* soft background light */}
       <div className="animate-drift pointer-events-none absolute -left-32 -top-32 size-[420px] rounded-full bg-aqua/20 blur-3xl" />
-      <div className="animate-drift-slow pointer-events-none absolute -bottom-40 -right-24 size-[460px] rounded-full bg-lime/15 blur-3xl" />
+      <div className="animate-drift-slow pointer-events-none absolute -bottom-40 -right-24 size-[460px] rounded-full bg-[#8cc556]/15 blur-3xl" />
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.05]"
         style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "22px 22px" }}
       />
       <svg viewBox="0 0 595 40" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-0 h-16 w-full" aria-hidden>
         <path d={WAVE_BACK} className="fill-aqua/15" />
-        <path d={WAVE_FRONT} className="fill-lime/20" />
+        <path d={WAVE_FRONT} className="fill-[#8cc556]/20" />
       </svg>
 
       <section className="animate-fade-up relative w-full max-w-[360px] rounded-[32px] border border-white/10 bg-white/[0.06] px-6 pb-7 pt-8 shadow-2xl shadow-black/40 backdrop-blur-xl sm:px-8">
         {/* lock badge */}
         <div className="relative mx-auto mb-5 grid size-16 place-items-center">
           <span
-            className={`absolute inset-0 rounded-2xl transition-colors duration-300 ${status === "error" ? "bg-red-400/30" : "bg-lime/25"} ${status === "idle" ? "animate-pin-halo" : ""}`}
+            className={`absolute inset-0 rounded-2xl transition-colors duration-300 ${status === "error" ? "bg-red-400/30" : "bg-[#8cc556]/25"} ${status === "idle" ? "animate-pin-halo" : ""}`}
           />
           <span
-            className={`relative grid size-16 place-items-center rounded-2xl text-deep shadow-lg transition-all duration-300 ${
+            className={`relative grid size-16 place-items-center rounded-2xl text-[#0e2a23] shadow-lg transition-all duration-300 ${
               status === "error"
                 ? "bg-gradient-to-br from-red-300 to-red-400 shadow-red-400/25"
-                : "bg-gradient-to-br from-lime to-aqua shadow-lime/20"
+                : "bg-gradient-to-br from-[#8cc556] to-aqua shadow-[#8cc556]/20"
             } ${status === "success" ? "animate-pin-unlock" : ""} ${status === "error" ? "animate-pin-wobble" : ""}`}
           >
             <Lock className="size-7" strokeWidth={2.2} />
           </span>
         </div>
 
-        <div className="mb-1 text-center text-[11px] font-bold uppercase tracking-[0.28em] text-lime">Restricted access</div>
-        <h1 className="text-center font-display text-3xl font-extrabold">
+        <div className="mb-1 text-center text-[11px] font-bold uppercase tracking-[0.28em] text-[#8cc556]">Restricted access</div>
+        <h1 className="text-center font-[family-name:var(--font-bricolage)] tracking-[-0.02em] text-3xl font-extrabold">
           {status === "success" ? "Welcome back!" : "Enter your PIN"}
         </h1>
-        <p className="mt-1.5 text-center text-[14px] text-mint/75">
+        <p className="mt-1.5 text-center text-[14px] text-[#b9d8c9]/75">
           {status === "checking" ? "Checking…" : status === "success" ? "Unlocking…" : `Type your ${PIN_LENGTH}-digit PIN`}
         </p>
 
@@ -156,26 +156,26 @@ export default function LoginPage() {
           {Array.from({ length: PIN_LENGTH }, (_, i) => {
             const filled = i < pin.length;
             const tone =
-              status === "error" ? "border-red-400 bg-red-400/15" : status === "success" ? "border-lime bg-lime/20" : filled ? "border-lime bg-lime/10" : "border-white/20 bg-black/20";
+              status === "error" ? "border-red-400 bg-red-400/15" : status === "success" ? "border-[#8cc556] bg-[#8cc556]/20" : filled ? "border-[#8cc556] bg-[#8cc556]/10" : "border-white/20 bg-black/20";
             return (
               <div
                 key={i}
                 className={`relative grid size-14 place-items-center rounded-2xl border-2 transition-colors duration-200 ${tone} ${
                   status === "checking" ? "animate-pin-wave" : ""
-                } ${status === "success" ? "animate-pin-hop" : ""} ${i === pin.length && status === "idle" ? "ring-4 ring-lime/10" : ""}`}
+                } ${status === "success" ? "animate-pin-hop" : ""} ${i === pin.length && status === "idle" ? "ring-4 ring-[#8cc556]/10" : ""}`}
                 style={status === "checking" || status === "success" ? { animationDelay: `${i * 90}ms` } : undefined}
               >
                 {filled &&
                   (peek === i ? (
-                    <span key="digit" className="animate-pin-pop font-display text-2xl font-extrabold text-lime">
+                    <span key="digit" className="animate-pin-pop font-[family-name:var(--font-bricolage)] tracking-[-0.02em] text-2xl font-extrabold text-[#8cc556]">
                       {pin[i]}
                     </span>
                   ) : (
-                    <span key="dot" className={`animate-pin-pop size-3.5 rounded-full ${status === "error" ? "bg-red-400" : "bg-lime"}`} />
+                    <span key="dot" className={`animate-pin-pop size-3.5 rounded-full ${status === "error" ? "bg-red-400" : "bg-[#8cc556]"}`} />
                   ))}
-                {filled && peek === i && <span className="animate-pin-ripple pointer-events-none absolute inset-0 rounded-2xl border-2 border-lime" />}
+                {filled && peek === i && <span className="animate-pin-ripple pointer-events-none absolute inset-0 rounded-2xl border-2 border-[#8cc556]" />}
                 {!filled && i === pin.length && status === "idle" && (
-                  <span className="animate-pin-caret absolute bottom-2.5 h-0.5 w-4 rounded-full bg-lime/70" />
+                  <span className="animate-pin-caret absolute bottom-2.5 h-0.5 w-4 rounded-full bg-[#8cc556]/70" />
                 )}
               </div>
             );
@@ -208,11 +208,11 @@ export default function LoginPage() {
                 disabled={locked}
                 aria-label={key === "del" ? "Delete last digit" : key}
                 style={{ animationDelay: `${i * 35}ms` }}
-                className={`animate-key-in relative grid h-14 place-items-center overflow-hidden rounded-2xl font-display text-2xl font-bold transition duration-150 active:scale-90 disabled:opacity-40 ${
+                className={`animate-key-in relative grid h-14 place-items-center overflow-hidden rounded-2xl font-[family-name:var(--font-bricolage)] tracking-[-0.02em] text-2xl font-bold transition duration-150 active:scale-90 disabled:opacity-40 ${
                   key === "del"
                     ? "text-white/60 hover:text-white"
-                    : "border border-white/10 bg-white/[0.07] hover:border-lime/40 hover:bg-white/[0.12]"
-                } ${pressed === key ? "scale-90 bg-lime/25 text-lime" : ""}`}
+                    : "border border-white/10 bg-white/[0.07] hover:border-[#8cc556]/40 hover:bg-white/[0.12]"
+                } ${pressed === key ? "scale-90 bg-[#8cc556]/25 text-[#8cc556]" : ""}`}
               >
                 {key === "del" ? <Delete className="size-6" /> : key}
               </button>
