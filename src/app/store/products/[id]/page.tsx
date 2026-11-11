@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { loadCatalog } from "@/lib/server/catalog";
 import { storeLinks } from "@/lib/server/links";
+import { plainText } from "@/lib/site";
 import { ProductCard } from "@/components/store/ProductCard";
 import { ProductDetail } from "@/components/store/ProductDetail";
 import { Reveal } from "@/components/store/Reveal";
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: PageProps<"/store/products/[i
   if (!product) return { title: "Product not found" };
   return {
     title: product.name,
-    description: product.description.slice(0, 160) || `${product.name} - order online, pay with bKash or bank transfer.`,
+    description: plainText(product.description).replace(/\s+/g, " ").slice(0, 160) || `${product.name} - order online, pay with bKash or bank transfer.`,
     openGraph: product.images[0] ? { images: [product.images[0]] } : undefined,
   };
 }

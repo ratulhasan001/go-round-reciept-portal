@@ -15,7 +15,7 @@ export default async function VerifyPage() {
         center
         eyebrow={`${shop.name} · Verify`}
         title={<>Is it really <em>{shop.name}?</em></>}
-        intro="Check a purchase or your order's status with the transaction ID of your payment - and download its receipt - or make sure someone really works for us."
+        intro="Check a purchase or your order's status with the mobile number it was placed with - and download its receipt - or make sure someone really works for us."
       />
       <Suspense>
         <VerifyHub />

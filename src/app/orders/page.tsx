@@ -139,13 +139,13 @@ export default function OrdersPage() {
           </div>
           {orders.length === 0 ? (
             <>
-              <h2 className="mt-4 font-display text-lg font-bold">No website orders yet</h2>
+              <h2 className="mt-4 text-lg font-bold">No website orders yet</h2>
               <p className="mt-1 max-w-sm text-[13.5px] text-muted">When customers order on your website, their orders appear here - with their payment details, ready to confirm and ship.</p>
               <VisitStore tone="light" className="mt-5" />
             </>
           ) : (
             <>
-              <h2 className="mt-4 font-display text-lg font-bold">Nothing here</h2>
+              <h2 className="mt-4 text-lg font-bold">Nothing here</h2>
               <p className="mt-1 text-[13.5px] text-muted">{q ? "No orders match your search." : "No orders with this status."}</p>
             </>
           )}

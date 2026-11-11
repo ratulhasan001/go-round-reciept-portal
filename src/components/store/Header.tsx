@@ -96,13 +96,13 @@ export function Header() {
                   key={l.href}
                   href={l.href}
                   aria-current={isOn(path, l.href, links.store()) ? "page" : undefined}
-                  className="sea-sheet-in flex items-center justify-between rounded-2xl px-3 py-3.5 font-serif text-[24px] text-sea-ink transition hover:bg-sea-sand/60 aria-[current=page]:italic aria-[current=page]:text-sea-teal"
+                  className="sea-sheet-in flex items-center justify-between rounded-2xl px-3 py-3.5 text-[18px] font-bold text-sea-ink transition hover:bg-sea-sand/60 aria-[current=page]:bg-sea-paper aria-[current=page]:text-sea-teal"
                   style={{ animationDelay: `${60 + i * 35}ms` }}
                 >
                   {l.label}
                 </Link>
               ))}
-              <Link href={links.store("/account")} className="sea-sheet-in mt-1 rounded-2xl px-3 py-3.5 font-serif text-[24px] text-sea-ink hover:bg-sea-sand/60" style={{ animationDelay: "290ms" }}>
+              <Link href={links.store("/account")} className="sea-sheet-in mt-1 rounded-2xl px-3 py-3.5 text-[18px] font-bold text-sea-ink hover:bg-sea-sand/60" style={{ animationDelay: "290ms" }}>
                 My account
               </Link>
             </nav>

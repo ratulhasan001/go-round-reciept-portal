@@ -54,7 +54,7 @@ export function SectionTitle({ icon, title, hint, action }: { icon?: React.React
       <div className="flex items-start gap-3">
         {icon ? <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-soft text-brand">{icon}</div> : null}
         <div>
-          <h2 className="font-display text-[17px] font-bold text-ink">{title}</h2>
+          <h2 className="text-[17px] font-bold text-ink">{title}</h2>
           {hint ? <p className="text-[13px] text-muted">{hint}</p> : null}
         </div>
       </div>

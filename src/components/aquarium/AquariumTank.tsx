@@ -512,7 +512,7 @@ export function AquariumTank({
           </div>
           {game?.active && (
             <div data-tank-ui className="tank-card absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-2xl bg-deep/85 py-1.5 pl-3 pr-1.5 text-white shadow-xl ring-1 ring-white/15 backdrop-blur-md">
-              <span className={cx("font-display text-[18px] font-extrabold tabular-nums", game.left < 6 && "animate-pulse text-amber-300")}>0:{String(Math.ceil(game.left)).padStart(2, "0")}</span>
+              <span className={cx("text-[18px] font-extrabold tabular-nums", game.left < 6 && "animate-pulse text-amber-300")}>0:{String(Math.ceil(game.left)).padStart(2, "0")}</span>
               <span className="text-[12.5px] font-bold text-lime">🎣 {game.score}</span>
               <span className="flex items-center gap-1 text-[11.5px] text-mint/70">
                 <Trophy className="size-3" /> {game.best}
@@ -657,7 +657,7 @@ function FishShop({ owned, onToggle, onClose }: { owned: ExtraKind[]; onToggle: 
     <div className="animate-fade-up mx-auto w-full max-w-2xl rounded-3xl bg-white p-4 text-ink shadow-lg ring-1 ring-line">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="flex items-center gap-2 font-display text-[16px] font-extrabold">
+          <h3 className="flex items-center gap-2 text-[16px] font-extrabold">
             <Store className="size-4 text-brand" /> Fish shop
           </h3>
           <p className="text-[12.5px] text-muted">Tap a fish to add it to the tank - tap again to let it go.</p>
@@ -796,7 +796,7 @@ function FishCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="text-[10.5px] font-bold uppercase tracking-wider text-aqua-deep">{info.species}</p>
-            <p className="flex items-center gap-1.5 truncate font-display text-[17px] font-extrabold">
+            <p className="flex items-center gap-1.5 truncate text-[17px] font-extrabold">
               {adopted && <Heart className="size-4 shrink-0 fill-rose-500 text-rose-500" />}
               {shown}
             </p>

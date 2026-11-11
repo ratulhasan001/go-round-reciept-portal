@@ -40,6 +40,7 @@ interface Store extends Data {
   setEmployees: (e: Employee[]) => void;
   /** Saves changes to a website order (status, payment check, notes…). */
   saveOrder: (o: Order) => void;
+  deleteOrder: (id: string) => void;
   /** remember: also add / update the customer and products it uses (off for auto-saves while typing). */
   saveInvoice: (inv: Invoice, opts?: { remember?: boolean }) => Invoice;
   deleteInvoice: (id: string) => void;
@@ -444,6 +445,13 @@ export function StoreProvider({ area, children }: { area: Area; children: React.
       setCoupons: (coupons) => setData((d) => ({ ...d, coupons })),
       setEmployees: (employees) => setData((d) => ({ ...d, employees })),
       saveOrder: (o) => setData((d) => ({ ...d, orders: d.orders.map((x) => (x.id === o.id ? { ...o, updatedAt: Date.now() } : x)) })),
+      deleteOrder: (id) =>
+        setData((d) => ({
+          ...d,
+          orders: d.orders.filter((o) => o.id !== id),
+          // its receipt stays, just no longer linked to a website order
+          invoices: d.invoices.map((i) => (i.orderId === id ? { ...i, orderId: undefined } : i)),
+        })),
       saveInvoice,
       deleteInvoice: (id) =>
         setData((d) => {

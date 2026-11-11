@@ -109,7 +109,12 @@ export default function WebsitePage() {
                 <Input type="url" value={s.facebook} placeholder="https://facebook.com/…" onChange={(e) => set({ facebook: e.target.value })} />
               </Field>
             </div>
-            <p className="mt-3 text-[12px] text-muted">Shop name, address, phone and email come from Settings.</p>
+            <div className="mt-4">
+              <Field label="Address on the website">
+                <Input value={s.address} placeholder="e.g. Dhaka/Khulna, Bangladesh" onChange={(e) => set({ address: e.target.value })} />
+              </Field>
+            </div>
+            <p className="mt-3 text-[12px] text-muted">Shop name, phone and email come from Settings. Receipts keep the address in Settings.</p>
           </Card>
 
           {/* payments */}
@@ -195,6 +200,11 @@ export default function WebsitePage() {
             <Button size="sm" className="mt-3" onClick={() => set({ zones: [...s.zones, { id: uid(), name: "", fee: shop.defaultDelivery }] })}>
               <Plus className="size-3.5" /> Add delivery area
             </Button>
+            <div className="mt-5">
+              <Field label="Delivery note (product pages and Contact us)">
+                <Textarea rows={2} value={s.deliveryNote} onChange={(e) => set({ deliveryNote: e.target.value })} />
+              </Field>
+            </div>
             <div className="mt-5 max-w-xs">
               <Field label="Free delivery on orders from (৳)">
                 <Input

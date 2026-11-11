@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { preload } from "react-dom";
 import { loadCatalog } from "@/lib/server/catalog";
 import { requestHost, storeLinks } from "@/lib/server/links";
 import { StoreProvider } from "@/components/store/StoreContext";
@@ -23,6 +24,8 @@ export const viewport: Viewport = { themeColor: "#f3efe6" };
 
 /** The customer website. Public: no shop login, and it never loads the admin panel's data. */
 export default async function StoreLayout({ children }: LayoutProps<"/store">) {
+  // the card's serif, fetched with the page so headings and the logo never flash a fallback font on slow mobile data
+  for (const f of ["Fraunces-400", "Fraunces-600", "Fraunces-Italic"]) preload(`/fonts/${f}.woff2`, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   const [{ shop, online }, host, links] = await Promise.all([loadCatalog(), requestHost(), storeLinks()]);
   return (
     <StoreProvider shop={shop} online={online} host={host}>

@@ -59,7 +59,7 @@ export function Mark({ className }: { className?: string }) {
     // eslint-disable-next-line @next/next/no-img-element -- user-uploaded data URL
     <img src={shop.logo} alt="" className={cx("rounded-full bg-white object-contain p-0.5 ring-2 ring-white/10", className)} />
   ) : (
-    <div className={cx("grid place-items-center rounded-xl bg-lime font-display font-extrabold text-deep", className)}>{initials(shop.name)}</div>
+    <div className={cx("grid place-items-center rounded-xl bg-lime font-extrabold text-deep", className)}>{initials(shop.name)}</div>
   );
 }
 

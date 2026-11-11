@@ -57,27 +57,29 @@ body {
 }
 
 .font-display {
-  letter-spacing: -0.02em;
+  /* Fraunces ships at 400 and 600 only: anything bolder would be a smeared fake bold */
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 /* the visiting card's serif, used on the receipt and letterhead (same files the PDF embeds) */
 @font-face {
   font-family: "Fraunces";
-  src: url("/fonts/Fraunces-400.ttf") format("truetype");
+  src: url("/fonts/Fraunces-400.woff2") format("woff2"), url("/fonts/Fraunces-400.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Fraunces";
-  src: url("/fonts/Fraunces-600.ttf") format("truetype");
+  src: url("/fonts/Fraunces-600.woff2") format("woff2"), url("/fonts/Fraunces-600.ttf") format("truetype");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Fraunces";
-  src: url("/fonts/Fraunces-Italic.ttf") format("truetype");
+  src: url("/fonts/Fraunces-Italic.woff2") format("woff2"), url("/fonts/Fraunces-Italic.ttf") format("truetype");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
@@ -1976,4 +1978,47 @@ input[type="number"] {
     transform: none;
     transition: none;
   }
+}
+
+/* product descriptions: on the store, and in the admin's description editor (same look) */
+.rich-desc > * + *,
+.rich-desc > div:has(> br:only-child) + * {
+  margin-top: 0.6em;
+}
+.rich-desc h3 {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 600;
+  font-size: 1.3em;
+  line-height: 1.2;
+  color: var(--color-sea-ink);
+}
+.rich-desc h4 {
+  font-weight: 800;
+  font-size: 1.05em;
+  color: var(--color-sea-ink);
+}
+.rich-desc b {
+  font-weight: 800;
+  color: var(--color-sea-ink);
+}
+.rich-desc ul,
+.rich-desc ol {
+  padding-left: 1.35em;
+}
+.rich-desc ul {
+  list-style: disc;
+}
+.rich-desc ol {
+  list-style: decimal;
+}
+.rich-desc li + li {
+  margin-top: 0.25em;
+}
+.rich-desc li::marker {
+  color: var(--color-sea-leaf);
+}
+.rich-desc blockquote {
+  border-left: 3px solid var(--color-sea-sprout);
+  padding-left: 0.9em;
+  font-style: italic;
 }

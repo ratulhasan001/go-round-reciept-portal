@@ -162,7 +162,7 @@ export function CustomerFormView({
                   <span className="block text-[11.5px] font-bold uppercase tracking-wider opacity-80">This link expires in</span>
                   <span className="block text-[12px] opacity-70">{urgent ? "Hurry - less than a minute left!" : soon ? "Only a few minutes left" : "Please fill it in before it closes"}</span>
                 </span>
-                <span className="flex items-baseline font-display text-[28px] font-extrabold leading-none tabular-nums">
+                <span className="flex items-baseline text-[28px] font-extrabold leading-none tabular-nums">
                   {left === null ? (
                     "30:00"
                   ) : (
@@ -222,7 +222,7 @@ export function CustomerFormView({
               <button
                 type="submit"
                 disabled={busy}
-                className="group relative mt-6 flex h-13 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-deep font-display text-[16px] font-bold text-lime shadow-lg shadow-deep/25 transition hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-[0.98] disabled:opacity-80"
+                className="group relative mt-6 flex h-13 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-deep text-[16px] font-bold text-lime shadow-lg shadow-deep/25 transition hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:scale-[0.98] disabled:opacity-80"
               >
                 <span aria-hidden className="animate-shine pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 skew-x-[-20deg] bg-white/15 blur-md" />
                 {busy ? (

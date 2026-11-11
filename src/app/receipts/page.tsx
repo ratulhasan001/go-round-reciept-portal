@@ -166,7 +166,7 @@ export default function Dashboard() {
             <span className="grid size-7 place-items-center rounded-lg bg-red-50 text-red-600">
               <BellRing className="size-4" />
             </span>
-            <h2 className="font-display text-[16px] font-bold">Who owes you</h2>
+            <h2 className="text-[16px] font-bold">Who owes you</h2>
             <span className="text-[12.5px] text-muted">· send a polite WhatsApp reminder in one tap</span>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -227,7 +227,7 @@ export default function Dashboard() {
             <div className="grid size-14 place-items-center rounded-2xl bg-soft text-brand">
               <ReceiptText className="size-6" />
             </div>
-            <div className="font-display text-lg font-bold">{rows.length ? "No receipts match" : "No receipts yet"}</div>
+            <div className="text-lg font-bold">{rows.length ? "No receipts match" : "No receipts yet"}</div>
             <p className="max-w-sm text-sm text-muted">{rows.length ? "Try a different search or filter." : "Create your first receipt - it only takes a minute."}</p>
             {!rows.length && (
               <Link href="/new" transitionTypes={["nav-right"]} className={buttonClass("primary")}>
@@ -255,7 +255,7 @@ export default function Dashboard() {
                 {visible.map(({ inv, t }) => (
                   <tr key={inv.id} className="group border-t border-line transition hover:bg-canvas/70">
                     <td className="whitespace-nowrap px-5 py-3.5">
-                      <Link href={`/new?id=${inv.id}`} transitionTypes={["nav-right"]} className="font-display font-bold text-ink hover:text-brand">{inv.number}</Link>
+                      <Link href={`/new?id=${inv.id}`} transitionTypes={["nav-right"]} className="font-bold text-ink hover:text-brand">{inv.number}</Link>
                     </td>
                     <td className="px-3 py-3.5">
                       <div className="font-semibold">{inv.customer.name || "—"}</div>
@@ -281,7 +281,7 @@ export default function Dashboard() {
                   <Link href={`/new?id=${inv.id}`} transitionTypes={["nav-right"]} className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-display font-bold">{inv.number}</span>
+                        <span className="font-bold">{inv.number}</span>
                         <StatusBadge status={t.status} />
                       </div>
                       <div className="mt-0.5 truncate text-sm font-semibold text-body">{inv.customer.name || "—"}</div>

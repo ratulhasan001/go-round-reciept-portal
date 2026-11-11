@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, ShieldCheck, Truck, Wallet } from "lucide-react";
-import { tk, waLink, type PublicProduct } from "@/lib/site";
+import { richHtml, tk, waLink, type PublicProduct } from "@/lib/site";
 import { ProductImage } from "./ProductImage";
 import { useShop } from "./StoreContext";
 import { WhatsAppIcon } from "./Icons";
@@ -14,8 +15,6 @@ export function ProductDetail({ p }: { p: PublicProduct }) {
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [pic, setPic] = useState(0);
-  const zones = shop.site.zones;
-  const cheapest = Math.min(...zones.map((z) => z.fee));
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-14">
@@ -41,7 +40,21 @@ export function ProductDetail({ p }: { p: PublicProduct }) {
       </div>
 
       <div>
-        {p.category && <p className="store-eyebrow !text-sea-leaf">{p.category}</p>}
+        {p.category && (
+          <p className="store-eyebrow flex flex-wrap items-center gap-x-2 !text-sea-leaf">
+            <Link href={`${links.store("/products")}?category=${encodeURIComponent(p.category)}`} className="hover:underline">
+              {p.category}
+            </Link>
+            {p.subcategory && (
+              <>
+                <span aria-hidden className="text-sea-muted">›</span>
+                <Link href={`${links.store("/products")}?category=${encodeURIComponent(p.category)}&sub=${encodeURIComponent(p.subcategory)}`} className="hover:underline">
+                  {p.subcategory}
+                </Link>
+              </>
+            )}
+          </p>
+        )}
         <h1 className="mt-3 font-serif text-[34px] leading-[1.08] sm:text-[44px]">{p.name}</h1>
         <p className="mt-4 text-[28px] font-extrabold tabular-nums">
           {tk(p.price)}
@@ -84,13 +97,13 @@ export function ProductDetail({ p }: { p: PublicProduct }) {
           </a>
         )}
 
-        {p.description && <div className="mt-9 whitespace-pre-line border-t border-sea-line pt-7 text-[15.5px] leading-relaxed text-sea-body">{p.description}</div>}
+        {p.description.trim() && <div className="rich-desc mt-9 border-t border-sea-line pt-7 text-[15.5px] leading-relaxed text-sea-body" dangerouslySetInnerHTML={{ __html: richHtml(p.description) }} />}
 
         <ul className="mt-9 grid gap-3 border-t border-sea-line pt-7 text-[14px] text-sea-body">
           <li className="flex gap-3">
             <Truck className="size-5 shrink-0 text-sea-teal" />
             <span>
-              Delivery {cheapest > 0 ? `from ${tk(cheapest)}` : "available"}
+              {shop.site.deliveryNote.trim() || "Delivery all over Bangladesh"}
               {shop.site.freeDeliveryOver > 0 && ` · free on orders over ${tk(shop.site.freeDeliveryOver)}`}
             </span>
           </li>

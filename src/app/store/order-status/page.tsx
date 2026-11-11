@@ -11,7 +11,7 @@ export default function OrderStatusPage() {
       <PageHead
         eyebrow="Order status"
         title={<>Where&apos;s my <em>order?</em></>}
-        intro="No account needed - type the transaction ID of your bKash or bank payment to see your order and download its receipt."
+        intro="No account needed - type the mobile number you ordered with to see your orders and download their receipts."
       />
       <Suspense>
         <TrackView />

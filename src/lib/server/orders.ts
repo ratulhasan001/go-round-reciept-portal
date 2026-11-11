@@ -127,6 +127,20 @@ export async function findOrder(code: string, phone: string): Promise<Order | nu
   return same ? row.data : null;
 }
 
+/**
+ * Every order placed with this mobile number, newest first. Numbers are compared on their last 10 digits, so
+ * 01712-345678, +8801712345678 and 8801712345678 are the same number.
+ */
+export async function findOrdersByPhone(phone: string): Promise<Order[]> {
+  const digits = phoneKey(phone);
+  if (digits.length < 10 || digits.length > 15) return [];
+  const rows = await db()<{ data: Order }[]>`
+    select data from gr_docs
+    where kind = 'order' and right(regexp_replace(coalesce(data->'customer'->>'phone', ''), '[^0-9]', '', 'g'), 10) = ${digits.slice(-10)}
+    order by (data->>'createdAt')::bigint desc limit 20`;
+  return rows.map((r) => r.data);
+}
+
 /** Transaction ids as typed: upper case, no spaces or dashes. */
 export const trxKey = (s: string) => s.toUpperCase().replace(/[\s-]/g, "");
 
@@ -139,7 +153,7 @@ export async function findOrderByTrx(trxId: string): Promise<Order | null> {
   if (key.length < 6 || key.length > 40) return null;
   const [row] = await db()<{ data: Order }[]>`
     select data from gr_docs
-    where kind = 'order' and upper(regexp_replace(coalesce(data->'payment'->>'trxId', ''), '[\s-]', '', 'g')) = ${key}
+    where kind = 'order' and upper(regexp_replace(coalesce(data->'payment'->>'trxId', ''), '[[:space:]-]', '', 'g')) = ${key}
     order by (data->>'createdAt')::bigint desc limit 1`;
   return row?.data ?? null;
 }

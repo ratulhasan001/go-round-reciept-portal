@@ -95,9 +95,9 @@ export default async function StoreHome() {
       <section className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="-mt-20 grid gap-3 sm:-mt-28 sm:grid-cols-3">
           {[
-            { icon: ShoppingBag, t: "Pick your plants", d: "Add what your tank needs to the cart - no account needed." },
+            { icon: ShoppingBag, t: "Pick your product", d: "Add what you need to the cart - no account needed." },
             { icon: Wallet, t: "Pay by bKash or bank", d: "Send the total and type in the transaction ID." },
-            { icon: PackageCheck, t: "We pack & deliver", d: "Check Order status any time with your transaction ID." },
+            { icon: PackageCheck, t: "We pack & deliver", d: "Check Order status any time with your mobile number." },
           ].map((s, i) => (
             <Reveal key={s.t} delay={i * 90} className="relative rounded-[24px] border border-sea-line bg-sea-paper/95 p-5 backdrop-blur">
               <div className="flex items-center gap-3">

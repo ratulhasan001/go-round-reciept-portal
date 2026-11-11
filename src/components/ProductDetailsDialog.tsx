@@ -6,9 +6,12 @@ import { useStore } from "@/lib/store";
 import { tk, thumb } from "@/lib/site";
 import type { Product } from "@/lib/types";
 import { Modal } from "./Modal";
-import { Field, Input, Switch, Textarea, cx, useToast } from "./ui";
+import { DescriptionEditor } from "./DescriptionEditor";
+import { Field, Input, Switch, cx, useToast } from "./ui";
 
 const MAX_PHOTOS = 8;
+
+const subExample = (category: string) => (/filter/i.test(category) ? "Filter media, Filter accessories" : /plant/i.test(category) ? "Stem plants, Carpet plants" : "a type within it");
 
 /** Draws the image at most `max` px on its longest side. */
 async function drawScaled(file: File, max: number) {
@@ -91,6 +94,9 @@ export function ProductDetailsDialog({ productId, onClose }: { productId: string
   if (!p) return null;
   const images = p.images ?? [];
   const categories = [...new Set(products.map((x) => x.category?.trim()).filter(Boolean) as string[])].sort();
+  // subcategories already used in this product's category
+  const sameCat = (x: Product) => !!p.category?.trim() && x.category?.trim().toLowerCase() === p.category.trim().toLowerCase();
+  const subcategories = [...new Set(products.filter(sameCat).map((x) => x.subcategory?.trim()).filter(Boolean) as string[])].sort();
 
   const update = (patch: Partial<Product>) =>
     setProducts(latest.current.map((x) => (x.id === productId ? { ...x, ...patch, updatedAt: Date.now() } : x)));
@@ -209,22 +215,45 @@ export function ProductDetailsDialog({ productId, onClose }: { productId: string
         </div>
 
         <Field label="Description">
-          <Textarea
-            rows={4}
-            value={p.description ?? ""}
-            placeholder="What it is, size, who it's for, how to use it…"
-            onChange={(e) => update({ description: e.target.value })}
-          />
+          <DescriptionEditor value={p.description ?? ""} placeholder="What it is, size, who it's for, how to use it…" onChange={(description) => update({ description })} />
         </Field>
 
-        <Field label="Category">
-          <Input list="product-categories" value={p.category ?? ""} placeholder="e.g. Fertilisers, Plants, Filters" onChange={(e) => update({ category: e.target.value })} />
-          <datalist id="product-categories">
-            {categories.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Category">
+            <Input list="product-categories" value={p.category ?? ""} placeholder="e.g. Filter, Plants, Fertilisers" onChange={(e) => update({ category: e.target.value })} />
+            <datalist id="product-categories">
+              {categories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </Field>
+          <Field label="Subcategory (optional)">
+            <Input
+              list="product-subcategories"
+              value={p.subcategory ?? ""}
+              disabled={!p.category?.trim()}
+              placeholder={p.category?.trim() ? `e.g. ${subExample(p.category)}` : "Pick a category first"}
+              onChange={(e) => update({ subcategory: e.target.value })}
+            />
+            <datalist id="product-subcategories">
+              {subcategories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </Field>
+        </div>
+        {p.category?.trim() && (
+          <p className="-mt-3 text-[12px] text-muted">
+            On the website: <b className="text-ink">{p.category.trim()}</b>
+            {p.subcategory?.trim() && (
+              <>
+                {" › "}
+                <b className="text-ink">{p.subcategory.trim()}</b>
+              </>
+            )}
+            {" · "}customers filter the shop by category, then by subcategory.
+          </p>
+        )}
 
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl bg-canvas px-3.5 py-3">

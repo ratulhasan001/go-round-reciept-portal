@@ -39,15 +39,15 @@ export default async function ContactPage() {
           </Reveal>
         ))}
       </div>
-      {shop.address && (
+      {s.address.trim() && (
         <Reveal className="mt-4 flex items-start gap-4 rounded-[24px] border border-sea-line bg-sea-paper p-5">
           <span className="grid size-14 shrink-0 place-items-center rounded-full bg-white ring-1 ring-sea-line">
             <MapPin className="size-6 text-sea-teal" />
           </span>
           <span>
             <span className="store-eyebrow block">Where we are</span>
-            <span className="mt-1 block text-[17px] font-extrabold">{shop.address}</span>
-            <span className="block text-[13px] text-sea-muted">We deliver all over Bangladesh.</span>
+            <span className="mt-1 block text-[17px] font-extrabold">{s.address}</span>
+            <span className="block text-[13px] text-sea-muted">{s.deliveryNote}</span>
           </span>
         </Reveal>
       )}

@@ -274,7 +274,7 @@ export function CustomerFormDialog() {
                       <Link2 className="size-5" />
                     </div>
                     <div>
-                      <h2 id="cform-title" className="font-display text-lg font-extrabold">
+                      <h2 id="cform-title" className="text-lg font-extrabold">
                         Customer form
                       </h2>
                       <p className="text-[13px] text-mint/80">A one-time link your customer fills in</p>
@@ -350,13 +350,13 @@ export function CustomerFormDialog() {
                         </svg>
                         <div className="absolute inset-0 grid place-items-center text-center">
                           <div>
-                            <div className={cx("font-display text-xl font-extrabold tabular-nums leading-none", tone)}>{clock(left)}</div>
+                            <div className={cx("text-xl font-extrabold tabular-nums leading-none", tone)}>{clock(left)}</div>
                             <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted">left</div>
                           </div>
                         </div>
                       </div>
                       <div className="min-w-0">
-                        <p className="flex items-center gap-2 font-display text-[16px] font-extrabold">
+                        <p className="flex items-center gap-2 text-[16px] font-extrabold">
                           <span className="relative flex size-2.5">
                             <span className="absolute inline-flex size-full animate-ping rounded-full bg-lime" />
                             <span className="relative inline-flex size-2.5 rounded-full bg-brand" />
@@ -541,7 +541,7 @@ function LinkList({ rows, fetchedAt, now, ownId, onCancel }: { rows: LinkRow[]; 
                 </div>
                 {state === "active" ? (
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <span className={cx("font-display text-[14px] font-extrabold tabular-nums", left < 60_000 ? "text-red-500" : left < 300_000 ? "text-amber-500" : "text-brand")}>{clock(left)}</span>
+                    <span className={cx("text-[14px] font-extrabold tabular-nums", left < 60_000 ? "text-red-500" : left < 300_000 ? "text-amber-500" : "text-brand")}>{clock(left)}</span>
                     <button onClick={() => onCancel(r)} title="Cancel this link" className="grid size-7 place-items-center rounded-lg text-muted transition hover:bg-red-50 hover:text-red-600" aria-label="Cancel link">
                       <Ban className="size-3.5" />
                     </button>

@@ -15,6 +15,7 @@ import {
   Phone,
   RotateCcw,
   ShoppingBag,
+  Trash2,
   Truck,
   Wallet,
 } from "lucide-react";
@@ -211,7 +212,7 @@ function Body({ order: o, save, shopName }: { order: Order; save: (o: Order) => 
 
       {/* payment */}
       <section className={cx("rounded-2xl border p-4", pay === "submitted" ? "border-amber-300 bg-amber-50/40" : pay === "rejected" ? "border-red-200" : "border-line")}>
-        <h3 className="mb-3 flex items-center gap-2 font-display text-[15px] font-bold">
+        <h3 className="mb-3 flex items-center gap-2 text-[15px] font-bold">
           <Wallet className="size-4 text-brand" /> Payment · {o.payment.method}
         </h3>
         {o.payment.trxId ? (
@@ -276,7 +277,7 @@ function Body({ order: o, save, shopName }: { order: Order; save: (o: Order) => 
 
       {/* customer */}
       <section className="rounded-2xl border border-line p-4">
-        <h3 className="font-display text-[15px] font-bold">{o.customer.name}</h3>
+        <h3 className="text-[15px] font-bold">{o.customer.name}</h3>
         <p className="text-[13.5px] text-body">{o.customer.phone}{o.customer.email ? ` · ${o.customer.email}` : ""}</p>
         <p className="mt-2 flex gap-2 whitespace-pre-line text-[13.5px] text-body">
           <MapPin className="mt-0.5 size-4 shrink-0 text-muted" />
@@ -307,7 +308,7 @@ function Body({ order: o, save, shopName }: { order: Order; save: (o: Order) => 
 
       {/* items */}
       <section className="rounded-2xl border border-line p-4">
-        <h3 className="mb-3 font-display text-[15px] font-bold">Items</h3>
+        <h3 className="mb-3 text-[15px] font-bold">Items</h3>
         <ul className="flex flex-col gap-3">
           {o.items.map((it) => (
             <li key={it.productId} className="flex items-center gap-3">
@@ -361,6 +362,44 @@ function Body({ order: o, save, shopName }: { order: Order; save: (o: Order) => 
         </ol>
         <p className="mt-3 text-[11.5px] text-faint">{shopName} · order id {o.id.slice(0, 8)}</p>
       </section>
+
+      <DeleteOrder order={o} />
     </div>
+  );
+}
+
+/** Removes the order for good (a test order, a duplicate, spam). Its receipt, if one was made, is kept. */
+function DeleteOrder({ order }: { order: Order }) {
+  const { deleteOrder } = useStore();
+  const toast = useToast();
+  const [armed, setArmed] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const del = () => {
+    if (!armed) {
+      setArmed(true);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setArmed(false), 4000);
+      return;
+    }
+    deleteOrder(order.id);
+    toast(`Order ${order.code} deleted`);
+  };
+
+  return (
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-100 p-4">
+      <div className="min-w-0">
+        <p className="text-[14px] font-bold">Delete this order</p>
+        <p className="text-[12.5px] text-muted">
+          {armed
+            ? "Tap again to delete it for good - this can't be undone."
+            : `Removes it from your list and from Order status.${order.invoiceNumber ? ` Receipt ${order.invoiceNumber} is kept.` : ""}`}
+        </p>
+      </div>
+      <Button variant="ghost" size="sm" className={cx(armed ? "bg-red-600 text-white hover:bg-red-700" : "text-red-600 hover:bg-red-50")} onClick={del}>
+        <Trash2 className="size-3.5" /> {armed ? "Yes, delete" : "Delete order"}
+      </Button>
+    </section>
   );
 }

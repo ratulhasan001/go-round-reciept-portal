@@ -63,7 +63,7 @@ export function Modal({
         <div className="flex items-start gap-3 border-b border-line px-5 py-4">
           {icon ? <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-deep text-lime">{icon}</div> : null}
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-display text-lg font-extrabold text-ink">{title}</h2>
+            <h2 className="truncate text-lg font-extrabold text-ink">{title}</h2>
             {subtitle ? <div className="text-[13px] text-muted">{subtitle}</div> : null}
           </div>
           <button

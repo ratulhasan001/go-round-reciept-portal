@@ -301,7 +301,7 @@ function EditorForm({
           <SectionIcon section="new" className="size-10 rounded-xl bg-deep text-lime shadow-md shadow-deep/20" />
           <div className="mr-auto min-w-0">
             <div className="flex items-center gap-2.5">
-              <h1 className="truncate font-display text-xl font-bold sm:text-2xl">{isSaved ? inv.number : "New receipt"}</h1>
+              <h1 className="truncate text-xl font-bold sm:text-2xl">{isSaved ? inv.number : "New receipt"}</h1>
               <StatusBadge status={t.status} />
             </div>
             <p className="truncate text-[12.5px] text-muted">{statusLine}</p>
@@ -503,7 +503,7 @@ function EditorForm({
               {/* discount */}
               <div className="rounded-2xl border border-line p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-display text-[15px] font-bold">
+                  <div className="flex items-center gap-2 text-[15px] font-bold">
                     <BadgePercent className="size-[18px] text-brand" /> Discount
                   </div>
                   <span className={cx("text-[13.5px] font-bold", t.discountTotal ? "text-brand" : "text-faint")}>– {money(t.discountTotal)}</span>
@@ -534,7 +534,7 @@ function EditorForm({
               {/* coupon */}
               <div className="rounded-2xl border border-line p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-display text-[15px] font-bold">
+                  <div className="flex items-center gap-2 text-[15px] font-bold">
                     <TicketPercent className="size-[18px] text-aqua-deep" /> Coupon
                   </div>
                   {gift ? (
@@ -639,7 +639,7 @@ function EditorForm({
                   <PlusCircle className="size-[18px]" />
                 </div>
                 <div className="mr-auto min-w-0">
-                  <div className="font-display text-[15px] font-bold">Additional charges</div>
+                  <div className="text-[15px] font-bold">Additional charges</div>
                   <div className="text-[12.5px] text-muted">bKash fee, courier charge, or any other charge</div>
                 </div>
                 <Switch label="Additional charges" checked={ex.enabled} onChange={(v) => setEx({ enabled: v })} />

@@ -69,7 +69,7 @@ export function payInstructions(o: Order, shop: Shop) {
   ] as string[];
 }
 
-/** The verify page, where the customer checks the order (and gets the receipt) with their transaction id. */
+/** The verify page, where the customer checks the order (and gets the receipt) with their mobile number. */
 export const trackUrl = (o: Order) => absolute(`${publicLinks(window.location.host).verify()}?code=${encodeURIComponent(o.code)}`, window.location.origin);
 
 /** A ready-made WhatsApp update for the customer about where their order is. */
@@ -99,6 +99,6 @@ export function updateMessage(o: Order, shop: Shop) {
   if (!paid && o.status !== "cancelled" && (!o.payment.trxId || rejected)) lines.push(``, ...payInstructions(o, shop));
   if (paid && o.invoiceNumber && o.status !== "cancelled") lines.push(``, `Your receipt ${o.invoiceNumber} is ready - download it from your order page.`);
   if (o.tracking?.trim() && (o.status === "shipped" || o.status === "delivered")) lines.push(``, `Delivery / tracking: ${o.tracking.trim()}`);
-  if (o.status !== "cancelled") lines.push(``, `Order status${o.payment.trxId ? ` (enter your transaction ID ${o.payment.trxId})` : ""}: ${trackUrl(o)}`);
+  if (o.status !== "cancelled") lines.push(``, `Order status (enter your mobile number ${o.customer.phone}): ${trackUrl(o)}`);
   return lines.join("\n");
 }

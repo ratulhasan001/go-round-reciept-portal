@@ -61,9 +61,9 @@ export function Footer({ shop, links }: { shop: PublicShop; links: Links }) {
                 </a>
               </li>
             )}
-            {shop.address && (
+            {shop.site.address.trim() && (
               <li className="flex items-start gap-2.5">
-                <MapPin className="mt-0.5 size-[18px] shrink-0" /> {shop.address}
+                <MapPin className="mt-0.5 size-[18px] shrink-0" /> {shop.site.address}
               </li>
             )}
           </ul>

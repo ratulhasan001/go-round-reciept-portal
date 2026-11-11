@@ -33,12 +33,12 @@ export function CalendarTile({ className }: { className?: string }) {
       <div className="relative flex h-[8.5em] flex-col overflow-hidden rounded-[1em] bg-white text-center shadow-[0_0.9em_1.8em_-0.6em_rgb(0_0_0/0.5)]">
         {/* month band */}
         <div className="bg-lime px-[0.5em] pb-[0.375em] pt-[0.625em] text-deep">
-          <div className="font-display text-[0.75em] font-extrabold uppercase leading-none tracking-[0.14em]">{month || " "}</div>
+          <div className="text-[0.75em] font-extrabold uppercase leading-none tracking-[0.14em]">{month || " "}</div>
           <div className="mt-[0.38em] text-[0.656em] font-bold leading-none tracking-[0.2em] text-deep/65">{d?.getFullYear() ?? " "}</div>
         </div>
         {/* day */}
         <div className="flex flex-1 flex-col justify-center px-[0.5em]">
-          <div className="font-display text-[2.6em] font-extrabold leading-none tabular-nums tracking-tight text-ink">{d?.getDate() ?? " "}</div>
+          <div className="text-[2.6em] font-extrabold leading-none tabular-nums tracking-tight text-ink">{d?.getDate() ?? " "}</div>
           <div className="mt-[0.19em] text-[0.656em] font-bold uppercase tracking-[0.16em] text-aqua-deep">{weekday || " "}</div>
           {/* too small to read on a phone-sized page */}
           <div className="mx-auto mt-[0.375em] h-px w-3/4 bg-line max-sm:hidden" />

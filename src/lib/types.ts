@@ -87,6 +87,8 @@ export interface SiteSettings {
   bank: { bank: string; accountName: string; accountNumber: string; branch: string; routing: string };
   zones: DeliveryZone[];
   freeDeliveryOver: number; // order subtotal from which delivery is free (0 = never)
+  address: string; // where the shop is, as the website shows it
+  deliveryNote: string; // how orders reach customers, shown on product pages and Contact us
   about: string; // About us page text (blank lines start a new paragraph)
   faq: Faq[];
 }
@@ -147,6 +149,7 @@ export interface Product {
   images?: string[]; // photo addresses (/api/img/<id>, or data URLs when there is no database); none = placeholder
   description?: string;
   category?: string;
+  subcategory?: string; // within the category, e.g. Filter › Filter media
   onSite?: boolean; // missing means shown on the website
   featured?: boolean; // shown on the store's home page
 }

@@ -6,7 +6,7 @@ import type { Order, OrderStatus, Product, Shop, SiteSettings } from "./types";
 // Production runs on three addresses served by this one app (see src/proxy.ts):
 //   goroundbd.com         the customer store, at the root (/products, /order-status…)
 //   admin.goroundbd.com   the admin panel, behind the shop password
-//   verify.goroundbd.com  check a purchase / order by transaction id, and staff QR codes
+//   verify.goroundbd.com  check a purchase / order by mobile number, and staff QR codes
 // Anywhere else (localhost, the *.vercel.app address) everything stays on one address: the admin panel at the root,
 // the store under /store and the verify page under /store/verify.
 
@@ -28,7 +28,7 @@ export interface Links {
   area: Area;
   /** A store page, e.g. store("/products"); store() is the home page. */
   store: (path?: string) => string;
-  /** The verify page (purchase / order status by transaction id); verify() is its start page. */
+  /** The verify page (purchase / order status by mobile number); verify() is its start page. */
   verify: (path?: string) => string;
   /** An admin page. */
   admin: (path?: string) => string;
@@ -97,14 +97,23 @@ Every order is packed by hand and checked before it leaves us. If you are not su
 export const DEFAULT_FAQ = [
   { q: "How do I place an order?", a: "Add products to your cart, go to checkout and fill in your name, phone number and address. You can order as a guest or with an account." },
   { q: "How can I pay?", a: "We accept bKash and bank transfer. At checkout, send the total and type in the transaction ID. We check every payment by hand and approve your order as soon as it reaches us." },
-  { q: "How do I get my receipt?", a: "Once we approve your payment, open Order status and type your transaction ID (or go to My account). Tap Download receipt to save it as a PDF." },
-  { q: "When will my order be shipped?", a: "We ship within 1 to 2 working days after approving the payment. You can follow every step on the Order status page - just type your transaction ID." },
+  { q: "How do I get my receipt?", a: "Once we approve your payment, open Order status and type the mobile number you ordered with (or go to My account). Tap Download receipt to save it as a PDF." },
+  { q: "When will my order be shipped?", a: "We ship within 1 to 2 working days after approving the payment. You can follow every step on the Order status page - just type your mobile number." },
   { q: "How much is delivery?", a: "The delivery charge is shown at checkout before you place your order." },
   { q: "Do I need an account?", a: "No. You can check out as a guest. An account just keeps your details and order history in one place." },
   { q: "Can I ask before buying?", a: "Of course. Message us on WhatsApp and we will reply as soon as we can." },
 ];
 
 /** The website settings with defaults filled in from the shop profile. */
+export const DEFAULT_ADDRESS = "Dhaka/Khulna, Bangladesh";
+export const DEFAULT_DELIVERY_NOTE = "Nationwide delivery through Steadfast (Regular, Same day) & Pathao (Instant, Express, Same day)";
+
+// FAQ answers from earlier defaults that still say "transaction ID" (order status now goes by mobile number)
+const RENAMED_ANSWERS: Record<string, string> = {
+  "Once we approve your payment, open Order status and type your transaction ID (or go to My account). Tap Download receipt to save it as a PDF.": "Once we approve your payment, open Order status and type the mobile number you ordered with (or go to My account). Tap Download receipt to save it as a PDF.",
+  "We ship within 1 to 2 working days after approving the payment. You can follow every step on the Order status page - just type your transaction ID.": "We ship within 1 to 2 working days after approving the payment. You can follow every step on the Order status page - just type your mobile number.",
+};
+
 export function siteSettings(shop: Shop): SiteSettings {
   const s = shop.site;
   return {
@@ -116,8 +125,10 @@ export function siteSettings(shop: Shop): SiteSettings {
     bank: { bank: "", accountName: "", accountNumber: "", branch: "", routing: "", ...s?.bank },
     zones: s?.zones?.length ? s.zones : [{ id: "standard", name: "Home delivery", fee: shop.defaultDelivery }],
     freeDeliveryOver: s?.freeDeliveryOver ?? 0,
+    address: s?.address ?? DEFAULT_ADDRESS,
+    deliveryNote: s?.deliveryNote ?? DEFAULT_DELIVERY_NOTE,
     about: s?.about ?? DEFAULT_ABOUT,
-    faq: s?.faq ?? DEFAULT_FAQ,
+    faq: (s?.faq ?? DEFAULT_FAQ).map((f) => ({ ...f, a: RENAMED_ANSWERS[f.a] ?? f.a })),
   };
 }
 
@@ -141,6 +152,7 @@ export interface PublicProduct {
   images: string[];
   description: string;
   category: string;
+  subcategory: string; // "" = none
   featured: boolean;
 }
 
@@ -155,8 +167,55 @@ export const publicProduct = (p: Product): PublicProduct => ({
   images: p.images ?? [],
   description: p.description ?? "",
   category: p.category?.trim() ?? "",
+  // a subcategory only means something inside a category
+  subcategory: p.category?.trim() ? (p.subcategory?.trim() ?? "") : "",
   featured: !!p.featured,
 });
+
+// ---------- product descriptions ----------
+// The admin writes descriptions in a small formatting editor (bold, lists, headings, emoji), so they are HTML;
+// descriptions saved before that are plain text. Only these tags are ever shown, with every attribute dropped.
+const RICH_TAGS: Record<string, string> = {
+  b: "b", strong: "b", i: "i", em: "i", u: "u", s: "s", strike: "s", del: "s",
+  p: "p", div: "div", br: "br", ul: "ul", ol: "ol", li: "li", blockquote: "blockquote",
+  h1: "h3", h2: "h3", h3: "h3", h4: "h4", h5: "h4", h6: "h4",
+};
+const isRich = (s: string) => /<\/?(b|strong|i|em|u|s|strike|del|p|div|br|ul|ol|li|blockquote|h[1-6]|span|font)\b[^>]*>/i.test(s);
+const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** A product description as safe HTML: formatting kept, everything else (scripts, links, styles, images) removed. */
+export function richHtml(desc: string): string {
+  if (!desc.trim()) return "";
+  if (!isRich(desc)) return escapeHtml(desc).replace(/\r?\n/g, "<br>");
+  return desc
+    .split(/(<[^>]*>)/)
+    .map((part) => {
+      if (!part.startsWith("<") || !part.endsWith(">")) return part.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const m = /^<(\/?)([a-z][a-z0-9]*)\b[^>]*>$/i.exec(part);
+      const tag = m && RICH_TAGS[m[2]!.toLowerCase()];
+      if (!tag) return "";
+      if (tag === "br") return m[1] ? "" : "<br>";
+      return `<${m[1]}${tag}>`;
+    })
+    .join("");
+}
+
+/** A description as plain text, for search and link previews. */
+export function plainText(desc: string): string {
+  if (!isRich(desc)) return desc.trim();
+  return desc
+    .replace(/<(br|\/p|\/div|\/li|\/h\d|\/blockquote)\b[^>]*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .trim();
+}
 
 /** Smaller copy of an uploaded photo for grids and thumbnails (data URLs have only one size). */
 export const thumb = (src: string) => (src.startsWith("/api/img/") && !src.endsWith("-t") ? `${src}-t` : src);

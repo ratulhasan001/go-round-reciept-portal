@@ -19,7 +19,7 @@ export function ProductCard({ p }: { p: PublicProduct }) {
       </Link>
       <div className="mt-3 flex items-start gap-2 px-0.5">
         <div className="min-w-0 flex-1">
-          {p.category && <p className="truncate text-[11px] font-extrabold uppercase tracking-[0.16em] text-sea-leaf">{p.category}</p>}
+          {p.category && <p className="truncate text-[11px] font-extrabold uppercase tracking-[0.16em] text-sea-leaf">{p.subcategory || p.category}</p>}
           <h3 className="mt-0.5 line-clamp-2 text-[15px] font-bold leading-snug">
             <Link href={href} className="after:absolute after:inset-0 after:content-['']">
               {p.name}

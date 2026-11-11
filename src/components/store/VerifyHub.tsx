@@ -7,7 +7,7 @@ import { TrackView } from "./TrackView";
 import { useShop } from "./StoreContext";
 import { Panel, SeaField, SeaInput, btn, cx } from "./ui";
 
-/** verify.goroundbd.com: check a purchase / order (by transaction id) or a staff member (by the code on their card). */
+/** verify.goroundbd.com: check a purchase / order (by mobile number) or a staff member (by the code on their card). */
 export function VerifyHub() {
   const { links, shop } = useShop();
   const router = useRouter();

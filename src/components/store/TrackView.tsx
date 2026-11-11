@@ -13,102 +13,140 @@ import { ProductImage } from "./ProductImage";
 import { WhatsAppIcon } from "./Icons";
 import { Panel, SeaField, SeaInput, btn, cx } from "./ui";
 
-/** Order status for guests: find an order by the payment's transaction id (or, before paying, by order code + phone). */
+/** Order status for guests: type the mobile number the order was placed with to see its orders, open one, get the receipt. */
 export function TrackView() {
   const params = useSearchParams();
   const { shop, online } = useShop();
-  const [mode, setMode] = useState<"trx" | "code">("trx");
-  const [trxId, setTrxId] = useState("");
-  const [code, setCode] = useState(params.get("code") ?? "");
   const [phone, setPhone] = useState("");
-  const [order, setOrder] = useState<OrderView | null>(null);
+  const [orders, setOrders] = useState<OrderView[] | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "busy" | "missing" | "short" | "error">("idle");
   const placed = params.get("placed") === "1";
+  const wanted = cleanCode(params.get("code") ?? ""); // links in WhatsApp updates name the order
 
-  const look = useCallback(async (body: { trxId: string } | { code: string; phone: string }) => {
-    setState("busy");
-    try {
-      const res = await fetch("/api/site/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-      const b = await res.json().catch(() => ({}));
-      if (res.ok && b.order) {
-        setOrder(b.order);
-        setState("idle");
-      } else setState(res.status === 404 ? "missing" : "error");
-    } catch {
-      setState("error");
-    }
-  }, []);
+  const show = useCallback(
+    (list: OrderView[], pick?: string) => {
+      setOrders(list);
+      // straight to the order when there is only one, or when the link named it
+      const hit = list.find((o) => o.code === (pick ?? wanted)) ?? (list.length === 1 ? list[0] : undefined);
+      setOpenId(hit?.id ?? null);
+      setState("idle");
+    },
+    [wanted],
+  );
+
+  const look = useCallback(
+    async (body: { phone: string } | { code: string; phone: string }) => {
+      setState("busy");
+      try {
+        const res = await fetch("/api/site/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        const b = await res.json().catch(() => ({}));
+        if (res.ok && (b.orders || b.order)) show(b.orders ?? [b.order]);
+        else setState(res.status === 404 ? "missing" : "error");
+      } catch {
+        setState("error");
+      }
+    },
+    [show],
+  );
 
   // an order placed on this browser (or opened from a link with its code) fills itself in
   useEffect(() => {
-    const c = cleanCode(params.get("code") ?? "");
-    const mine = recentOrders().find((o) => o.code === c);
-    if (c && mine) void look({ code: c, phone: mine.phone }); // eslint-disable-line react-hooks/set-state-in-effect -- one-time lookup for an order placed here
-  }, [params, look]);
+    const mine = recentOrders().find((o) => o.code === wanted);
+    if (wanted && mine) void look({ code: wanted, phone: mine.phone }); // eslint-disable-line react-hooks/set-state-in-effect -- one-time lookup for an order placed here
+  }, [wanted, look]);
 
-  if (order) return <OrderCard order={order} placed={placed} onChange={setOrder} phone={order.customer.phone} onBack={() => setOrder(null)} />;
+  const open = orders?.find((o) => o.id === openId);
+  if (open)
+    return (
+      <OrderCard
+        order={open}
+        placed={placed}
+        onChange={(o) => setOrders((list) => (list ?? []).map((x) => (x.id === o.id ? o : x)))}
+        phone={open.customer.phone}
+        onBack={() => {
+          setOpenId(null);
+          if ((orders?.length ?? 0) <= 1) setOrders(null);
+        }}
+        backLabel={(orders?.length ?? 0) > 1 ? "All orders on this number" : "Check another number"}
+      />
+    );
+
+  if (orders?.length)
+    return (
+      <Panel className="mx-auto max-w-2xl">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="store-eyebrow">Your orders</p>
+            <p className="mt-2 font-serif text-[26px] leading-tight">
+              {orders.length} order{orders.length === 1 ? "" : "s"} on <span className="font-sans text-[0.85em] font-extrabold tabular-nums tracking-normal">{orders[0]!.customer.phone}</span>
+            </p>
+          </div>
+          <button onClick={() => setOrders(null)} className="text-[13.5px] font-bold text-sea-teal hover:underline">
+            Use another number
+          </button>
+        </div>
+        <ul className="mt-5 grid gap-2.5">
+          {orders.map((o) => (
+            <li key={o.id}>
+              <button
+                onClick={() => setOpenId(o.id)}
+                className="flex w-full items-center gap-3 rounded-2xl border border-sea-line bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-sea-ink/30 hover:shadow-[0_14px_30px_-24px_rgba(17,58,45,0.6)]"
+              >
+                <span className="size-14 shrink-0 overflow-hidden rounded-xl ring-1 ring-sea-line">
+                  <ProductImage src={o.items[0]?.image} name={o.items[0]?.name ?? o.code} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-x-2 text-[14.5px] font-extrabold">
+                    {o.code}
+                    <span className={cx("rounded-full px-2 py-0.5 text-[11px] font-extrabold", o.status === "cancelled" ? "bg-red-50 text-red-700" : o.status === "placed" ? "bg-amber-50 text-amber-700" : "bg-sea-teal-soft text-sea-teal")}>
+                      {o.status === "placed" ? PAY_LABEL[payState(o)] : ORDER_LABEL[o.status]}
+                    </span>
+                  </span>
+                  <span className="block truncate text-[13px] text-sea-muted">
+                    {fmtWhen(o.createdAt)} · {o.items.reduce((n, i) => n + i.qty, 0)} item{o.items.reduce((n, i) => n + i.qty, 0) === 1 ? "" : "s"}
+                  </span>
+                </span>
+                <span className="text-[15px] font-extrabold tabular-nums">{tk(o.total)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    );
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (mode === "trx") {
-      if (trxId.replace(/[\s-]/g, "").length < 6) return setState("short");
-      void look({ trxId });
-    } else if (code.trim() && phone.trim()) void look({ code, phone });
+    if (phone.replace(/\D/g, "").length < 10) return setState("short");
+    void look({ phone });
   };
 
   return (
     <Panel className="mx-auto max-w-lg">
       <form onSubmit={submit} className="grid gap-4">
-        {mode === "trx" ? (
-          <SeaField label="Transaction ID" hint="from your bKash or bank message" htmlFor="t-trx">
-            <SeaInput
-              id="t-trx"
-              value={trxId}
-              onChange={(e) => {
-                setTrxId(e.target.value.toUpperCase());
-                if (state !== "busy") setState("idle");
-              }}
-              placeholder="e.g. 9KL7XQ2M4P"
-              autoCapitalize="characters"
-              autoComplete="off"
-              spellCheck={false}
-              className="text-center font-mono text-[18px] tracking-[0.12em]"
-              required
-              autoFocus
-            />
-          </SeaField>
-        ) : (
-          <>
-            <SeaField label="Order code" hint="e.g. GR7K3F9Q" htmlFor="t-code">
-              <SeaInput id="t-code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} autoCapitalize="characters" autoComplete="off" required />
-            </SeaField>
-            <SeaField label="WhatsApp number used for the order" htmlFor="t-phone">
-              <SeaInput id="t-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01XXXXXXXXX" required />
-            </SeaField>
-          </>
-        )}
-        {state === "short" && <p className="text-[13.5px] font-semibold text-red-600">Please type the full transaction ID.</p>}
-        {state === "missing" && (
-          <p className="text-[13.5px] font-semibold text-red-600">
-            {mode === "trx"
-              ? "We couldn't find an order paid with that transaction ID. Please check it against your bKash or bank message."
-              : "We couldn't find an order with that code and number. Please check both."}
-          </p>
-        )}
+        <SeaField label="Mobile number" hint="the one you ordered with" htmlFor="t-phone">
+          <SeaInput
+            id="t-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              if (state !== "busy") setState("idle");
+            }}
+            placeholder="01XXXXXXXXX"
+            className="text-center text-[19px] font-bold tracking-[0.06em]"
+            required
+            autoFocus
+          />
+        </SeaField>
+        {state === "short" && <p className="text-[13.5px] font-semibold text-red-600">Please type the full mobile number, e.g. 01712345678.</p>}
+        {state === "missing" && <p className="text-[13.5px] font-semibold text-red-600">We couldn&apos;t find any orders on that number. Please check it, or try the other number you may have used.</p>}
         {state === "error" && <p className="text-[13.5px] font-semibold text-red-600">Something went wrong. Please try again.</p>}
         {!online && <p className="text-[13.5px] font-semibold text-sea-muted">Order status isn&apos;t available yet - please ask us on WhatsApp.</p>}
         <button type="submit" disabled={state === "busy" || !online} className={btn("primary", "lg", "w-full")}>
           {state === "busy" ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />} Check order status
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === "trx" ? "code" : "trx");
-            setState("idle");
-          }}
-          className="text-center text-[13.5px] font-bold text-sea-teal hover:underline"
-        >
-          {mode === "trx" ? "Haven't paid yet? Use your order code instead" : "Paid already? Use your transaction ID instead"}
         </button>
         <p className="text-center text-[13px] text-sea-muted">
           Can&apos;t find it?{" "}
@@ -121,7 +159,16 @@ export function TrackView() {
   );
 }
 
-export function OrderCard({ order, placed, onChange, phone, onBack }: { order: OrderView; placed?: boolean; onChange?: (o: OrderView) => void; phone?: string; onBack?: () => void }) {
+export function OrderCard({
+  order, placed, onChange, phone, onBack, backLabel = "Check another order",
+}: {
+  order: OrderView;
+  placed?: boolean;
+  onChange?: (o: OrderView) => void;
+  phone?: string;
+  onBack?: () => void;
+  backLabel?: string;
+}) {
   const { shop } = useShop();
   const stepIdx = ORDER_STEPS.indexOf(order.status);
   const cancelled = order.status === "cancelled";
@@ -150,7 +197,7 @@ export function OrderCard({ order, placed, onChange, phone, onBack }: { order: O
             <div>
               <p className="font-serif text-[26px] leading-tight">Thank you, {order.customer.name.split(" ")[0]}!</p>
               <p className="mt-1 text-[14.5px] text-sea-cream/80">
-                Your order <b className="text-white">{order.code}</b> is in. We&apos;ll check your payment and approve it - your receipt will then be ready right here. Keep this code to come back any time.
+                Your order <b className="text-white">{order.code}</b> is in. We&apos;ll check your payment and approve it - your receipt will then be ready right here. Check back any time on Order status with your mobile number.
               </p>
             </div>
           </div>
@@ -264,7 +311,7 @@ export function OrderCard({ order, placed, onChange, phone, onBack }: { order: O
         </a>
         {onBack && (
           <button onClick={onBack} className="text-[13.5px] font-bold text-sea-muted hover:text-sea-ink">
-            Check another order
+            {backLabel}
           </button>
         )}
       </aside>

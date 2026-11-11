@@ -96,7 +96,7 @@ export function ImportDialog({
                     <FileSpreadsheet className="size-5" />
                   </div>
                   <div>
-                    <h2 id="import-title" className="font-display text-lg font-extrabold">
+                    <h2 id="import-title" className="text-lg font-extrabold">
                       {title}
                     </h2>
                     <p className="text-[13px] text-muted">{hint}</p>
@@ -221,7 +221,7 @@ function Stat({ i, icon, label, value, tone }: { i: number; icon: React.ReactNod
   return (
     <div className="animate-row-in rounded-2xl border border-line p-3" style={{ animationDelay: `${i * 70}ms` }}>
       <div className={cx("mb-2 grid size-8 place-items-center rounded-xl", tone)}>{icon}</div>
-      <div className="font-display text-2xl font-extrabold tabular-nums">{shown}</div>
+      <div className="text-2xl font-extrabold tabular-nums">{shown}</div>
       <div className="text-[12px] font-semibold text-muted">{label}</div>
     </div>
   );
